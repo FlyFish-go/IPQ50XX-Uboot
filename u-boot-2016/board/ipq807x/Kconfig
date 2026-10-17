@@ -1,0 +1,85 @@
+config SYS_CPU
+       default "ipq807x"
+
+config SYS_BOARD
+       default "ipq807x"
+
+config SYS_VENDOR
+       default "qca/arm"
+
+config SYS_CONFIG_NAME
+       default "ipq807x"
+
+config IPQ_I2C
+	bool "Enable i2c support on IPQ platform"
+
+config USB_XHCI_IPQ
+	bool "ipq807x usb support for ipq807x"
+
+config PCI_IPQ
+	bool "ipq807x pci support for ipq807x"
+
+config QCA_AQUANTIA_PHY
+	bool "Enable Aquantia PHY support for ipq807x"
+
+config QCA8033_PHY
+	bool "Enable QCA8033 PHY support for ipq807x"
+
+config QCA8081_PHY
+	bool "Enable QCA8081 PHY support for ipq807x"
+
+config QCA8075_PHY
+	bool "Enable QCA8075 PHY support for ipq807x"
+
+config BOARD_TYPES
+	bool "Support board_type member in global data"
+	default y
+
+config LIST_OF_CONFIG_NAMES_SUPPORT
+	bool "List of config names support"
+
+config LIST_FUSE
+	bool "Enable fuse list command"
+	default n
+
+config TARGET_IPQ807x_ALIYUN_AP8220
+    bool "Aliyun AP8220 board support"
+	default n
+    help
+	  Enable support for Aliyun AP8220 board
+
+config TARGET_IPQ807X_CRADLEPOINT_E320
+    bool "Cradlepoint E320 board support"
+	default n
+    help
+	  Enable support for Cradlepoint E320 board
+
+config TARGET_IPQ807x_INSEEGO_FG2000
+    bool "Inseego FG2000 board support"
+	default n
+    help
+	  Enable support for Inseego FG2000 board
+
+config TARGET_IPQ807X_OPPO_CKB01
+    bool "OPPO CKB01 (SoftBank Air 5G) board support"
+	default n
+    help
+	  Enable support for OPPO CKB01 (SoftBank Air 5G) board
+
+config TARGET_IPQ807x_REDMI_AX6
+    bool "Redmi AX6 board support"
+	default n
+    help
+	  Enable support for Redmi AX6 board
+
+config TARGET_IPQ807x_XIAOMI_AX3600
+    bool "Xiaomi AX3600 board support"
+	default n
+    help
+	  Enable support for Xiaomi AX3600 board
+
+config TARGET_IPQ807x_XIAOMI_AX9000
+    bool "Xiaomi AX9000 board support"
+	default n
+    help
+	  Enable support for Xiaomi AX9000 board

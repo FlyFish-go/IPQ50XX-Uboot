@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title data-i18n="webterm.title"></title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/main.js"></script>
+</head>
+
+<body onload="appInit('webterm')" data-page="webterm">
+    <div class="app">
+        <aside id="sidebar" class="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <button class="sidebar-toggle" id="sidebarToggle"></button>
+        <div class="main">
+            <div id="m">
+                <div class="card-title-section">
+                    <h1 data-i18n="webterm.title"></h1>
+                </div>
+
+                <div class="card-main-section">
+                    <div id="terminal" class="terminal-container">
+                        <div id="terminal_main" class="terminal-main">
+                            <div id="terminal_output" class="terminal-output"></div>
+                            <div id="terminal_input_line" class="terminal-line command">
+                                <span class="line-prompt">$</span>
+                                <span class="line-content terminal-input-wrapper">
+                                    <input type="text" id="terminal_input" class="terminal-input"
+                                            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                                            data-i18n-attr="placeholder:webterm.cmd.placeholder">
+                                </span>
+                            </div>
+                        </div>
+
+                        <div id="cmd_suggestions" class="cmd-suggestions" style="display: none;">
+                            <div id="suggestions_list" class="suggestions-list"></div>
+                        </div>
+
+                        <div class="terminal-info-bar">
+                            <div id="terminal_file_info" class="terminal-file-info">
+                                <div class="terminal-file-progress" id="terminal_file_progress">
+                                    <div class="bar-circle-mini" id="bar-circle-mini" style="--percent: 0;"></div>
+                                </div>
+                                <div class="terminal-file-message" id="terminal_file_message"></div>
+                            </div>
+                            <div id="terminal_status" class="terminal-status"></div>
+                        </div>
+
+                        <div class="terminal-toolbar">
+                            <div class="terminal-actions">
+                                <button type="button" class="terminal-btn" onclick="webTerminalManager.focusInput()" data-i18n="webterm.input"></button>
+                                <button type="button" class="terminal-btn" onclick="webTerminalManager.send()" data-i18n="webterm.send"></button>
+                                <button type="button" class="terminal-btn" onclick="webTerminalManager.uploadFile()" data-i18n="webterm.upload"></button>
+                                <button type="button" class="terminal-btn" onclick="webTerminalManager.clear()" data-i18n="webterm.clear"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="version"></div>
+        </div>
+    </div>
+</body>
+
+</html>
