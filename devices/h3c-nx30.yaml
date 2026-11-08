@@ -1,0 +1,52 @@
+id: h3c-nx30
+order: 1
+vendor: H3C
+name: NX30
+aliases: [NX30, RX3000]
+soc: IPQ5018
+status: verified
+family: H3C NX30 家族
+summary: H3C NX30 家族的首批机型，U-Boot 已发布正式版 v0.1.0。
+hardware:
+  - { label: 主板分类, value: "HW-D" }
+  - { label: 闪存, value: "NAND（多种型号，U-Boot 自动识别 ECC）" }
+  - { label: 原厂固件版本, value: "`NX30V100R012`" }
+  - { label: 实机测试, value: "NX30：全流程" }
+slots:
+  mechanism: bootconfig
+  note: 原厂双系统，由 BOOTCONFIG 选择启动槽。可选把两个槽合并成一个 80 MiB 大分区。
+install:
+  method: bootbridge
+  label: BootBridge 网页版
+  url: https://flyfish-go.github.io/H3C-NX30-Uboot/
+steps:
+  - title: 准备官方固件
+    body: |
+      下载与本机型对应的官方固件 `NX30V100R012`。BootBridge 会核对文件大小和 SHA-256，版本不对时不会继续。
+  - title: 生成桥接包
+    body: |
+      打开 [BootBridge 网页版](https://flyfish-go.github.io/H3C-NX30-Uboot/)，选择机型并载入官方固件，生成桥接包。固件只在你自己的浏览器里处理，不会上传。
+  - title: 在原厂后台上传
+    body: |
+      登录路由器原厂后台，在「固件升级」上传桥接包。重启后电脑用网线接 **LAN** 口，打开 `http://192.168.10.1`。
+  - title: 识别、备份、安装
+    body: |
+      在安装向导里依次点「识别 → 备份 → 安装」。
+
+      **备份文件请保存在自己电脑上**，里面有本机的校准数据和序列号，不要发给别人。完成后路由器重启，照常进入原厂系统。
+    warn: U-Boot 分区文件（appsbl.mbn）不能直接上传到原厂升级页，首次安装只能走 BootBridge。
+  - title: 进入 U-Boot 救援页
+    body: |
+      断电，按住 Reset 再通电，红灯闪满 3 下后松手，浏览器打开 `http://192.168.10.1`。在这里可以刷固件、刷 U-Boot、备份整片闪存，选择启动哪个系统。
+rescue:
+  how: 断电，按住 Reset 再通电，红灯闪满 3 下后松手
+  address: 192.168.10.1
+slot_select: 按住 Reset 或 Mesh/WPS 键通电：红灯闪 1 下松手启动一区，闪 2 下松手启动二区，并设为默认。
+recovery:
+  - 安装前 BootBridge 会完整备份；桥接系统里随时可以返回原厂。
+  - 已装本项目 U-Boot 的，救援页里可以写回备份的分区。
+  - 万一启动程序本身损坏，需要 TTL 串口或编程器，请先到 QQ 群 1131957442 联系维护者。
+links:
+  - { text: H3C-NX30-Uboot 仓库, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot" }
+  - { text: v0.1.0 发布说明, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot/releases/tag/uboot-v0.1.0" }
+  - { text: 配套 QSDK 11.5 固件, url: "https://github.com/FlyFish-go/H3C-RT3000-Product-R1" }
