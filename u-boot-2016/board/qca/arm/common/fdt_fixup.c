@@ -12,6 +12,7 @@
  */
 
 #include <common.h>
+#include <errno.h>
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
 #include <nand.h>
 #include <h3c_nand_ecc.h>

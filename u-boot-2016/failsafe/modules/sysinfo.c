@@ -39,6 +39,11 @@
 #include <h3c_fem.h>
 #include <h3c_nand_catalog.h>
 #endif
+#ifdef CONFIG_H3C_BOARD
+#include <h3c_build_id.h>
+#include <h3c_fem.h>
+#include <h3c_nand_catalog.h>
+#endif
 #include <malloc.h>
 #include <errno.h>
 #include <version.h>
@@ -149,6 +154,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,");
 #endif
 
+#ifdef CONFIG_H3C_BOARD
     /* The U-Boot package folder that matches this build exactly:
      * HW-<board>/<NAND model>-ECC<load ECC>, as in the release zips. */
     {
@@ -191,6 +197,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
             }
         }
     }
+#endif /* CONFIG_H3C_BOARD */
 #ifdef CONFIG_H3C_RAM_RESCUE
     APPEND_JSON_TO_BUF("\"ram_rescue\":true,");
 #else
