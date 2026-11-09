@@ -794,7 +794,7 @@ static int failsafe_write_uboot(ulong data_addr, ulong data_size)
 
 	ADD_CMD_TO_LIST("flash 0:APPSBL 0x%lx 0x%lx", data_addr, data_size);
 
-	if (!part_exists("0:APPSBL_1", 0))
+	if (!IS_ENABLED(CONFIG_FAILSAFE_UBOOT_PRIMARY_ONLY) && !part_exists("0:APPSBL_1", 0))
 		ADD_CMD_TO_LIST("flash 0:APPSBL_1 0x%lx 0x%lx", data_addr, data_size);
 
 	return failsafe_run_command_list();

@@ -1,3 +1,11 @@
+config FAILSAFE_UBOOT_PRIMARY_ONLY
+    bool "Web U-Boot update writes only 0:APPSBL"
+    default n
+    help
+      Leave 0:APPSBL_1 untouched when the web page installs a U-Boot.
+      Use this on boards whose stock BOOTCONFIG always selects the primary
+      APPSBL and whose stock 0:APPSBL_1 is empty.
+
 config FAILSAFE_MAC_MANAGEMENT
     bool "Enable Web Failsafe MAC management"
     default n
