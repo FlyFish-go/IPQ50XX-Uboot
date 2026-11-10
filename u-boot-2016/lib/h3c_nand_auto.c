@@ -7,6 +7,7 @@
 #include <nand.h>
 #include <asm/arch-qca-common/qpic_nand.h>
 #include <h3c_nand_auto.h>
+#include <h3c_nand_ecc.h>
 
 enum { AUTO_IDLE = 0, AUTO_PENDING, AUTO_OK, AUTO_FAILED };
 
@@ -82,6 +83,8 @@ void h3c_nand_auto_run(void)
 	struct mtd_ecc_stats saved = mtd->ecc_stats;
 	struct h3c_nand_auto_ops ops;
 	struct h3c_nand_auto_result res;
+	unsigned int old_bits = mtd->ecc_strength;
+	unsigned int old_spare = h3c_qpic_nand_physical_spare();
 	int ret;
 
 	if (st.state == AUTO_PENDING) {
@@ -101,6 +104,12 @@ void h3c_nand_auto_run(void)
 				st.state = AUTO_FAILED;
 				printf("H3C NAND AUTO: boot-chain ECC not unique (%d)\n",
 				       ret);
+				/* Leave the controller as it was found, not in
+				 * the last format that was tried. */
+				if ((old_bits == 4U || old_bits == 8U) && old_spare &&
+				    qpic_nand_auto_set_format(old_bits, old_spare))
+					printf("H3C NAND AUTO: could not restore ECC%u\n",
+					       old_bits);
 			} else {
 				st.state = AUTO_OK;
 				st.row = res.row;
