@@ -27,11 +27,11 @@
  */
 
 #include <common.h>
-#if defined(CONFIG_H3C_HW_D_RAM_AUTOECC) || defined(CONFIG_H3C_NAND_ECC_COMPAT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_H3C_NAND_ECC_COMPAT)
 #define CONFIG_H3C_QPIC_DUAL_ECC
 #endif
 /* These helpers are unreachable in the read-only B target. */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_QPIC_DUAL_ECC)
+#if defined(CONFIG_H3C_IPQ5018_COMMON) || defined(CONFIG_H3C_QPIC_DUAL_ECC)
 #define QPIC_STAGE0_UNUSED __maybe_unused
 #else
 #define QPIC_STAGE0_UNUSED
@@ -40,7 +40,7 @@
 
 #include <asm/io.h>
 #include <asm/errno.h>
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <h3c_hw_d_readonly.h>
 #endif
 #include <nand.h>
@@ -56,25 +56,25 @@
 #define CONFIG_H3C_NAND_STORAGE_ECC_BITS 0U
 #endif
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_fw_write.h>
 #include <rt3000_b_fw_core.h>
 #include <rt3000_b_layout.h>
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <qpic_nand_model.h>
 #endif
 #include <linux/mtd/nand.h>
 #include <asm/arch-qca-common/bam.h>
 #include <asm/arch-qca-common/qpic_nand.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <asm/arch-qca-common/smem.h>
 #endif
 #include <asm/arch-qca-common/gpio.h>
 #include <fdtdec.h>
 #include <dm.h>
 #include <poller.h>
-#if defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_AUTOECC) || defined(CONFIG_H3C_HW_D_STORAGE_PORT)
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_nor_nand.h>
 #include <nx30_d_qpic_window_core.h>
 #elif defined(CONFIG_H3C_NAND_ECC_COMPAT)
@@ -106,7 +106,7 @@ enum qpic_nand_layout qpic_layout = QPIC_NAND_LAYOUT_LINUX;
 
 #ifdef CONFIG_QPIC_SERIAL
 static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
-#if defined(CONFIG_H3C_IPQ5018_COMMON) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#if defined(CONFIG_H3C_IPQ5018_COMMON) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/* OEM APPSBL compatibility profiles: 128 MiB window, not full die size.
 	 * Keep the factory QPIC BCH/OOB format (including BCH4 for 98:DB).
 	 * See test/qpic_h3c_oem_nand_profiles.json for verified descriptors.
@@ -341,7 +341,7 @@ static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
 		.density = 0x08000000,
 		.otp_region = 0x2000,
 		.no_of_addr_cycle = 0x3,
-		#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+		#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 		.num_bits_ecc_correctability = 4,
 #else
 		.num_bits_ecc_correctability = 8,
@@ -772,7 +772,7 @@ int rt3_flash_reboot_required(void)
 	return rt3_flash_reboot_lock;
 }
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 /* Closed by default; only a guarded production transaction opens this aperture. */
 static struct {
 	struct mtd_info *mtd;
@@ -818,7 +818,7 @@ int rt3_fw_write_window_open(struct mtd_info *mtd, u64 offset, u64 size)
 	}
 	if (!exact_target || exact_targets != 1)
 		return -EROFS;
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (nx30_d_qpic_write_window_open(mtd, offset, size, mtd->ecc_strength)) return -EROFS;
 #endif
 	rt3_fw_window.mtd = mtd;
@@ -832,7 +832,7 @@ int rt3_fw_write_window_open(struct mtd_info *mtd, u64 offset, u64 size)
 
 void rt3_fw_write_window_close(void)
 {
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	nx30_d_qpic_write_window_close();
 #else
 	if (rt3_fw_window.open && rt3_fw_window.mtd)
@@ -853,8 +853,7 @@ int rt3_fw_write_window_allows(struct mtd_info *mtd, u64 offset, u64 size)
 int rt3_bootconfig_write_window_open(struct mtd_info *mtd, const char *name,
                                      u64 offset, u64 size)
 {
-#if !(defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || \
-      defined(CONFIG_H3C_HW_A_PRODUCTION_PORT))
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A))
 	(void)mtd; (void)name; (void)offset; (void)size;
 	return -EROFS;
 #else
@@ -881,7 +880,7 @@ int rt3_bootconfig_write_window_open(struct mtd_info *mtd, const char *name,
 	if (offset != expected || (u64)start * mtd->erasesize != expected ||
 	    (u64)count * mtd->erasesize != size)
 		return -EROFS;
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (nx30_d_qpic_write_window_open(mtd, offset, size, mtd->ecc_strength)) return -EROFS;
 #endif
 	rt3_fw_window.mtd = mtd;
@@ -956,7 +955,7 @@ int rt3_metadata_write_window_open(struct mtd_info *mtd, const char *name,
 	    (!strcmp(name, "0:ART") &&
 	     (offset != 0x780000 || size != 0x100000)))
 		return -EROFS;
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (nx30_d_qpic_write_window_open(mtd, offset, size, mtd->ecc_strength)) return -EROFS;
 #endif
 	rt3_fw_window.mtd = mtd;
@@ -985,7 +984,7 @@ struct rt3_named_smem_table {
 int rt3_named_nand_write_window_open(struct mtd_info *mtd, const char *name,
 				     u64 offset, u64 size)
 {
-#if defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/* A/C metadata has a separate reviewed whitelist; never inherit B's generic writer. */
 	(void)mtd; (void)name; (void)offset; (void)size;
 	return -EROFS;
@@ -1048,7 +1047,7 @@ int rt3_named_nand_write_window_open(struct mtd_info *mtd, const char *name,
 	    verified_layout.fingerprint != layout.fingerprint)
 		return -EROFS;
 
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (nx30_d_qpic_write_window_open(mtd, offset, size, mtd->ecc_strength)) return -EROFS;
 #endif
 	rt3_fw_window.mtd = mtd;
@@ -1075,7 +1074,7 @@ int rt3_named_nand_write_window_open(struct mtd_info *mtd, const char *name,
  * the controller is switched back afterwards; on units where both match this
  * is a no-op.
  */
-#if defined(CONFIG_H3C_HW_D_STORAGE_PORT) && defined(CONFIG_H3C_NAND_LOAD_ECC_BITS)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) && defined(CONFIG_H3C_NAND_LOAD_ECC_BITS)
 #define H3C_HYB_ENV_START    0x00480000ULL
 #define H3C_HYB_APPSBL_START 0x00500000ULL
 #define H3C_HYB_DATA_START   0x00780000ULL
@@ -1339,7 +1338,7 @@ static inline unsigned int h3c_hyb_window_ecc(struct mtd_info *mtd)
  * layer must validate SMEM and transaction intent before opening this window;
  * this driver independently accepts only exact fixed physical extents.
  */
-#if defined(CONFIG_H3C_HW_D_STORAGE_PORT)
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_d_protect_core.h>
 static int qpic_serial_get_feature(struct mtd_info *mtd, uint32_t ftr_addr);
 static int qpic_serial_set_feature(struct mtd_info *mtd, uint32_t ftr_addr, uint32_t value);
@@ -2506,7 +2505,7 @@ int qpic_spi_nand_config(struct mtd_info *mtd)
 		return status;
 	}
 
-#ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	/* Read-only rescue never needs to unlock NAND array writes. */
 	qspi_debug("%s: NOR rescue leaves block protection unchanged\n",
 		   __func__);
@@ -3399,14 +3398,14 @@ qpic_nand_write_page(struct mtd_info *mtd, uint32_t pg_addr,
 					 struct mtd_oob_ops *ops)
 {
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (cfg_mode != NAND_CFG || !dev || !ops ||
 	    ops->mode != MTD_OPS_AUTO_OOB || !ops->datbuf || !ops->oobbuf ||
 	    ops->ooblen != dev->oob_per_page ||
 	    !nx30_d_qpic_write_window_allows(mtd,
 		    (u64)pg_addr * mtd->writesize, mtd->writesize))
 		return h3c_hw_d_nand_write_rejected();
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#elif defined(CONFIG_H3C_IPQ5018_COMMON)
 	/* qpic_nand_write_oob rejects caller OOB; these are QPIC-generated ECC bytes. */
 	if (!dev || cfg_mode != NAND_CFG || !ops || ops->mode != MTD_OPS_AUTO_OOB ||
 	    !ops->datbuf || !ops->oobbuf || ops->ooblen != dev->oob_per_page ||
@@ -3466,7 +3465,7 @@ qpic_nand_mark_badblock(struct mtd_info *mtd, loff_t offs)
 {
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
 
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	return h3c_hw_d_nand_write_rejected();
 #endif
 	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
@@ -5093,11 +5092,11 @@ static int qpic_nand_write_oob(struct mtd_info *mtd, loff_t to,
 	u_long num_pages;
 	enum nand_cfg_value cfg_mode;
 
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (!ops || ops->mode != MTD_OPS_AUTO_OOB || ops->ooblen ||
 	    ops->oobbuf || !nx30_d_qpic_write_window_allows(mtd,to,ops->len))
 		return h3c_hw_d_nand_write_rejected();
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#elif defined(CONFIG_H3C_IPQ5018_COMMON)
 	/* Only plain ECC data writes within the writer's exact range are allowed. */
 	if (!ops || ops->mode != MTD_OPS_AUTO_OOB || ops->ooblen ||
 	    ops->oobbuf || !rt3_fw_write_window_allows(mtd, to, ops->len))
@@ -5210,13 +5209,13 @@ static int qpic_nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 nand_result_t qpic_nand_blk_erase(struct mtd_info *mtd, uint32_t page)
 {
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	u64 offset=(u64)page*mtd->writesize;
 	if (!dev || !dev->num_pages_per_blk ||
 	    page%dev->num_pages_per_blk ||
 	    !nx30_d_qpic_write_window_allows(mtd,offset,mtd->erasesize))
 		return h3c_hw_d_nand_write_rejected();
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#elif defined(CONFIG_H3C_IPQ5018_COMMON)
 	u64 offset = (u64)page * mtd->writesize;
 	if (!dev || !dev->num_pages_per_blk ||
 	    (page % dev->num_pages_per_blk) ||
@@ -5231,7 +5230,7 @@ nand_result_t qpic_nand_blk_erase(struct mtd_info *mtd, uint32_t page)
 	uint32_t status;
 	int num_desc = 0;
 	uint32_t blk_addr = page / (dev->num_pages_per_blk);
-#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_H3C_HW_D_STORAGE_PORT)
+#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
 #endif
 
@@ -5324,7 +5323,7 @@ nand_result_t qpic_nand_blk_erase(struct mtd_info *mtd, uint32_t page)
 	if (status) {
 		printf("NAND Erase error: Block address belongs to "
 		       "bad block: %d\n", blk_addr);
-#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_H3C_HW_D_STORAGE_PORT)
+#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 		qpic_nand_mark_badblock(mtd, (page << chip->page_shift));
 #endif
 		return status;
@@ -5334,7 +5333,7 @@ nand_result_t qpic_nand_blk_erase(struct mtd_info *mtd, uint32_t page)
 	if (!(status & PROG_ERASE_OP_RESULT))
 		return NANDC_RESULT_SUCCESS;
 
-#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_H3C_HW_D_STORAGE_PORT)
+#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	qpic_nand_mark_badblock(mtd, (page << chip->page_shift));
 #endif
 	return status;
@@ -5351,10 +5350,10 @@ qpic_nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
 
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (!instr || !nx30_d_qpic_write_window_allows(mtd,instr->addr,instr->len))
 		return h3c_hw_d_nand_write_rejected();
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#elif defined(CONFIG_H3C_IPQ5018_COMMON)
 	if (!instr || !rt3_fw_write_window_allows(mtd, instr->addr, instr->len))
 		return -EROFS;
 #endif
@@ -5389,7 +5388,7 @@ qpic_nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 		if (ret) {
 			instr->fail_addr = offs;
 			printf("Erase operation failed \n");
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 			return ret;
 #endif
 		}
@@ -5403,7 +5402,7 @@ qpic_nand_mtd_params(struct mtd_info *mtd)
 	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
 	mtd->type = MTD_NANDFLASH;
 	mtd->flags = MTD_CAP_NANDFLASH;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	/* Make UBI attach read-only; QPIC write/erase guards remain the backstop. */
 	mtd->flags &= ~MTD_WRITEABLE;
 #endif
@@ -5422,7 +5421,7 @@ qpic_nand_mtd_params(struct mtd_info *mtd)
 	mtd->_block_isbad = qpic_nand_block_isbad;
 	mtd->_block_markbad = qpic_nand_mark_badblock;
 	mtd->_sync = qpic_nand_sync;
-#if defined(CONFIG_H3C_HW_D_STORAGE_PORT) && defined(CONFIG_H3C_NAND_LOAD_ECC_BITS)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) && defined(CONFIG_H3C_NAND_LOAD_ECC_BITS)
 	if (mtd->_read != h3c_hyb_read)
 		h3c_hyb_install(mtd);
 #endif
@@ -5983,7 +5982,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 #ifdef CONFIG_QSPI_SERIAL_TRAINING
 
 	/* start serial training here */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	/*
 	 * qpic_spi_init() already selected the conservative 50 MHz bus clock
 	 * with feedback enabled. Training erases and programs 0:TRAINING.
@@ -6732,7 +6731,7 @@ U_BOOT_CMD(qpic_nand, 2, 1, do_qpic_nand_cmd,
 
 int rt3_fw_write_window_close_status(void)
 {
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  return nx30_d_qpic_write_window_close_error();
 #else
  return 0;

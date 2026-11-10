@@ -18,12 +18,12 @@
 #include <h3c_nand_ecc.h>
 #include <h3c_mainline_fdt.h>
 #endif
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nand.h>
 #include <nx30_d_bootargs.h>
 #include <nx30_nor_autoecc.h>
 #endif
-#ifdef CONFIG_H3C_HW_D_STORAGE_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_d_fdt_nor_guard.h>
 extern volatile int nx30_d_oem_fit_handoff_verified;
 #endif
@@ -1234,7 +1234,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 #if defined (CONFIG_IPQ_TINY) && !defined(CONFIG_NAND_FLASH)
 		ipq_nor_fdt_fixup(blob, nodes);
 #else
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 		/* Keep labels from the selected FIT when it already defines partitions. */
 		if (!getenv("h3c_hw_c_keep_fit_partitions") ||
 		    strcmp(getenv("h3c_hw_c_keep_fit_partitions"), "1"))
@@ -1313,7 +1313,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 #endif
 
 	fdt_fixup_ethernet(blob);
-#if defined(CONFIG_H3C_NAND_ECC_COMPAT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_H3C_NAND_ECC_COMPAT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
  {
   int chosen = fdt_path_offset(blob, "/chosen"), length;
   const char *args = chosen >= 0 ? fdt_getprop(blob, chosen, "bootargs", &length) : NULL;
@@ -1348,7 +1348,7 @@ int ft_board_setup(void *blob, bd_t *bd)
    printf("H3C NAND: upstream spi-nand node ECC=%u\n", mode);
  }
 #endif
-#ifdef CONFIG_H3C_HW_D_STORAGE_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  {
   qca_smem_flash_info_t boot_flash;
   const char *root_compat, *parent_compat, *chip_compat;

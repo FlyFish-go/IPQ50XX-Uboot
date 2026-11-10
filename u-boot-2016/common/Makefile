@@ -52,7 +52,7 @@ obj-$(CONFIG_ENV_IS_IN_MMC) += env_mmc.o
 obj-$(CONFIG_ENV_IS_IN_FAT) += env_fat.o
 obj-$(CONFIG_ENV_IS_IN_NAND) += env_nand.o
 ifeq ($(CONFIG_ENV_IS_IN_NAND),)
-obj-$(CONFIG_H3C_HW_A_PRODUCTION_PORT) += env_nand.o
+obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_A) += env_nand.o
 endif
 obj-$(CONFIG_ENV_IS_IN_NVRAM) += env_nvram.o
 obj-$(CONFIG_ENV_IS_IN_ONENAND) += env_onenand.o

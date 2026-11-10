@@ -259,17 +259,6 @@ int board_init(void)
 		printf("BUG: unsupported flash type : %d\n", sfi->flash_type);
 		BUG();
 	}
-#if defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-	/* D production retains the guarded storage driver flag, but must select
-	 * the actual NAND ENV backend. Diagnostic profiles remain volatile. */
-	saveenv = NULL;
-	env_ptr = NULL;
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
-	env_name_spec = "NX30 D RAM diagnostic (volatile ENV)";
-#else
-	env_name_spec = "HW-A RAM-only validation";
-#endif
-#else
 	if (sfi->flash_type == SMEM_BOOT_SPI_FLASH) {
 #ifdef CONFIG_ENV_IS_IN_SPI_FLASH
 		saveenv = sf_saveenv;
@@ -292,7 +281,6 @@ int board_init(void)
 
 #endif
 	}
-#endif /* !CONFIG_TARGET_IPQ5018_H3C_HW_A */
 #endif
 	ret = ipq_board_usb_init();
 	if (ret < 0) {
@@ -526,7 +514,7 @@ int board_late_init(void)
 	board_flash_protect();
 #endif
 	set_ethmac_addr();
-#ifdef CONFIG_H3C_HW_D_RAM_READONLY
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	{
 		uchar env_mac[6];
 		if (!eth_getenv_enetaddr("ethaddr", env_mac) ||

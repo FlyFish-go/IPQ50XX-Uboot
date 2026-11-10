@@ -11,7 +11,7 @@
 #include <rt3000_b_fw_write.h>
 #include "boot_default_rt3000_b_core.h"
 #include <h3c_boot_policy.h>
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_d_service.h>
 #endif
 
@@ -29,7 +29,7 @@ static u8 *last_backup_snapshot;
 static int backup_snapshot_ready;
 static void answer(struct httpd_response *r, int code, const char *json);
 
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 /* Export the separate service transaction's pinned preimages even if full BC
  * equality is lost. These handlers never read slots or acquire a write window. */
 static void retained_failure_handler(enum httpd_uri_handler_status status,
@@ -80,7 +80,7 @@ static int extent_read(const struct bc_extent *tmpl, struct bc_extent *out)
  u32 off = 0, size = 0;
  if (!tmpl || !out || getpart_offset_size((char *)tmpl->name, &off, &size) ||
      size != BC_SIZE || off % BC_ERASE || off > BC_CHIP || size > BC_CHIP - off
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG") && off != 0x100000)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG1") && off != 0x140000)
 #endif
@@ -212,7 +212,7 @@ static int write_one(struct mtd_info *m, const struct bc_extent *tmpl,
   if (r) return r;
  }
  if (!page || !check) return -ENOMEM;
- #if (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT)
+ #if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
  r = rt3_bootconfig_write_window_open(m, tmpl->name, e->off, e->size);
 #else
  r = rt3_named_nand_write_window_open(m, tmpl->name, e->off, e->size);
@@ -251,7 +251,7 @@ static int write_one(struct mtd_info *m, const struct bc_extent *tmpl,
  r = 0;
  out:
  if (opened) {rt3_fw_write_window_close();
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  if(rt3_fw_write_window_close_status())r=-EIO;
 #endif
  }
@@ -312,7 +312,7 @@ static enum bd_result boot_default_apply(int want_selector, const char *target,
  enum bd_result res;
  shown[0] = 0;
  if (partial_update_lock) return BD_E_LOCKED;
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  {
   struct nx30_d_result failure; u32 copy;
   if (!nx30_d_default_failure_get(&failure,&copy)) return BD_E_RETAINED;
@@ -479,7 +479,7 @@ static void default_handler(enum httpd_uri_handler_status status,
            active, bootcmd_compatible() && !partial_update_lock ? "true" : "false",
            partial_update_lock ? "true" : "false",
            partial_update_lock ? "partial_update" : (!bootcmd_compatible() ? "custom_bootcmd" : ""));
-#elif (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
   snprintf(reply, sizeof(reply), "{\"status\":\"ok\",\"default\":\"%s\",\"can_change\":%s,\"locked\":%s,\"reason\":\"%s\",\"auto_web\":false,\"default_applies_to\":\"bootipq\"}",
            active, bootcmd_compatible() && !partial_update_lock ? "true" : "false",
            partial_update_lock ? "true" : "false",
@@ -498,7 +498,7 @@ void boot_default_rt3000_b_register_uri_handlers(struct httpd_instance *inst)
  httpd_register_uri_handler(inst, "/boot/default", default_handler, NULL);
  httpd_register_uri_handler(inst, "/boot/default/backup/bootconfig.bin", backup_primary_handler, NULL);
  httpd_register_uri_handler(inst, "/boot/default/backup/bootconfig1.bin", backup_copy1_handler, NULL);
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  httpd_register_uri_handler(inst,"/boot/default/retained-failure",retained_failure_handler,NULL);
  httpd_register_uri_handler(inst,"/boot/default/retained-original0.bin",retained_original0_handler,NULL);
  httpd_register_uri_handler(inst,"/boot/default/retained-original1.bin",retained_original1_handler,NULL);

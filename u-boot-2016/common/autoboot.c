@@ -1,4 +1,4 @@
-#ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_nor_autoecc.h>
 #endif
 /*
@@ -13,11 +13,11 @@
 #include <h3c_nand_ecc.h>
 #endif
 #include <autoboot.h>
-#if defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #include <h3c_boot_policy.h>
 #endif
 #include <bootretry.h>
-#ifdef CONFIG_H3C_HW_A_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A
 extern int h3c_hw_a_reset_held_3s(void);
 #endif
 #include <cli.h>
@@ -426,27 +426,27 @@ void autoboot_command(const char *s)
         return;
     }
 #endif
-#ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
     nx30_nor_nand_autoecc_cli();
 #endif
     s = "httpd";
     stored_bootdelay = 0;
-#elif defined(CONFIG_H3C_HW_D_RAM_WEB)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/* Enter the read-only maintenance preview on the verified D LAN port. */
 	if (setenv("ethprime", "eth1") || setenv("ethact", "eth1") || setenv("ethrotate", "no"))
 		puts("NX30 D RAM web preview: cannot select eth1\n");
-#ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	/* A failed or ambiguous probe keeps the read-only web/serial rescue. */
 	nx30_nor_nand_autoecc_cli();
 #endif
 	s = "httpd";
 	stored_bootdelay = 0;
-#elif defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/* Ignore imported bootcmd and leave this bounded diagnostic at CLI. */
 	s = "echo NX30 D RAM diagnostic ready";
 	stored_bootdelay = 0;
 #endif
-#if defined(CONFIG_H3C_HW_A_PRODUCTION_PORT)
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A
 	/*
 	 * HW-A production always enters HTTP recovery. The OEM environment
 	 * survives installation with ipaddr=192.168.10.10, so the recovery LAN
@@ -459,7 +459,7 @@ void autoboot_command(const char *s)
 	s = "httpd";
 	stored_bootdelay = 0;
 #endif
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 	/* C's three LAN ports share the RTL8367S CPU link on GMAC1. */
 	if (setenv("ethact", "eth1") ||
 	    setenv("ipaddr", "192.168.10.1") ||
@@ -525,10 +525,7 @@ void autoboot_command(const char *s)
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)
 		disable_ctrlc(prev);	/* restore Control C checking */
 #endif
-#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && \
-	!defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) && \
-	!defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-	!defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#if !defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 		const char *cmd = "bootipq";
 		if (!s || strncmp(s, cmd, strlen(cmd))) {
 			printf("Failed to run `%s`, try `%s`\n", s, cmd);

@@ -24,7 +24,7 @@ static inline int httpd_upload_length_allowed(const char *uri, unsigned long len
 #else
     if (length > RT3_HTTP_UPLOAD_LIMIT) return 0;
     if (!httpd_upload_uri_is_standard_upload(uri)) return 1;
-#if defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
     return length <= RT3_HTTP_RECOVERY_UPLOAD_LIMIT;
 #else
     return length <= RT3_HTTP_METADATA_UPLOAD_LIMIT;

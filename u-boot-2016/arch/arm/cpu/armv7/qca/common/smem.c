@@ -39,7 +39,7 @@
 #include <ubi_uboot.h>
 #include <command.h>
 #include <ipq_api.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_layout.h>
 #endif
 
@@ -966,11 +966,11 @@ int qca_smem_part_to_mtdparts(char *mtdid,int len)
 {
  qca_smem_flash_info_t *sfi=&qca_smem_flash_info;
  char *buf; int i,n,used,ret,init=0;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
  char alias[SMEM_PTN_NAME_MAX];
 #endif
  uint32_t bsize;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
  struct rt3_layout view;
  if(rt3_layout_read(&view)) return -EINVAL;
 #endif
@@ -998,7 +998,7 @@ int qca_smem_part_to_mtdparts(char *mtdid,int len)
   if(psize>SZ_1M&&!(psize&(SZ_1M-1))){psize/=SZ_1M;unit="M@";}
   else if(psize>SZ_1K&&!(psize&(SZ_1K-1))){psize/=SZ_1K;unit="K@";}
   else unit="@";
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
   if(!strcmp(p->name,"rootfs")||!strcmp(p->name,"rootfs_1")){
    ret=rt3_layout_linux_mtd_alias(&view,sfi->rootfs.offset,p->name,offset,alias,sizeof(alias));
    if(ret) goto fail;

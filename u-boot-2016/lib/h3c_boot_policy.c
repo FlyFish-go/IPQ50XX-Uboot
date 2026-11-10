@@ -222,7 +222,7 @@ int h3c_release_reset_held(void)
 void h3c_release_autoboot(void)
 {
  struct h3c_boot_inputs in = { 1, 0, 1, H3C_RESET_UNKNOWN };
-#if defined(CONFIG_H3C_RAM_RESCUE) || defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_RAM_RESCUE
  in.forced_web = 1;
 #endif
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT

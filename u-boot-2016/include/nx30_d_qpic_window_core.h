@@ -31,7 +31,7 @@ static inline int nx30_d_qpic_extent_allowed(nx30_d_core_u64 offset,
         (offset==0x00100000ULL && size==0x00040000ULL) ||
         (offset==0x00140000ULL && size==0x00040000ULL) ||
         (offset==0x00640000ULL && size==0x00140000ULL)
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
         || (offset==0x00480000ULL && size==0x00080000ULL)
         || (offset==0x00780000ULL && size==0x00100000ULL)
         || (offset==0x00400000ULL && size==0x00040000ULL)

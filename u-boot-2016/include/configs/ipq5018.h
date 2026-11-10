@@ -45,7 +45,7 @@
 #define CONFIG_ENV_SIZE_MAX			(256 << 10) /* 256 KB */
 
 /* Software-only shared port; HW-A remains a distinct target identity. */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #define CONFIG_H3C_IPQ5018_DUALSLOT_PORT
 #endif
 
@@ -58,11 +58,9 @@
 /*
  * Flash read/write commands
  */
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 #define CONFIG_CMD_FLASHREAD
 #define CONFIG_CMD_FLASHWRITE
 #define CONFIG_CMD_FLASHRW
-#endif
 
 /*
  * Enable Env overwrite support
@@ -153,7 +151,7 @@ extern loff_t board_env_size;
 #define CONFIG_ENV_OFFSET			board_env_offset
 #define CONFIG_ENV_SIZE				CONFIG_ENV_SIZE_MAX
 #define CONFIG_ENV_RANGE			board_env_range
-#if defined(CONFIG_H3C_HW_D_STORAGE_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #define CONFIG_SYS_MALLOC_LEN			(8 << 20)
 #else
 #define CONFIG_SYS_MALLOC_LEN			(CONFIG_ENV_SIZE_MAX + (500 << 10))
@@ -276,10 +274,7 @@ extern loff_t board_env_size;
  * apply when the saved environment is absent. Boards outside this list keep
  * the upstream QCA defaults below.
  */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || \
-    defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || \
-    defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || \
-    defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #define CONFIG_IPADDR				192.168.10.1
 #define CONFIG_SERVERIP				192.168.10.2
 #else
@@ -363,7 +358,7 @@ extern loff_t board_env_size;
 #define CONFIG_SYS_MEMTEST_END			CONFIG_SYS_MEMTEST_START + 0x100
 
 /* NSS firmware loaded using bootm */
-#ifdef CONFIG_H3C_HW_A_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A
 #define CONFIG_BOOTCOMMAND			"httpd"
 #else
 #define CONFIG_BOOTCOMMAND			"bootipq"
@@ -452,7 +447,7 @@ extern loff_t board_env_size;
  * generic UBI command available, but leave all QCA volume-write support off;
  * the B QPIC driver also rejects NAND program/erase operations.
  */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 #define CONFIG_LZO
@@ -508,18 +503,14 @@ extern loff_t board_env_size;
  */
 #define CONFIG_IPQ_XTRACT_N_FLASH
 #define CONFIG_IPQ_MIBIB_RELOAD
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 #define CONFIG_CMD_BOOTCONFIG
 #define CONFIG_CMD_BOOTFLASH
-#endif
 #define CONFIG_CMD_IMI
-#if !defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
 #define CONFIG_HTTPD
 #define CONFIG_TCP
 #define CONFIG_LIB_RAND
-#ifndef CONFIG_H3C_HW_D_RAM_WEB
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #define CONFIG_HTTPD_DEBUG
-#endif
 #endif
 #define CONFIG_INCLUDE_EXTRA_DTB
 #define CONFIG_CALL_FUNC_CAPTURE
@@ -544,9 +535,7 @@ extern loff_t board_env_size;
 /*
  * DHCP Server support
  */
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 #define CONFIG_DHCPD
-#endif
 
 #ifdef CONFIG_DHCPD
 #define CONFIG_CMD_DISABLE_BOOTP
@@ -557,15 +546,11 @@ extern loff_t board_env_size;
 /*
  * Telnet Server support
  */
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 #define CONFIG_TELNETD
-#endif
 
 /*
  * wget support
  */
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 #define CONFIG_WGET
-#endif
 
 #endif /* _IPQ5018_H */

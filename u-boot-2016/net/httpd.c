@@ -136,7 +136,7 @@ static void *httpd_get_upload_buffer_ptr(size_t size)
 	return (void *)load_addr;
 }
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 static void *httpd_get_firmware_upload_buffer_ptr(size_t size)
 {
 	/* Keep firmware staging above the fixed 0x42000000 slots hash scratch. */
@@ -152,7 +152,7 @@ static void *httpd_get_firmware_upload_buffer_ptr(size_t size)
 
 static void *httpd_get_upload_buffer_for_uri(const char *uri, size_t size)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	if (uri && !strcmp(uri, "/firmware/validate"))
 		return httpd_get_firmware_upload_buffer_ptr(size);
 #endif
@@ -583,7 +583,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			cl_ptr += sizeof(content_length_str) - 1;
 			while (*cl_ptr == ' ')
 				cl_ptr++;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 			char *length_end;
 			unsigned long parsed_length = simple_strtoul(cl_ptr, &length_end, 10);
 			if (length_end == cl_ptr ||
@@ -641,7 +641,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			pdata->upload_size = pdata->bufsize - hdr_size;
 			if (!strcmp(pdata->uri, "/upload") ||
 				!strcmp(pdata->uri, "/console/upload") ||
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 				!strcmp(pdata->uri, "/firmware/validate") ||
 #endif
 				0) {
@@ -901,24 +901,6 @@ static int httpd_handle_request(struct httpd_instance *inst,
 	// TODO: 这个函数的作用是什么？
 	// schedule();
 
-#if defined(CONFIG_H3C_HW_D_RAM_WEB) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-	if (req->method != HTTP_GET ||
-	    (strcmp(pdata->uri, "/") && strcmp(pdata->uri, "/index.html") &&
-	     strcmp(pdata->uri, "/main.js") && strcmp(pdata->uri, "/style.css") &&
-	     strcmp(pdata->uri, "/version") && strcmp(pdata->uri, "/sysinfo") &&
-	     strcmp(pdata->uri, "/boot/slots") && strcmp(pdata->uri, "/nand/probe"))) {
-		static const char message[] =
-			"NX30 HW-D RAM-only read-only preview: this route or HTTP method is disabled.\n";
-		parse_post_data_later = false;
-		req->urih = NULL;
-		pdata->response.status = HTTP_RESP_STD;
-		pdata->response.data = message;
-		pdata->response.size = sizeof(message) - 1;
-		pdata->response.info.code = 403;
-		pdata->response.info.content_type = "text/plain";
-		pdata->response.info.connection_close = 1;
-	} else
-#endif
 	{
 		req->urih = httpd_find_uri_handler(inst, pdata->uri);
 		if (!req->urih) {

@@ -48,15 +48,6 @@ extern upgrade_type_t upgrade_type;
 typedef void (*register_uri_handlers_func_t)(struct httpd_instance *inst);
 
 register_uri_handlers_func_t register_uri_handlers_funcs[] = {
-#if defined(CONFIG_H3C_HW_D_RAM_WEB) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-#ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
-	nor_nand_autoecc_register_uri_handlers,
-#endif
-	index_register_uri_handlers,
-	misc_register_uri_handlers,
-	sysinfo_register_uri_handlers,
-	slots_rt3000_b_register_uri_handlers,
-#else
 	index_register_uri_handlers,
 	html_register_uri_handlers,
 	backup_register_uri_handlers,
@@ -68,10 +59,10 @@ register_uri_handlers_func_t register_uri_handlers_funcs[] = {
 	misc_register_uri_handlers,
 	network_register_uri_handlers,
 	sysinfo_register_uri_handlers,
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	nor_nand_autoecc_register_uri_handlers,
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	buttons_rt3000_b_register_uri_handlers,
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A
@@ -85,13 +76,12 @@ register_uri_handlers_func_t register_uri_handlers_funcs[] = {
 	slots_rt3000_b_register_uri_handlers,
 	rt3_metadata_register_uri_handlers,
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	boot_default_rt3000_b_register_uri_handlers,
 #endif
 	syslog_register_uri_handlers,
 	upgrade_register_uri_handlers,
 	webterm_register_uri_handlers,
-#endif
 };
 
 bool httpd_is_running(void)
@@ -159,7 +149,7 @@ static int failsafe_eth_init(void)
 static int failsafe_loop(void)
 {
 	int ret;
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (!eth_get_dev_by_name("eth1") || setenv("ethprime", "eth1") ||
 	    setenv("ethact", "eth1") || setenv("ethrotate", "no")) {
 		puts("NX30 D: verified LAN unavailable; stay at recovery CLI\n");

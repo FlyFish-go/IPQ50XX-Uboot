@@ -17,7 +17,7 @@
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
 #include <h3c_nand_ecc.h>
 #endif
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_d_service.h>
 #endif
 /* The /upload parser places a single form value within the first 64 KiB. */
@@ -289,7 +289,7 @@ static int write_extent(const struct md_extent*e,const u8*d,u32 n,u32 fingerprin
  for(off=0;off<e->size;off+=RT3_MD_PAGE_SIZE){page_from(d,n,off,page);r=read_page(m,e->off+off,check);if(r||memcmp(page,check,RT3_MD_PAGE_SIZE)){r=r?r:-EIO;goto out;}}
  r=0;
  out:if(opened){rt3_fw_write_window_close();
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  if(rt3_fw_write_window_close_status())r=-EIO;
 #endif
  }free(check);free(page);return r;
@@ -332,7 +332,7 @@ static int mibib_write(const struct md_extent*e,const u8*d,u32 n,u32 fingerprint
  }
  r=0;
  out:if(opened){rt3_fw_write_window_close();
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  if(rt3_fw_write_window_close_status())r=-EIO;
 #endif
  }free(copy);free(check);free(page);return r;

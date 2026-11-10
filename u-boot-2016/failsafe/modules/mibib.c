@@ -28,13 +28,13 @@
 #include <failsafe/failsafe.h>
 #include <failsafe/fw_dec.h>
 #include <ipq_api.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #include <rt3000_b_layout.h>
 #endif
 
 #include "modules.h"
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #define H3C_MIBIB_NAND_BYTES 0x80000U
 #define H3C_SMEM_TABLE_BYTES (16U + 32U * (16U + 3U * sizeof(u32)))
 
@@ -205,7 +205,7 @@ static void mibib_reload_handler(enum httpd_uri_handler_status status,
     mibib = &request->form.values[0];
 
     if (!is_9008_mode()) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
         ret = h3c_reload_mibib_ram_only(mibib->data, mibib->size);
         if (ret) {
             handle_fail_led_state();

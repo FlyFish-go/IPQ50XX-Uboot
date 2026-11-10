@@ -21,9 +21,5 @@
 #define H3C_BOARD_LABEL "IPQ5018"
 #define H3C_BOARD_FAMILY "IPQ5018"
 #endif
-#if defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-#define H3C_BOARD_RAM_READONLY 1
-#else
 #define H3C_BOARD_RAM_READONLY 0
-#endif
 #endif

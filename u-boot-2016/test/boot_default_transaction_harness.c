@@ -10,7 +10,7 @@ void *malloc(size_t); void free(void *); int posix_memalign(void **,size_t,size_
 #undef main
 
 static unsigned char flash[0x200000];
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 static int mock_retained_failure;
 #endif
 static int erase_count, write_count, read_count, bad_count, open_count, close_count;
@@ -39,7 +39,7 @@ static const char *host_getenv(const char *name) { return !strcmp(name,"bootcmd"
 #undef getenv
 #include "boot_default_rt3000_b_core.c"
 
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 int nx30_d_default_failure_get(struct nx30_d_result *r,u32 *copy)
 { memset(r,0,sizeof(*r));*copy=1;r->status=-EIO;r->stage=5;return mock_retained_failure?0:-ENOENT; }
 int nx30_d_default_original_get(unsigned int copy,const void **bytes,size_t *length)
@@ -244,7 +244,7 @@ static int b_main(void)
  CHECK(!test_success(1,"rootfs",1,"rootfs"));
  CHECK(!test_noop_and_forms());CHECK(!test_invalid_images());CHECK(!test_preflight());CHECK(!test_failures());
  defaults_setup(0,0);boot_default_rt3000_b_register_uri_handlers(&inst);
- #ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+ #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  CHECK(registered_count==6);
  CHECK(!strcmp(registered[3],"/boot/default/retained-failure"));
  CHECK(!strcmp(registered[4],"/boot/default/retained-original0.bin"));
@@ -259,7 +259,7 @@ static int b_main(void)
  puts("BOOTCONFIG production transaction host tests PASS");return 0;
 }
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 int main(void)
 {
  struct httpd_response r={0};
@@ -277,7 +277,7 @@ int main(void)
  CHECK(call_post("rootfs_1",&r)==409 && strstr(r.data,"custom_bootcmd") && erase_count==0);
  puts("C production BOOTCONFIG GET metadata host test PASS"); return 0;
 }
-#elif defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 int main(void)
 {
  struct httpd_response r={0};

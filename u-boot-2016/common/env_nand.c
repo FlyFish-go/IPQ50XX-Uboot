@@ -23,7 +23,7 @@
 #include <nand.h>
 #include <search.h>
 #include <errno.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <asm/arch-qca-common/smem.h>
 #include <rt3000_b_fw_write.h>
 #include <rt3000_b_env.h>
@@ -134,7 +134,7 @@ int nand_env_init(void)
  * The legacy NAND code saved the environment in the first NAND device i.e.,
  * nand_dev_desc + 0. This is also the behaviour using the new NAND code.
  */
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifndef CONFIG_H3C_IPQ5018_COMMON
 static int writeenv(size_t offset, u_char *buf)
 {
 	size_t end = offset + board_env_size;
@@ -170,7 +170,7 @@ struct env_location {
 	nand_erase_options_t erase_opts;
 };
 
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#ifndef CONFIG_H3C_IPQ5018_COMMON
 static int erase_and_write_env(const struct env_location *location,
 		u_char *env_new)
 {
@@ -192,7 +192,7 @@ static int erase_and_write_env(const struct env_location *location,
 static unsigned char env_flags;
 #endif
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 /* Resolve and preflight the exact single APPSBLENV partition before any write. */
 static int rt3_env_target(nand_info_t **nand_out, loff_t *offset_out,
 			  size_t *size_out)
@@ -368,7 +368,7 @@ static int rt3_nand_saveenv(void)
 out:
 	if (window_open) {
 		rt3_fw_write_window_close();
-#ifdef CONFIG_H3C_HW_D_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 		if (rt3_fw_write_window_close_status()) ret = -EIO;
 #endif
 	}
@@ -382,7 +382,7 @@ out:
 
 int nand_saveenv(void)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	return rt3_nand_saveenv();
 #else
 	int	ret = 0;

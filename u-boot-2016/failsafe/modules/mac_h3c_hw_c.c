@@ -13,7 +13,7 @@
 typedef unsigned char uchar;
 #endif
 
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 #define H3C_HW_C_MAC_WRITABLE "true"
 #define H3C_HW_C_MAC_PERSISTENT "true"
 #define H3C_HW_C_MAC_READ_ONLY "false"
@@ -94,7 +94,7 @@ static void h3c_hw_c_mac_info_handler(enum httpd_uri_handler_status status,
 	response->size = strlen(response->data);
 }
 
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 static int mac_nibble(unsigned char c)
 {
  if(c>='0'&&c<='9')return c-'0';
@@ -132,7 +132,7 @@ void mac_register_uri_handlers(struct httpd_instance *inst)
 {
 	httpd_register_uri_handler(inst, "/mac/info",
 				   h3c_hw_c_mac_info_handler, NULL);
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 	httpd_register_uri_handler(inst, "/mac/set", mac_set_handler, NULL);
 #endif
 }

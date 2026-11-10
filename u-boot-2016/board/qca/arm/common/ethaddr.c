@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 #define RT3_MAC_BOARD_LABEL "H3C HW-C"
 #else
 #define RT3_MAC_BOARD_LABEL "RT3000-B"
@@ -86,7 +86,7 @@ int get_eth_mac_address(uchar *enetaddr, uint no_of_macs)
 			return -EINVAL;
 	}
 	return 0;
-#elif defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	static const uchar temporary_ethaddr[6] = { 0x02, 0x4e, 0x58, 0x30, 0x00, 0x01 };
 	static const uchar temporary_eth1addr[6] = { 0x02, 0x4e, 0x58, 0x30, 0x00, 0x02 };
 	static const uchar generic_ethaddr[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };

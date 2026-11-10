@@ -46,11 +46,7 @@ static char slots_json[4096];
 static char escaped_part[SLOT_N][128];
 static char escaped_label[SLOT_N][128];
 static char escaped_version[SLOT_N][256];
-#if defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-#define SLOT_ACCESS_JSON "\"read_only\":true,\"boot_supported\":false,"
-#else
 #define SLOT_ACCESS_JSON "\"read_only\":false,\"boot_supported\":true,"
-#endif
 static int slots_ready;
 static struct rt3_layout scanned_layout;
 static char *env_snapshot;
@@ -111,7 +107,7 @@ static int classify_oem(const char *hash, struct slot_info *s,
  strlcpy(s->detection, "known_rootfs_sha256", sizeof(s->detection));
  return 1;
 }
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include "slots_nx30_d_oem.h"
 #endif
 static void classify(const char *hash, struct slot_info *s)
@@ -121,7 +117,7 @@ static void classify(const char *hash, struct slot_info *s)
  strlcpy(s->version, "unknown", sizeof(s->version));
  strlcpy(s->label, "Unknown system", sizeof(s->label));
  strlcpy(s->detection, "unknown_rootfs_sha256", sizeof(s->detection));
- #ifdef CONFIG_H3C_HW_D_RAM_WEB
+ #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
  if (classify_oem(hash, s, known_nx30_d_oem, ARRAY_SIZE(known_nx30_d_oem), known_qsdk)) return;
  #endif
  if (classify_oem(hash, s, known_oem, ARRAY_SIZE(known_oem), known_qsdk))

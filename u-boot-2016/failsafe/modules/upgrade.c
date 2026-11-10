@@ -18,7 +18,7 @@
 #include <net/httpd.h>
 #include <failsafe/failsafe.h>
 #include <ipq_api.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_metadata.h>
 #endif
 
@@ -58,7 +58,7 @@ static u32 fs_upload_id;
 static u32 upload_data_id;
 static size_t upload_size;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 static int metadata_kind_for_upgrade(upgrade_type_t type, enum rt3_md_kind *kind)
 {
 	if (!kind) return -EINVAL;
@@ -116,7 +116,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 	struct httpd_form_value *form_value;
 	struct upload_session *sess;
 	enum rt3_md_target metadata_target = RT3_MD_TARGET_DEFAULT;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	int has_cdt_target;
 #endif
 	int idx;
@@ -129,7 +129,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 		}
 
 		handle_start_led_state();
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		rt3_metadata_invalidate();
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
@@ -173,7 +173,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 			}
 		}
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		if (metadata_upload_target(request, upgrade_type, &metadata_target,
 					   &has_cdt_target) ||
 		    request->form.count != (u32)(1 + has_cdt_target)) {
@@ -286,7 +286,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 		}
 
 		if (upload_data_id == fs_upload_id) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 			enum rt3_md_kind kind;
 			if (metadata_kind_for_upgrade(upgrade_type,&kind)) {
 				char token[65];
@@ -357,7 +357,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 				upload_data_id, fs_upload_id);
 			response->data = st->buf;
 			st->ret = RET_UPLOAD_ID_MISMATCH;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 			rt3_metadata_invalidate();
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
@@ -365,7 +365,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 #endif
 		}
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		/* Headers were already streamed; preserve the custom body lifecycle
 		 * even when a metadata helper formats a standard error response. */
 		response->status = HTTP_RESP_CUSTOM;
@@ -414,7 +414,7 @@ void upgrade_register_uri_handlers(struct httpd_instance *inst)
 {
 	httpd_register_uri_handler(inst, "/upload", &upload_handler, NULL);
 	httpd_register_uri_handler(inst, "/result", &result_handler, NULL);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	/* Metadata commits are token-gated in the result handler. */
 	httpd_register_uri_handler(inst, "/write", &result_handler, NULL);
 #endif

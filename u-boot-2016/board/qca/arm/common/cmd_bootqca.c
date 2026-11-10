@@ -22,7 +22,7 @@
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
 #include <h3c_nand_ecc.h>
 #endif
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #include <nx30_d_bootargs.h>
 #include <nx30_nor_autoecc.h>
 #endif
@@ -31,7 +31,7 @@
 #include <part.h>
 #include <linux/mtd/ubi.h>
 #include <asm/arch-qca-common/smem.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_layout.h>
 #include <bootconfig.h>
 #include <rt3000_b_bootargs.h>
@@ -75,7 +75,7 @@ extern void set_minidump_bootargs(void);
 static qca_mmc *host = &mmc_host;
 #endif
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <h3c_board_profile.h>
 #define RT3_BOOT_BOARD_LABEL H3C_BOARD_LABEL
 /* Named selection is resolved against the validated complete SMEM table.
@@ -92,7 +92,7 @@ static int rt3000b_prepare_boot_slot(int argc, char *const argv[])
 	struct rt3_layout layout;
 	const struct rt3_partition *part;
 	const char *target;
-#if !defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) && !defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if !defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	const char *bootargs;
 #endif
 	int ret, selector;
@@ -134,7 +134,7 @@ static int rt3000b_prepare_boot_slot(int argc, char *const argv[])
 
 	sfi->rootfs.offset = part->offset;
 	sfi->rootfs.size = part->size;
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/* Final rootfs args are resolved from the selected FIT below. */
 #else
 	bootargs = !strcmp(part->name, "rootfs") ?
@@ -152,7 +152,7 @@ static int rt3000b_prepare_boot_slot(int argc, char *const argv[])
 }
 #endif /* CONFIG_TARGET_IPQ5018_H3C_RT3000_B */
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 static u64 h3c_hw_c_cells_u64(const fdt32_t *cells, int count)
 {
 	u64 value = 0;
@@ -163,11 +163,11 @@ static u64 h3c_hw_c_cells_u64(const fdt32_t *cells, int count)
 }
 
 /* Resolve the selected slot using the labels in the selected FIT FDT. */
-#ifdef CONFIG_H3C_HW_D_STORAGE_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 volatile int nx30_d_oem_fit_handoff_verified;
 #endif
 
-#if !defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 enum h3c_hw_c_fit_profile {
 	H3C_HW_C_PROFILE_INVALID = 0,
 	H3C_HW_C_PROFILE_NATIVE = 1,
@@ -205,18 +205,18 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 	char label[64], bootargs[192], alias[64];
 	int conf, image, part, parent, len, reg_len;
 	int matches = 0, root_labels = 0, extent_nodes = 0, ac, sc;
-#if !defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	int candidate_oem = 0;
 #endif
 	uint8_t comp;
 	int is_native, is_oem;
-#if !defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	enum h3c_hw_c_fit_profile profile = H3C_HW_C_PROFILE_INVALID;
 #endif
 	if (!verified_oem)
 		return CMD_RET_FAILURE;
 	*verified_oem = 0;
-#ifdef CONFIG_H3C_HW_D_STORAGE_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	nx30_d_oem_fit_handoff_verified = 0;
 #endif
 
@@ -237,7 +237,7 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 	prop = fdt_getprop(fdt, 0, "compatible", &len);
 	if (!prop)
 		return CMD_RET_FAILURE;
-	#ifdef CONFIG_H3C_HW_D_RAM_WEB
+	#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	is_native = 0; /* This bounded D candidate accepts only checked OEM FITs. */
 	is_oem = fdt_stringlist_contains(prop, len, "qcom,ipq5018-mp02.1") == 1;
 #define H3C_FIT_OEM_CONFIG "config@mp02.1"
@@ -300,7 +300,7 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 		       RT3_BOOT_BOARD_LABEL, name);
 		return 0;
 	}
-#ifndef CONFIG_H3C_HW_D_RAM_WEB
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (h3c_hw_c_classify_fit_profile(root_labels || extent_nodes,
 			is_native, is_oem, name, &profile))
 		return CMD_RET_FAILURE;
@@ -314,7 +314,7 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 			sfi->rootfs.size == 0x05000000 &&
 			!rt3_layout_read(&native_layout) &&
 			native_layout.mode == RT3_LAYOUT_SINGLE;
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 		if (!is_native || root_labels != 2 || extent_nodes != 2 ||
 		    matches != (single ? 0 : 1))
 #else
@@ -344,7 +344,7 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 		struct rt3_layout layout;
 		const struct rt3_partition *entry = NULL;
 		int i;
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 		if (!is_oem || strcmp(name, H3C_FIT_OEM_CONFIG) ||
 		    rt3_layout_read(&layout))
 #else
@@ -368,14 +368,14 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 		len = snprintf(bootargs, sizeof(bootargs),
 			       "ubi.mtd=%s root=mtd:ubi_rootfs rootfstype=squashfs",
 			       label);
-#ifndef CONFIG_H3C_HW_D_RAM_WEB
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 		candidate_oem = 1;
 #endif
 	}
 	if (len < 0 || len >= (int)sizeof(bootargs) ||
 	    setenv("fsbootargs", bootargs))
 		return CMD_RET_FAILURE;
-#if !defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	*verified_oem = candidate_oem;
 #endif
 	printf("%s: FIT %s maps 0x%llx+0x%llx to %s bootargs (%s)\n",
@@ -383,7 +383,7 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 	       name, (unsigned long long)sfi->rootfs.offset,
 	       (unsigned long long)sfi->rootfs.size,
 	       is_native ? "native" : "OEM", bootargs);
-#ifdef CONFIG_H3C_HW_D_STORAGE_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	if (is_oem)
 		nx30_d_oem_fit_handoff_verified = 1;
 #endif
@@ -445,7 +445,7 @@ void __stack_chk_fail(void)
 	bad_mode ();
 }
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 static int h3c_hw_c_root_token(const char *token, size_t len)
 {
 	static const char *prefixes[] = {
@@ -500,7 +500,7 @@ static int h3c_hw_c_append_filtered(char *dst, size_t capacity,
 }
 #endif
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 static int h3c_hw_c_append_oem_cnss_skip4(char *buf, size_t capacity,
 					 size_t *used, int verified_oem)
 {
@@ -776,7 +776,7 @@ static int update_bootargs(void *addr, int config_noffset, int verified_oem)
 	}
 #endif
 	fit_bootargs = (char *)fdt_getprop(addr, 0, FIT_BOOTARGS_PROP, &len);
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	{
 		size_t used = 0;
 		char *rootargs = getenv("fsbootargs");
@@ -832,7 +832,7 @@ static int update_bootargs(void *addr, int config_noffset, int verified_oem)
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
  if (ret == CMD_RET_SUCCESS)
   ret = h3c_normalize_nand_bootargs(cmd_line);
-#elif defined(CONFIG_H3C_HW_D_RAM_WEB)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
  if (ret == CMD_RET_SUCCESS) {
   char *normalized = malloc(CONFIG_SYS_CBSIZE);
   unsigned int mode = nx30_nor_nand_autoecc_mode();
@@ -997,7 +997,7 @@ int config_select(unsigned int addr, char *rcmd, int rcmd_size)
 		strlcpy(dtb_config_name, config, sizeof(dtb_config_name));
 		config_noffset = fit_conf_get_node((void *)addr, dtb_config_name);
 		if (config_noffset >= 0) {
-			#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+			#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 			if (h3c_hw_c_set_fit_rootfs_bootargs((void *)addr, dtb_config_name,
 						      &verified_oem))
 				goto fail;
@@ -1044,7 +1044,7 @@ int config_select(unsigned int addr, char *rcmd, int rcmd_size)
 #endif
 			config_noffset = fit_conf_get_node((void *)addr, dtb_config_name);
 			if (config_noffset >= 0) {
-				#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+				#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 			if (h3c_hw_c_set_fit_rootfs_bootargs((void *)addr, dtb_config_name,
 						      &verified_oem))
 				goto fail;
@@ -1692,14 +1692,14 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 #ifndef CONFIG_DISABLE_SIGNED_BOOT
 	char buf = 0;
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
  if (!h3c_nand_ecc_ready()) {
   puts("H3C NAND: format unknown or conflicting; refuse kernel boot\n");
   ret = CMD_RET_FAILURE;
   goto boot_done;
  }
-#elif defined(CONFIG_H3C_HW_D_RAM_AUTOECC)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
  if (!nx30_nor_nand_autoecc_mode()) {
   puts("NX30 D: unknown or mixed sampled ECC; refuse kernel boot\n");
   ret = CMD_RET_FAILURE;
@@ -1743,7 +1743,7 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		ret = do_boot_unsignedimg(cmdtp, flag, argc, argv);
 	}
 
-#if defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) || defined(CONFIG_H3C_IPQ5018_COMMON)
 boot_done:
 #endif
 #ifdef CONFIG_H3C_RELEASE_SYSTEM_DEFAULT
@@ -1771,7 +1771,7 @@ boot_done:
 	return ret;
 }
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 U_BOOT_CMD(bootipq, 2, 0, do_bootipq,
 	   "bootipq from flash device",
 	   "bootipq [rootfs|rootfs_1] - Default BOOTCONFIG slot or named partition\n"

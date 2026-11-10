@@ -70,7 +70,7 @@ void ipq_gpio_init(void)
 #endif
 }
 
-#ifndef CONFIG_H3C_HW_D_RAM_WEB
+#ifndef CONFIG_TARGET_IPQ5018_H3C_HW_D
 // =============================================================================
 // httpd 触发检测（按键、环境变量、9008 模式）
 // =============================================================================
@@ -103,7 +103,7 @@ static bool is_any_button_pressed(button_info_t *button_info)
 		return false;
 
 	fdt_for_each_subnode(gd->fdt_blob, node, parent) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 		/* HW-B and C production recovery are RESET-only; WPS/MESH remains a normal key. */
 		const char *name = fdt_get_name(gd->fdt_blob, node, NULL);
 		if (!name || strcmp(name, "reset"))
@@ -228,7 +228,7 @@ static bool failsafe_env_exists(void)
 	if (strcmp(failsafe_start_mode, "always")) {
 		/* 非 always 模式，删除 failsafe 环境变量，防止重启后再次启动 httpd */
 		setenv("failsafe", NULL);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		puts("Failsafe setting cleared in RAM only; environment save is disabled\n");
 #else
 		saveenv();
@@ -284,17 +284,17 @@ static bool check_9008_mode_and_failsafe_env(void)
 	return true;
 }
 
-#endif /* !CONFIG_H3C_HW_D_RAM_WEB */
+#endif /* !CONFIG_TARGET_IPQ5018_H3C_HW_D */
 
 void do_httpd_check(void)
 {
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	/* D web preview is entered explicitly after selecting eth1 in autoboot. */
 	return;
 #else
 	if (check_9008_mode_and_failsafe_env() ||
 		is_any_button_pressed_for_enough_time()) {
-#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
 		/* RESET recovery runs before C's autoboot selects the LAN link. */
 		if (setenv("ethact", "eth1")) {
 			puts("HW-C: unable to select LAN for web recovery\n");
@@ -317,7 +317,7 @@ void do_httpd_check(void)
  */
 void do_network_check(void)
 {
-#ifdef CONFIG_H3C_HW_D_RAM_WEB
+#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 	/* Pin initial selection and NetLoop retries to the verified D LAN. */
 	setenv("ethprime", "eth1");
 	setenv("ethact", "eth1");
@@ -331,7 +331,7 @@ void do_network_check(void)
 	setenv("bootdelay", "3");
 	/* Default rescue page to the three verified QCA8337 LAN ports. */
 	setenv("ethact", "eth1");
-#elif (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
 	/*
 	 * Normalize only the two observed legacy C defaults in RAM. The long
 	 * c-native command is the exact C bring-up bootcmd observed on 2026-10-10;
@@ -347,7 +347,7 @@ void do_network_check(void)
 			setenv("bootdelay", "3");
 	}
 #endif
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	/*
 	 * H3C recovery LAN is fixed at 192.168.10.1/24 on every board. A preserved
 	 * OEM environment carries ipaddr=192.168.10.10, and a stray custom_network
@@ -416,7 +416,7 @@ void do_network_check(void)
 		printf("    ipaddr: %s\n", default_ipaddr);
 		printf("    netmask: %s\n", default_netmask);
 		printf("    serverip: %s\n", default_serverip);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		puts("Network defaults updated in RAM only; environment save is disabled\n");
 #else
 		saveenv();
