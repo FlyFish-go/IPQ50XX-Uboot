@@ -1,0 +1,121 @@
+/*
+ * TCL T30 Pro (China Mobile custom), IPQ5018, 256 MiB, 128 MiB SPI NAND.
+ * Stock CDT board ID is 0x8040000 (AP-MP02.1); the stock kernel boots
+ * FIT config@mp02.1 and the stock layout is dual-system via BOOTCONFIG.
+ *
+ * Taken from the stock U-Boot (its embedded MP02.1 DTB) and the stock
+ * kernel DTB: Ethernet is the MP02.1 reference (QCA8337, 4 ports,
+ * switch reset GPIO39); console UART on GPIO20/21 function 1;
+ * RESET GPIO25, WPS GPIO31 (active low); LEDs green GPIO22, red GPIO23.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ */
+#include "ipq5018-mp02.1.dts"
+
+/ {
+	host_name = "TCL T30 Pro";
+	model = "TCL T30 Pro";
+	compatible = "qca,ipq5018", "qca,ipq5018-mp02.1";
+	machid = <0x8040000>;
+	config_name = "config@mp02.1";
+
+	aliases {
+		gmac_gpio = "/gmac_gpio";
+	};
+
+	/* Stock MP02.1 Ethernet: internal GE PHY on GMAC1, QCA8337 (4 ports,
+	 * reset GPIO39) on GMAC2. This tree's mp02.1 file describes a
+	 * QCA8033 PHY on GMAC2 instead, so restore the stock values. */
+	gmac_cfg {
+		gephy_led = <10>;
+
+		gmac2_cfg {
+			/delete-property/ phy_address;
+			/delete-property/ 8033_gpio;
+			mac_pwr = <0xaa545>;
+			s17c_switch_enable = <1>;
+			switch_port_count = <4>;
+			switch_phy_address = <0 1 2 3>;
+			switch_gpio = <39>;
+		};
+	};
+
+	/* The stock MP02.1 DTB configures only the two QUP SPI BAM pipes. */
+	spi {
+		/delete-property/ wr_pipe_1;
+		/delete-property/ rd_pipe_1;
+		/delete-property/ wr_pipe_2;
+		/delete-property/ rd_pipe_2;
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			gpio = <25>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+
+		wps {
+			gpio = <31>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_red {
+			label = "power_led";
+			gpio = <23>;
+			func = <0>;
+			out = <GPIO_OUT_HIGH>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_green {
+			label = "blink_led", "system_led";
+			gpio = <22>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&console {
+	serial_gpio {
+		/delete-node/ blsp0_mux_uart_rx;
+		/delete-node/ blsp0_mux_uart_tx;
+
+		blsp0_uart_rx {
+			gpio = <20>;
+			func = <1>;
+			pull = <GPIO_PULL_DOWN>;
+			drvstr = <GPIO_8MA>;
+			od_en = <GPIO_OD_DISABLE>;
+		};
+
+		blsp0_uart_tx {
+			gpio = <21>;
+			func = <1>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			od_en = <GPIO_OD_DISABLE>;
+		};
+	};
+};

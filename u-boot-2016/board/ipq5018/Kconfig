@@ -1,0 +1,390 @@
+if ARCH_IPQ5018
+
+config SYS_CPU
+       default "ipq5018"
+
+config SYS_BOARD
+       default "ipq5018"
+
+config SYS_VENDOR
+       default "qca/arm"
+
+config SYS_CONFIG_NAME
+       default "ipq5018"
+
+config IPQ_I2C
+	bool "Enable i2c support on IPQ platform"
+
+config USB_XHCI_IPQ
+	bool "Enable usb support for ipq5018"
+
+config PCI_IPQ
+	bool "Enable pci support for ipq5018"
+
+config MMC_FLASH
+	bool "Enable MMC flash support for ipq5018"
+
+config IPQ_TZT
+	bool "Enable TZ test command for ipq5018"
+
+config UBI_WRITE
+	bool "Enable ubi volume write command for ipq5018"
+
+config QPIC_SERIAL
+	bool "Enable QPIC serial spi nand  for ipq5018"
+
+config IPQ_TINY
+	bool "Enable Tiny support for ipq5018"
+
+config IPQ_MTD_NOR
+	bool "Register nor in MTD framework for ipq5018"
+
+config IPQ_TINY_SPI_NOR
+	bool "This config helps to update spi-nor related updated in ipq5018"
+
+config NAND_FLASH
+	bool "Enable NAND driver for ipq5018"
+
+config GEPHY
+	bool "Enable Internel GEPHY for ipq5018"
+
+config ART_COMPRESSED
+	bool "Enable uncompress support for ipq5018"
+
+config BOARD_TYPES
+	bool "Support board_type member in global data"
+	default y
+
+config LIST_OF_CONFIG_NAMES_SUPPORT
+	bool "List of config names support"
+
+config LIST_FUSE
+	bool "Enable fuse list command"
+	default n
+
+config TARGET_IPQ5018_CMCC_MR3000D_CI
+    bool "CMCC MR3000D-CI board support"
+	default n
+    help
+	  Enable support for CMCC MR3000D-CI board
+
+choice
+    prompt "H3C hardware identity"
+    optional
+
+config TARGET_IPQ5018_H3C_RT3000_B
+    bool "H3C RT3000-B board support"
+    select H3C_DEFAULT_WEB
+    help
+      Dedicated IPQ5000/GD5F1GQ5REYIG/QCA8337 target.
+      Uses the shared dual-slot recovery core with checked named write windows.
+
+config TARGET_IPQ5018_H3C_HW_A
+    bool "H3C HW-A board support"
+    help
+      IPQ5018 / external DDR, RC-A2-512 board.
+
+config TARGET_IPQ5018_H3C_HW_C
+    bool "H3C HW-C board support"
+    help
+      IPQ5018 / external DDR / RTL8367S board (RT3000 v3 class).
+
+config TARGET_IPQ5018_H3C_HW_D
+    bool "H3C HW-D / NX30 board support"
+    select H3C_DEFAULT_WEB
+    help
+      NX30: IPQ5000 / integrated DDR. Boot-chain NAND accesses run in the
+      load ECC through checked write windows.
+
+endchoice
+
+config H3C_HW_C_OEM_CNSS_SKIP4
+    bool "Default the OEM HW-C CNSS skip mask to skip radio 0x42"
+    depends on TARGET_IPQ5018_H3C_HW_C
+    default n
+    help
+      For a verified OEM MP03.1-C2 FIT with the OEM partition layout, append
+      cnss2.skip_radio_bmap=4 only when no explicit skip mask is supplied.
+      Native FITs and other board profiles are not affected.
+
+config TARGET_IPQ5018_CMCC_PZ_L8
+    bool "CMCC PZ-L8 board support"
+	default n
+    help
+	  Enable support for CMCC PZ-L8 board
+
+config TARGET_IPQ5018_CMCC_RAX3000Q
+    bool "CMCC RAX3000Q(Y) board support"
+	default n
+    help
+	  Enable support for CMCC RAX3000Q(Y) board
+
+config TARGET_IPQ5018_CUCC_VS010
+    bool "CUCC VS010 board support"
+	default n
+    help
+	  Enable support for CUCC VS010 board
+
+config TARGET_IPQ5018_JDCLOUD_AX3000
+    bool "JDCloud AX3000 board support"
+	default n
+    help
+	  Enable support for JDCloud AX3000 board
+
+config TARGET_IPQ5018_LINGYAN_LYW_30M
+    bool "Lingyan LYW-30M / CUCC VS010 / VS010 MAX board support"
+	default n
+    help
+	  Enable support for the AX3000_Q06 board sold as Lingyan LYW-30M
+	  (CMCC), CUCC VS010 and CUCC VS010 MAX, with the stock CDT
+	  (AP-MP03.3, machid 0x8040002) and the stock dual-system layout.
+
+config TARGET_IPQ5018_TCL_T30_PRO
+    bool "TCL T30 Pro (China Mobile) board support"
+	default n
+    help
+	  Enable support for the TCL T30 Pro China Mobile custom router
+	  with the stock CDT (AP-MP02.1, board ID 0x8040000) and the stock
+	  dual-system layout.
+config H3C_RELEASE_SYSTEM_DEFAULT
+    bool "H3C release: selected system by default, RESET recovery"
+    depends on H3C_IPQ5018_COMMON
+    default n
+    help
+      Explicit release-only power-on policy. Ignore imported bootcmd and boot
+      the audited BOOTCONFIG-selected system through bootipq. RESET or an
+      unconfirmed format enters eth1 recovery at 192.168.10.1 without saving
+      ENV. This overrides the legacy default-web flag, not RAM/NOR rescue.
+      It neither qualifies APPSBL installation nor enables NAND writes.
+
+config H3C_DEFAULT_WEB
+    bool "Enter the common recovery web UI at power-on"
+    depends on H3C_IPQ5018_COMMON
+    default n
+    help
+      Keep power-on at the common web UI while preserving the selected
+      default system for explicit boot. Does not save environment variables.
+
+config H3C_RAM_RESCUE
+    bool "RAM-run rescue image loaded by an installed U-Boot"
+    depends on H3C_RELEASE_SYSTEM_DEFAULT
+    default n
+    help
+      Link at 0x49A20000 so an installed U-Boot at 0x4A920000 can load this
+      ELF from its rescue page and start it with bootelf. Power-on always
+      enters the rescue page. Writes keep the normal checks; the build
+      identity is unchanged, so the matching flash build can be installed.
+
+config H3C_NAND_PROFILE_ID
+    string "Source-bound OEM NAND profile ID"
+    depends on H3C_IPQ5018_COMMON
+    default ""
+    help
+      Pin this image to one exact entry from h3c_nand_catalog.h. This is
+      required when a JEDEC prefix has multiple OEM source variants. Runtime
+      geometry and ECC checks still have to match; this setting does not grant
+      APPSBL write or installation qualification.
+
+config H3C_NAND_SOURCE_MASK
+    hex "Exact OEM source mask for the selected NAND profile"
+    depends on H3C_NAND_PROFILE_ID != ""
+    default 0x0
+    help
+      Must be one exact source bit admitted by the selected profile. Zero is
+      invalid for a pinned image. This binds ambiguous IDs to source evidence.
+
+config H3C_NAND_LOAD_ECC_BITS
+    int "Exact OEM NAND APPSBL load ECC mode"
+    depends on H3C_NAND_PROFILE_ID != ""
+    range 4 8
+    default 4
+    help
+      Declares the ECC4 or ECC8 format used to load the SBL/APPSBL source.
+      It must equal STORAGE_ECC_BITS for this repair path; no conversion is
+      performed. Runtime QPIC identity and geometry are still checked.
+
+config H3C_NAND_STORAGE_ECC_BITS
+    int "Exact OEM NAND system storage ECC mode"
+    depends on H3C_NAND_PROFILE_ID != ""
+    range 4 8
+    default 4
+    help
+      Declares the selected source profile's persisted APPSBL page format.
+      It must equal LOAD_ECC_BITS; QPIC starts in this format. Runtime NAND
+      metadata is still checked before Linux handoff or writes.
+
+config H3C_NAND_ECC_COMPAT
+    bool "Evidence-based NAND ECC compatibility"
+    depends on H3C_IPQ5018_COMMON
+    default y
+    help
+      Check complete ENV CRC before environment relocation, independently
+      sample system UBI metadata, and preserve the proven existing BCH mode.
+      Unknown or conflicting formats keep recovery available and reject
+      persistent windows and NAND Linux handoff. This does not certify an
+      APPSBL/front-stage format or enable NOR operations.
+
+config H3C_BOARD
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B || TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      Any H3C NX30-family board. Gates H3C-only build identity, FEM and
+      NAND catalog reporting so other IPQ5018 boards still compile.
+
+config H3C_IPQ5018_COMMON
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B || TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      Shared validated SMEM layout, dual-slot, metadata and recovery services.
+
+config H3C_RTL8367S_SGMII
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      RTL8367S switch on GMAC1 over SGMII/SGMII+.
+
+config H3C_GMAC_TX_FLUSH_BEFORE_OWN
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      Flush the TX buffer before handing the descriptor to the DMA engine.
+
+config H3C_GMAC_NETDIAG
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      GMAC register dump controlled by the hwc_netdiag environment variable.
+
+config H3C_ETH_ART_MAC_REQUIRED
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Fail GMAC init when the ART partition has no MAC addresses.
+
+config H3C_MDIO_C22_1502F
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C
+    help
+      Program MDIO CTRL0 with 0x1502f for clause-22 access.
+
+config H3C_RESCUE_INITRAMFS_STAGE
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Web rescue only stages a validated initramfs; the generic firmware writers are compiled out.
+
+config H3C_METADATA_IMPLICIT_TARGET
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Metadata uploads without a target use the single-target writer.
+
+config H3C_FLASHRW_NAMED_NAND
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      flash <partition> on NAND goes through the validated named-partition writer.
+
+config H3C_LED_STATUS_AT_GPIO_INIT
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Clear inherited LED colours and light the status LED right after GPIO init.
+
+config H3C_BOOTCONFIG_STAGE0_POLICY
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      BOOTCONFIG is read with backup fallback and never rewritten by the generic code.
+
+config H3C_BOOTCONFIG_WINDOW_READ
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Release boot reads BOOTCONFIG from fixed physical windows, without the repair path.
+
+config H3C_BOOTCONFIG_FIXED_EXTENTS
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      BOOTCONFIG copies live at fixed extents and have their own write window.
+
+config H3C_MIBIB_RAM_RELOAD
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      An uploaded MIBIB is validated and only reloaded into RAM.
+
+config H3C_SYSINFO_SPI_INFO
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Report the detected SPI flash on the rescue system page.
+
+config H3C_QPIC_EXACT_WRITE_WINDOW
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Every NAND write or erase must fall inside one exact, pre-opened physical window.
+
+config H3C_NOR_NAND_AUTOECC
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Detect the running NAND ECC mode at boot and hand it to Linux.
+
+config H3C_NAND_BOOT_ECC4
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      The shared 2 Gbit catalog row uses 4-bit ECC.
+
+config H3C_NAND_KEEP_BLOCK_PROTECT
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Leave the SPI-NAND block protection bits as found.
+
+config H3C_NAND_NO_BAD_BLOCK_MARK
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      A failed erase is reported but never marks the block bad.
+
+config H3C_NAND_HYBRID_ECC
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Boot chain and data area may use different ECC strengths.
+
+config H3C_UBI_ATTACH_READONLY
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Diagnostic and boot UBI attaches must not schedule writes.
+
+config H3C_FDT_NOR_GUARD
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Drop the SPI-NOR node handed to Linux when the unit has none.
+
+config H3C_OEM_FIT_HANDOFF
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Boot only a checked OEM FIT, and record that for the FDT fixups.
+
+config H3C_FIT_ROOTFS_BOOTARGS
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      Derive the rootfs bootargs from the FIT being booted.
+
+config H3C_BOOTCONFIG_RETAINED_FAILURE
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Keep and export the pinned preimages of a failed BOOTCONFIG transaction.
+
+endif

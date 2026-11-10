@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-2.0
+
+obj-y += backup.o
+obj-y += env.o
+ifeq ($(CONFIG_H3C_IPQ5018_COMMON),y)
+obj-y += firmware_rt3000_b.o firmware_rt3000_b_core.o firmware_fit_ubi.o firmware_platform.o
+obj-y += metadata_rt3000_b.o rt3000_b_metadata_core.o
+obj-y += h3c_build_id.o h3c_fem.o rt3000_mibib.o
+endif
+obj-y += helpers.o
+obj-y += mibib.o
+obj-y += misc.o
+obj-y += network.o
+obj-y += sysinfo.o
+obj-y += syslog.o
+ifneq ($(filter y,$(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) $(CONFIG_TARGET_IPQ5018_H3C_HW_D)),)
+obj-y += buttons_rt3000_b.o
+endif
+obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_A) += buttons_h3c_hw_a.o
+obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_C) += buttons_h3c_hw_c.o
+obj-$(CONFIG_H3C_IPQ5018_COMMON) += slots_rt3000_b.o
+obj-$(CONFIG_H3C_NAND_ECC_COMPAT) += nor_nand_autoecc.o nor_nand_autoecc_core.o
+obj-$(CONFIG_H3C_IPQ5018_COMMON) += boot_default_rt3000_b.o boot_default_rt3000_b_core.o
+obj-y += upgrade.o
+obj-y += webterm.o
+ifneq ($(filter y,$(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) $(CONFIG_TARGET_IPQ5018_H3C_HW_D)),)
+obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac_rt3000_b.o
+else ifeq ($(CONFIG_TARGET_IPQ5018_H3C_HW_A),y)
+obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac_h3c_hw_a.o
+else ifeq ($(CONFIG_TARGET_IPQ5018_H3C_HW_C),y)
+obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac_h3c_hw_c.o
+else
+obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac.o
+endif
+
+obj-$(CONFIG_H3C_IPQ5018_COMMON) += squashfs_release.o xz/
+
+ccflags-$(CONFIG_H3C_IPQ5018_COMMON) += -DXZ_UBOOT_BUILD -DXZ_INTERNAL_CRC32=1

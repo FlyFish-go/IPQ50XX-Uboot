@@ -1,3 +1,5 @@
+/bin/
+__pycache__/
 node_modules/
 site/docs/.vitepress/cache/
 site/docs/.vitepress/dist/
