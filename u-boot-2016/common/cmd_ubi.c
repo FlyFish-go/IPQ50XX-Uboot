@@ -483,7 +483,7 @@ static int ubi_dev_scan(struct mtd_info *info, char *ubidev,
 
 int ubi_part(char *part_name, const char *vid_header_offset)
 {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_UBI_ATTACH_READONLY
 	/* Diagnostic CLI/boot attachment must not schedule UBI writes. */
 	if (!ubi_readonly_requested) {
 		ubi_release_current();

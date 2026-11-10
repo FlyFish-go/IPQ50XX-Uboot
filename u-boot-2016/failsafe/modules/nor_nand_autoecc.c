@@ -285,7 +285,7 @@ static void nor_nand_probe_handler(enum httpd_uri_handler_status status,
 		return;
 	}
 	response->info.code = 200;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_NOR_NAND_AUTOECC
 	if (!request || request->method != HTTP_GET || request->form.count) {
 #else
 	if (!request || request->method != HTTP_POST || request->form.count) {

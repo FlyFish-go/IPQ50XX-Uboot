@@ -52,7 +52,7 @@ void firmware_rt3000_b_register_uri_handlers(struct httpd_instance *inst);
 void buttons_h3c_hw_a_register_uri_handlers(struct httpd_instance *inst);
 void buttons_h3c_hw_c_register_uri_handlers(struct httpd_instance *inst);
 void upgrade_register_uri_handlers(struct httpd_instance *inst);
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_NOR_NAND_AUTOECC
 void nor_nand_autoecc_register_uri_handlers(struct httpd_instance *inst);
 #endif
 void webterm_register_uri_handlers(struct httpd_instance *inst);

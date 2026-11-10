@@ -321,4 +321,70 @@ config H3C_SYSINFO_SPI_INFO
     help
       Report the detected SPI flash on the rescue system page.
 
+config H3C_QPIC_EXACT_WRITE_WINDOW
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Every NAND write or erase must fall inside one exact, pre-opened physical window.
+
+config H3C_NOR_NAND_AUTOECC
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Detect the running NAND ECC mode at boot and hand it to Linux.
+
+config H3C_NAND_BOOT_ECC4
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      The shared 2 Gbit catalog row uses 4-bit ECC.
+
+config H3C_NAND_KEEP_BLOCK_PROTECT
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Leave the SPI-NAND block protection bits as found.
+
+config H3C_NAND_NO_BAD_BLOCK_MARK
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      A failed erase is reported but never marks the block bad.
+
+config H3C_NAND_HYBRID_ECC
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Boot chain and data area may use different ECC strengths.
+
+config H3C_UBI_ATTACH_READONLY
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Diagnostic and boot UBI attaches must not schedule writes.
+
+config H3C_FDT_NOR_GUARD
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Drop the SPI-NOR node handed to Linux when the unit has none.
+
+config H3C_OEM_FIT_HANDOFF
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Boot only a checked OEM FIT, and record that for the FDT fixups.
+
+config H3C_FIT_ROOTFS_BOOTARGS
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      Derive the rootfs bootargs from the FIT being booted.
+
+config H3C_BOOTCONFIG_RETAINED_FAILURE
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Keep and export the pinned preimages of a failed BOOTCONFIG transaction.
+
 endif

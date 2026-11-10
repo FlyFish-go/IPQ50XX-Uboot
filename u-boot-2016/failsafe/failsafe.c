@@ -59,7 +59,7 @@ register_uri_handlers_func_t register_uri_handlers_funcs[] = {
 	misc_register_uri_handlers,
 	network_register_uri_handlers,
 	sysinfo_register_uri_handlers,
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_NOR_NAND_AUTOECC
 	nor_nand_autoecc_register_uri_handlers,
 #endif
 #if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)

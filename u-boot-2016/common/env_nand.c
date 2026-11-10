@@ -368,7 +368,7 @@ static int rt3_nand_saveenv(void)
 out:
 	if (window_open) {
 		rt3_fw_write_window_close();
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_QPIC_EXACT_WRITE_WINDOW
 		if (rt3_fw_write_window_close_status()) ret = -EIO;
 #endif
 	}

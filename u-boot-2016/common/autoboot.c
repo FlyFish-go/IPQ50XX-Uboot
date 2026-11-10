@@ -1,4 +1,4 @@
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_NOR_NAND_AUTOECC
 #include <nx30_nor_autoecc.h>
 #endif
 /*
@@ -426,7 +426,7 @@ void autoboot_command(const char *s)
         return;
     }
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_NOR_NAND_AUTOECC
     nx30_nor_nand_autoecc_cli();
 #endif
     s = "httpd";

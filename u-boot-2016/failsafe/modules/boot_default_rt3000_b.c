@@ -11,7 +11,7 @@
 #include <rt3000_b_fw_write.h>
 #include "boot_default_rt3000_b_core.h"
 #include <h3c_boot_policy.h>
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_BOOTCONFIG_RETAINED_FAILURE
 #include <nx30_d_service.h>
 #endif
 
@@ -29,7 +29,7 @@ static u8 *last_backup_snapshot;
 static int backup_snapshot_ready;
 static void answer(struct httpd_response *r, int code, const char *json);
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_BOOTCONFIG_RETAINED_FAILURE
 /* Export the separate service transaction's pinned preimages even if full BC
  * equality is lost. These handlers never read slots or acquire a write window. */
 static void retained_failure_handler(enum httpd_uri_handler_status status,
@@ -251,7 +251,7 @@ static int write_one(struct mtd_info *m, const struct bc_extent *tmpl,
  r = 0;
  out:
  if (opened) {rt3_fw_write_window_close();
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_QPIC_EXACT_WRITE_WINDOW
  if(rt3_fw_write_window_close_status())r=-EIO;
 #endif
  }
@@ -312,7 +312,7 @@ static enum bd_result boot_default_apply(int want_selector, const char *target,
  enum bd_result res;
  shown[0] = 0;
  if (partial_update_lock) return BD_E_LOCKED;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_BOOTCONFIG_RETAINED_FAILURE
  {
   struct nx30_d_result failure; u32 copy;
   if (!nx30_d_default_failure_get(&failure,&copy)) return BD_E_RETAINED;
@@ -498,7 +498,7 @@ void boot_default_rt3000_b_register_uri_handlers(struct httpd_instance *inst)
  httpd_register_uri_handler(inst, "/boot/default", default_handler, NULL);
  httpd_register_uri_handler(inst, "/boot/default/backup/bootconfig.bin", backup_primary_handler, NULL);
  httpd_register_uri_handler(inst, "/boot/default/backup/bootconfig1.bin", backup_copy1_handler, NULL);
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_BOOTCONFIG_RETAINED_FAILURE
  httpd_register_uri_handler(inst,"/boot/default/retained-failure",retained_failure_handler,NULL);
  httpd_register_uri_handler(inst,"/boot/default/retained-original0.bin",retained_original0_handler,NULL);
  httpd_register_uri_handler(inst,"/boot/default/retained-original1.bin",retained_original1_handler,NULL);

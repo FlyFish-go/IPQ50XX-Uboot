@@ -18,12 +18,12 @@
 #include <h3c_nand_ecc.h>
 #include <h3c_mainline_fdt.h>
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_FDT_NOR_GUARD
 #include <nand.h>
 #include <nx30_d_bootargs.h>
 #include <nx30_nor_autoecc.h>
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_FDT_NOR_GUARD
 #include <nx30_d_fdt_nor_guard.h>
 extern volatile int nx30_d_oem_fit_handoff_verified;
 #endif
@@ -1313,7 +1313,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 #endif
 
 	fdt_fixup_ethernet(blob);
-#if defined(CONFIG_H3C_NAND_ECC_COMPAT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#if defined(CONFIG_H3C_NAND_ECC_COMPAT) || defined(CONFIG_H3C_NAND_HYBRID_ECC)
  {
   int chosen = fdt_path_offset(blob, "/chosen"), length;
   const char *args = chosen >= 0 ? fdt_getprop(blob, chosen, "bootargs", &length) : NULL;
@@ -1348,7 +1348,7 @@ int ft_board_setup(void *blob, bd_t *bd)
    printf("H3C NAND: upstream spi-nand node ECC=%u\n", mode);
  }
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
+#ifdef CONFIG_H3C_FDT_NOR_GUARD
  {
   qca_smem_flash_info_t boot_flash;
   const char *root_compat, *parent_compat, *chip_compat;
