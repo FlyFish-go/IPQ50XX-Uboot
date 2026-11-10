@@ -213,6 +213,29 @@ config H3C_NAND_STORAGE_ECC_BITS
       It must equal LOAD_ECC_BITS; QPIC starts in this format. Runtime NAND
       metadata is still checked before Linux handoff or writes.
 
+config H3C_NAND_AUTO_PROFILE
+    bool "Select the NAND profile and boot-chain ECC at run time"
+    depends on H3C_IPQ5018_COMMON && H3C_NAND_ECC_COMPAT && H3C_NAND_PROFILE_ID = ""
+    default n
+    help
+      Build one image that serves every catalog NAND chip. A chip with one
+      catalog row and one boot-chain ECC mode is taken from the catalog;
+      otherwise SBL1, MIBIB and APPSBL pages are read in each candidate
+      format and the format must be evidenced uniquely. If it is not, no
+      profile is selected, NAND writes stay rejected and the recovery page
+      is used. The build identity is profile=auto. Not valid together with
+      H3C_NAND_PROFILE_ID.
+
+config H3C_NAND_ACCEPT_AUTO_IMAGE
+    bool "Accept auto-profile U-Boot images in the rescue upload"
+    depends on H3C_IPQ5018_COMMON
+    default y if H3C_NAND_AUTO_PROFILE
+    default n
+    help
+      Let h3c_build_id_check() accept an upload whose build identity is
+      profile=auto for the same board. Always on in auto-profile builds; a
+      pinned build needs this to accept an auto upload.
+
 config H3C_NAND_ECC_COMPAT
     bool "Evidence-based NAND ECC compatibility"
     depends on H3C_IPQ5018_COMMON

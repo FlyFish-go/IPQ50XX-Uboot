@@ -111,4 +111,5 @@ obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_D) += nx30_d_bootargs.o
 obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_D) += nx30_d_service.o nx30_d_uboot.o nx30_d_ubi_core.o nx30_d_firmware.o nx30_d_fw_txn_core.o
 
 obj-$(CONFIG_H3C_NAND_ECC_COMPAT) += h3c_nand_ecc_core.o h3c_nand_ecc.o
+obj-$(CONFIG_H3C_NAND_AUTO_PROFILE) += h3c_nand_auto_core.o h3c_nand_auto.o
 obj-$(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) += h3c_boot_policy_core.o h3c_boot_policy.o

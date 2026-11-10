@@ -55,6 +55,17 @@
 #ifndef CONFIG_H3C_NAND_STORAGE_ECC_BITS
 #define CONFIG_H3C_NAND_STORAGE_ECC_BITS 0U
 #endif
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+#include <h3c_nand_auto.h>
+/* Boot-chain ECC chosen at run time instead of by the build pin: the code
+ * that consumes the pinned load/storage ECC reads this variable instead. */
+static unsigned int qpic_auto_bits;	/* ECC the SBL/APPSBL are loaded with */
+static unsigned int qpic_auto_storage_bits; /* ECC of the stored boot chain */
+#undef CONFIG_H3C_NAND_LOAD_ECC_BITS
+#undef CONFIG_H3C_NAND_STORAGE_ECC_BITS
+#define CONFIG_H3C_NAND_LOAD_ECC_BITS qpic_auto_bits
+#define CONFIG_H3C_NAND_STORAGE_ECC_BITS qpic_auto_storage_bits
+#endif
 #endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_fw_write.h>
@@ -644,6 +655,29 @@ struct qpic_serial_nand_params *serial_params;
 #ifdef CONFIG_H3C_NAND_PROFILE_ID
 static const struct h3c_nand_catalog_profile *qpic_source_profile;
 
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+/* Catalog-only part of the run-time selection: a chip with one catalog row
+ * and one boot-chain ECC mode is decided here, exactly like a build pin.
+ * Anything else stays undecided (the controller keeps the QPIC table format)
+ * until h3c_nand_auto_run() has probed the boot chain.
+ */
+static int qpic_nand_auto_select(const struct qpic_serial_nand_params *params)
+{
+	const struct h3c_nand_catalog_profile *row = NULL;
+	unsigned int mode = 0;
+
+	qpic_auto_bits = qpic_auto_storage_bits = 0;
+	if (!params || !params->name)
+		return 0;
+	if (!h3c_nand_auto_early((const unsigned char *)params->id,
+				 params->name, &row, &mode))
+		return 0;
+	qpic_source_profile = row;
+	qpic_auto_bits = qpic_auto_storage_bits = mode;
+	return 1;
+}
+#endif
+
 /* Resolve only a build-pinned, exact OEM source profile. A prefix ID alone
  * never chooses between duplicate source rows. The source and ECC pins must
  * both be admitted by the selected row, and the observed QPIC alias must
@@ -659,6 +693,9 @@ static int qpic_nand_select_source_profile(
 	if (!params)
 		return -EINVAL;
 	if (!CONFIG_H3C_NAND_PROFILE_ID[0]) {
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+		return qpic_nand_auto_select(params);
+#endif
 		/* Legacy unpinned operation is safe only for a unique catalog row
 		 * whose QPIC descriptor exactly agrees with the canonical source
 		 * geometry and mode. Duplicate IDs or known discrepancies require an
@@ -2427,6 +2464,10 @@ static int qpic_nand_read_id_serial(struct mtd_info *mtd)
 #endif
 #ifdef CONFIG_H3C_NAND_PROFILE_ID
 	qpic_source_profile = NULL;
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+	qpic_auto_bits = qpic_auto_storage_bits = 0;
+	h3c_nand_auto_reset();
+#endif
 #endif
 
 	nand_ret = qpic_nand_fetch_id(mtd);
@@ -6228,6 +6269,55 @@ int nx30_nor_nand_restore4(void)
 {
 	return nx30_nor_nand_set_read_ecc(NX30_NOR_NAND_ECC4);
 }
+
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+/* Switch the controller to one boot-chain format (BCH strength and raw spare
+ * size of a catalog row). Unlike nx30_nor_nand_set_read_ecc() this is not
+ * limited to C8:41 and may change the spare size; it restores the previous
+ * configuration when the format cannot be applied.
+ */
+int qpic_nand_auto_set_format(unsigned int bits, unsigned int spare)
+{
+	struct nx30_nor_nand_cfg_snapshot old;
+	struct mtd_info *mtd = &nand_info[CONFIG_QPIC_NAND_NAND_INFO_IDX];
+	struct qpic_nand_dev *dev = &qpic_nand_dev;
+	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
+	unsigned int old_spare = dev->spare_size;
+	int ret;
+
+	if ((bits != NX30_NOR_NAND_ECC4 && bits != NX30_NOR_NAND_ECC8) ||
+	    !spare || !chip || !serial_params || !dev->buffers ||
+	    !mtd->_read || !mtd->_read_oob ||
+	    dev->page_size != 2048 || mtd->writesize != 2048)
+		return -EINVAL;
+	nx30_nor_nand_save_cfg(mtd, &old);
+	dev->spare_size = spare;
+	mtd->ecc_strength = bits;
+	mtd->oobsize = spare;
+	mtd->oobavail = 0;
+	ret = qpic_nand_save_config(mtd);
+	if (!ret)
+		mtd->ecc_step_size = 512;
+	if (ret || !chip->ecc.layout || mtd->ecc_strength != bits ||
+	    dev->cws_per_page != 4 || mtd->ecc_step_size != 512 ||
+	    dev->cw_size != (bits == NX30_NOR_NAND_ECC4 ?
+			     NAND_CW_SIZE_4_BIT_ECC : NAND_CW_SIZE_8_BIT_ECC) ||
+	    mtd->oobsize != dev->cw_size * dev->cws_per_page - mtd->writesize ||
+	    mtd->oobsize > spare || !mtd->oobavail) {
+		nx30_nor_nand_restore_cfg(mtd, &old);
+		dev->spare_size = old_spare;
+		return ret ? ret : -EIO;
+	}
+	dev->oob_per_page = mtd->oobavail;
+	mtd->bitflip_threshold = DIV_ROUND_UP(mtd->ecc_strength * 3, 4);
+	return 0;
+}
+
+void qpic_nand_auto_set_load_bits(unsigned int bits)
+{
+	qpic_auto_bits = qpic_auto_storage_bits = bits;
+}
+#endif
 
 int nx30_nor_nand_read_page(u64 physical_offset, void *data,
 			    size_t data_capacity, void *oob,

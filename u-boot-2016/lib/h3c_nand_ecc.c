@@ -22,6 +22,9 @@
 #include "../failsafe/modules/nor_nand_autoecc_core.h"
 #endif
 #include <h3c_nand_ecc.h>
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+#include <h3c_nand_auto.h>
+#endif
 
 #define H3C_ECC_ENV_OFFSET       0x00480000ULL
 #define H3C_ECC_ENV_PART_SIZE   0x00080000U
@@ -180,6 +183,30 @@ static int platform_get_profile(struct h3c_nand_ecc_test_profile *p)
 	p->nand_size = mtd->size;
 	p->page_size = mtd->writesize;
 	p->erase_size = mtd->erasesize;
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+	/* Run-time selection must agree with the full QPIC tuple exactly like
+	 * a build pin; no selected row means no catalog profile (not ready).
+	 */
+	{
+		const struct h3c_nand_catalog_profile *expected =
+			h3c_nand_auto_row();
+
+		if (expected && !strcmp(expected->qpic_model, model.name) &&
+		    expected->id[0] == model.id[0] &&
+		    expected->id[1] == model.id[1] &&
+		    expected->qpic_capacity_bytes == (unsigned int)mtd->size &&
+		    expected->page_bytes == mtd->writesize &&
+		    expected->erase_bytes == mtd->erasesize &&
+		    expected->qpic_raw_spare_bytes == spare &&
+		    mtd->ecc_strength == h3c_nand_auto_mode() &&
+		    h3c_nand_catalog_runtime_read_qualified(expected,
+							mtd->ecc_strength) &&
+		    (mtd->ecc_strength == 4 ?
+		     expected->qpic_mtd_oob_ecc4 :
+		     expected->qpic_mtd_oob_ecc8) == mtd->oobsize)
+			p->catalog_profile = expected;
+	}
+#else
 	/* A source-bound build may disambiguate identical JEDEC prefixes, but
 	 * must still match the complete runtime QPIC tuple. Empty means legacy
 	 * catalog matching, which itself fails closed on ambiguous tuples.
@@ -208,6 +235,7 @@ static int platform_get_profile(struct h3c_nand_ecc_test_profile *p)
 			model.id, model.name, (unsigned int)mtd->size,
 			mtd->writesize, mtd->erasesize, spare,
 			mtd->ecc_strength, mtd->oobsize);
+#endif
 	if (!h3c_nand_catalog_runtime_read_qualified(p->catalog_profile,
 						    p->configured_mode))
 		return 0;
@@ -526,6 +554,12 @@ static int h3c_nand_ecc_profile_matches(
 
 static void h3c_nand_ecc_update_ready(void)
 {
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+	if (!h3c_nand_auto_ok()) {
+		ecc_state.ready = 0;
+		return;
+	}
+#endif
 	ecc_state.ready = ecc_state.profile_valid && ecc_state.env_mode &&
 		ecc_state.io_mode && ecc_state.system_mode &&
 		ecc_state.io_mode == ecc_state.env_mode &&
@@ -571,6 +605,13 @@ void h3c_nand_ecc_init(void)
 	memset(&ecc_state, 0, sizeof(ecc_state));
 	ecc_state.mtd = &nand_info[CONFIG_QPIC_NAND_NAND_INFO_IDX];
 	ecc_state.board_role = platform_board_role();
+#endif
+#ifdef CONFIG_H3C_NAND_AUTO_PROFILE
+	/* Probe the boot chain first; without a unique profile nothing below
+	 * may mark the NAND ready. */
+	h3c_nand_auto_run();
+	if (!h3c_nand_auto_ok())
+		goto unknown;
 #endif
 	ret = platform_get_profile(&p);
 	if (ret || !h3c_nand_ecc_profile_matches(&p))
