@@ -479,7 +479,7 @@ static void default_handler(enum httpd_uri_handler_status status,
            active, bootcmd_compatible() && !partial_update_lock ? "true" : "false",
            partial_update_lock ? "true" : "false",
            partial_update_lock ? "partial_update" : (!bootcmd_compatible() ? "custom_bootcmd" : ""));
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
   snprintf(reply, sizeof(reply), "{\"status\":\"ok\",\"default\":\"%s\",\"can_change\":%s,\"locked\":%s,\"reason\":\"%s\",\"auto_web\":false,\"default_applies_to\":\"bootipq\"}",
            active, bootcmd_compatible() && !partial_update_lock ? "true" : "false",
            partial_update_lock ? "true" : "false",

@@ -106,7 +106,7 @@ enum qpic_nand_layout qpic_layout = QPIC_NAND_LAYOUT_LINUX;
 
 #ifdef CONFIG_QPIC_SERIAL
 static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
-#if defined(CONFIG_H3C_IPQ5018_COMMON) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 	/* OEM APPSBL compatibility profiles: 128 MiB window, not full die size.
 	 * Keep the factory QPIC BCH/OOB format (including BCH4 for 98:DB).
 	 * See test/qpic_h3c_oem_nand_profiles.json for verified descriptors.
@@ -1047,9 +1047,6 @@ int rt3_named_nand_write_window_open(struct mtd_info *mtd, const char *name,
 	    verified_layout.fingerprint != layout.fingerprint)
 		return -EROFS;
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
-	if (nx30_d_qpic_write_window_open(mtd, offset, size, mtd->ecc_strength)) return -EROFS;
-#endif
 	rt3_fw_window.mtd = mtd;
 	rt3_fw_window.start = offset;
 	rt3_fw_window.end = offset + size;

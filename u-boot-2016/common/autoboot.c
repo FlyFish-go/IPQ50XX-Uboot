@@ -431,20 +431,6 @@ void autoboot_command(const char *s)
 #endif
     s = "httpd";
     stored_bootdelay = 0;
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
-	/* Enter the read-only maintenance preview on the verified D LAN port. */
-	if (setenv("ethprime", "eth1") || setenv("ethact", "eth1") || setenv("ethrotate", "no"))
-		puts("NX30 D RAM web preview: cannot select eth1\n");
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
-	/* A failed or ambiguous probe keeps the read-only web/serial rescue. */
-	nx30_nor_nand_autoecc_cli();
-#endif
-	s = "httpd";
-	stored_bootdelay = 0;
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
-	/* Ignore imported bootcmd and leave this bounded diagnostic at CLI. */
-	s = "echo NX30 D RAM diagnostic ready";
-	stored_bootdelay = 0;
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A
 	/*

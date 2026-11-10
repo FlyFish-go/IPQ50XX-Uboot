@@ -131,7 +131,7 @@ static int failsafe_env_get_form_value(struct httpd_request *request,
 	return 0;
 }
 
-#if !defined(CONFIG_H3C_IPQ5018_COMMON) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#ifndef CONFIG_H3C_IPQ5018_COMMON
 static char *failsafe_env_export_text(size_t *out_len)
 {
 	env_t *envbuf;

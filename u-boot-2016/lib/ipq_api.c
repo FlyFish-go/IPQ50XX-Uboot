@@ -103,7 +103,7 @@ static bool is_any_button_pressed(button_info_t *button_info)
 		return false;
 
 	fdt_for_each_subnode(gd->fdt_blob, node, parent) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 		/* HW-B and C production recovery are RESET-only; WPS/MESH remains a normal key. */
 		const char *name = fdt_get_name(gd->fdt_blob, node, NULL);
 		if (!name || strcmp(name, "reset"))
@@ -331,7 +331,7 @@ void do_network_check(void)
 	setenv("bootdelay", "3");
 	/* Default rescue page to the three verified QCA8337 LAN ports. */
 	setenv("ethact", "eth1");
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 	/*
 	 * Normalize only the two observed legacy C defaults in RAM. The long
 	 * c-native command is the exact C bring-up bootcmd observed on 2026-10-10;

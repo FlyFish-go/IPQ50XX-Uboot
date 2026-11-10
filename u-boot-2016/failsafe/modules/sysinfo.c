@@ -140,10 +140,6 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
     APPEND_JSON_TO_BUF("\"is_9008_mode\":%s,", is_9008_mode() ? "true" : "false");
 #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,\"profile\":\"common\",");
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
-    APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":true,\"profile\":\"nand-readonly\",");
-#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
-    APPEND_JSON_TO_BUF("\"ram_only\":true,\"read_only\":true,");
 #elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,");
 #endif

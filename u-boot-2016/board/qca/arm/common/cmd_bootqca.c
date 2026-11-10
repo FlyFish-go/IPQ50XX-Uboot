@@ -1743,7 +1743,7 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		ret = do_boot_unsignedimg(cmdtp, flag, argc, argv);
 	}
 
-#if defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) || defined(CONFIG_H3C_IPQ5018_COMMON)
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 boot_done:
 #endif
 #ifdef CONFIG_H3C_RELEASE_SYSTEM_DEFAULT
