@@ -291,4 +291,34 @@ config H3C_LED_STATUS_AT_GPIO_INIT
     help
       Clear inherited LED colours and light the status LED right after GPIO init.
 
+config H3C_BOOTCONFIG_STAGE0_POLICY
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      BOOTCONFIG is read with backup fallback and never rewritten by the generic code.
+
+config H3C_BOOTCONFIG_WINDOW_READ
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_D
+    help
+      Release boot reads BOOTCONFIG from fixed physical windows, without the repair path.
+
+config H3C_BOOTCONFIG_FIXED_EXTENTS
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_HW_D
+    help
+      BOOTCONFIG copies live at fixed extents and have their own write window.
+
+config H3C_MIBIB_RAM_RELOAD
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      An uploaded MIBIB is validated and only reloaded into RAM.
+
+config H3C_SYSINFO_SPI_INFO
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Report the detected SPI flash on the rescue system page.
+
 endif

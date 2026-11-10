@@ -41,7 +41,7 @@ extern struct sdhci_host mmc_host;
 
 static const qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) && defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT)
+#if defined(CONFIG_H3C_BOOTCONFIG_WINDOW_READ) && defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT)
 #include <nand.h>
 #include <h3c_bootconfig_readonly.h>
 
@@ -206,7 +206,7 @@ int read_bootconfig(bootconfig_info_t *bootcfg, bool skip_validation, bool quiet
 	}
 
 	if (bootcfg->info.numaltpart > NUM_ALT_PARTITION) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 		return -EINVAL; /* Do not guess a slot from a malformed table. */
 #endif
 		if (!quiet)
@@ -227,7 +227,7 @@ int read_bootconfig_and_write_back_if_needed(bootconfig_info_t *bootcfg)
 	bootcfg->size = sizeof(struct bootconfig_info);
 
 	ret = read_bootconfig(bootcfg, false, false);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	if (!ret)
 		return 0;
 	backup_bootcfg.part_name = BOOTCONFIG_BACKUP_PART_NAME;
@@ -269,7 +269,7 @@ int read_bootconfig_and_write_back_if_needed(bootconfig_info_t *bootcfg)
  */
 int write_bootconfig(bootconfig_info_t *bootcfg)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	printf("BOOTCONFIG writes blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else
@@ -328,7 +328,7 @@ done:
  */
 int sync_bootconfig(bool reverse)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	printf("BOOTCONFIG sync blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else
@@ -400,7 +400,7 @@ int print_bootconfig(void)
 		return ret;
 
 	puts("\n========== Bootconfig Information ==========\n");
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	printf("Source Partition: %s\n", bootcfg.part_name);
 #endif
 	printf("Magic Start:      0x%08x %s\n", bootcfg.info.magic_start,
@@ -426,12 +426,12 @@ int print_bootconfig(void)
  */
 int get_bootconfig(const char *part_name)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) && defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT)
+#if defined(CONFIG_H3C_BOOTCONFIG_WINDOW_READ) && defined(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT)
 	return h3c_bc_release_get(part_name);
 #else
 	bootconfig_info_t bootcfg;
 	int ret;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	int found = -1;
 #endif
 
@@ -442,7 +442,7 @@ int get_bootconfig(const char *part_name)
 	for (int i = 0; i < bootcfg.info.numaltpart && i < NUM_ALT_PARTITION; i++) {
 		if (strncmp(bootcfg.info.per_part_entry[i].name, part_name,
 			    ALT_PART_NAME_LENGTH) == 0) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 			if (found >= 0)
 				return -EINVAL; /* Duplicate selector is ambiguous. */
 			found = i;
@@ -451,7 +451,7 @@ int get_bootconfig(const char *part_name)
 #endif
 		}
 	}
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	if (found >= 0)
 		return bootcfg.info.per_part_entry[found].primaryboot;
 #endif
@@ -466,7 +466,7 @@ int get_bootconfig(const char *part_name)
  */
 int set_bootconfig(const char *name, uint32_t value)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 	printf("BOOTCONFIG changes blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else

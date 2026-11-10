@@ -853,7 +853,7 @@ int rt3_fw_write_window_allows(struct mtd_info *mtd, u64 offset, u64 size)
 int rt3_bootconfig_write_window_open(struct mtd_info *mtd, const char *name,
                                      u64 offset, u64 size)
 {
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A))
+#if !defined(CONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS)
 	(void)mtd; (void)name; (void)offset; (void)size;
 	return -EROFS;
 #else
@@ -984,7 +984,7 @@ struct rt3_named_smem_table {
 int rt3_named_nand_write_window_open(struct mtd_info *mtd, const char *name,
 				     u64 offset, u64 size)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D)
+#if defined(CONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS)
 	/* A/C metadata has a separate reviewed whitelist; never inherit B's generic writer. */
 	(void)mtd; (void)name; (void)offset; (void)size;
 	return -EROFS;

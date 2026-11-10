@@ -44,11 +44,6 @@
 
 #define CONFIG_ENV_SIZE_MAX			(256 << 10) /* 256 KB */
 
-/* Software-only shared port; HW-A remains a distinct target identity. */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
-#define CONFIG_H3C_IPQ5018_DUALSLOT_PORT
-#endif
-
 
 /*
 * PSCI Calls enable

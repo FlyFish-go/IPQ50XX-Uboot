@@ -236,7 +236,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 
 	/* SPI info */
 	APPEND_JSON_TO_BUF("\"spi\":{");
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_SYSINFO_SPI_INFO)
 	{
 		const struct spi_flash *spi = get_detected_spi_flash();
 		char esc_spi_name[128];
@@ -260,7 +260,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 #endif
 	APPEND_JSON_TO_BUF("},"); /* devices: spi */
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_SYSINFO_SPI_INFO)
 	/* Configured probe location only; this is not an exhaustive wiring scan. */
 	{
 		const struct spi_flash *spi = get_detected_spi_flash();

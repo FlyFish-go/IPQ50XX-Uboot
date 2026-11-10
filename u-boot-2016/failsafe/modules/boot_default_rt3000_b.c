@@ -80,7 +80,7 @@ static int extent_read(const struct bc_extent *tmpl, struct bc_extent *out)
  u32 off = 0, size = 0;
  if (!tmpl || !out || getpart_offset_size((char *)tmpl->name, &off, &size) ||
      size != BC_SIZE || off % BC_ERASE || off > BC_CHIP || size > BC_CHIP - off
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG") && off != 0x100000)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG1") && off != 0x140000)
 #endif
@@ -212,7 +212,7 @@ static int write_one(struct mtd_info *m, const struct bc_extent *tmpl,
   if (r) return r;
  }
  if (!page || !check) return -ENOMEM;
- #if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_D) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+ #if defined(CONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS)
  r = rt3_bootconfig_write_window_open(m, tmpl->name, e->off, e->size);
 #else
  r = rt3_named_nand_write_window_open(m, tmpl->name, e->off, e->size);
