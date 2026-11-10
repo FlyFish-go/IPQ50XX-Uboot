@@ -1,4 +1,5 @@
 #define CONFIG_TARGET_IPQ5018_H3C_RT3000_B 1
+#define CONFIG_H3C_IPQ5018_COMMON 1
 #include <common.h>
 #include <net/httpd.h>
 #include <failsafe/failsafe.h>

@@ -102,16 +102,13 @@ not_found = (FSDATA / "404.html").read_text(encoding="utf-8")
 assert re.search(r"http-equiv\s*=\s*['\"]refresh", not_found, re.I)
 
 guard = re.search(
-    r"#if\s+(.*?)\n\s*httpd_register_uri_handler\(inst, \"/firmware-dual\.html\".*?\n"
+    r"#if(?:def)?\s+(.*?)\n\s*httpd_register_uri_handler\(inst, \"/firmware-dual\.html\".*?\n"
     r"\s*httpd_register_uri_handler\(inst, \"/firmware-single\.html\".*?\n#endif",
     MISC, re.S,
 )
 assert guard, "firmware mode handler guard not found"
 for macro in (
-    "CONFIG_TARGET_IPQ5018_H3C_RT3000_B",
-    "CONFIG_H3C_HW_A_PRODUCTION_PORT",
-    "CONFIG_H3C_HW_C_PRODUCTION_PORT",
-    "CONFIG_H3C_HW_D_PRODUCTION_PORT",
+    "CONFIG_H3C_IPQ5018_COMMON",
 ):
     assert macro in guard.group(1), "production route guard misses " + macro
 

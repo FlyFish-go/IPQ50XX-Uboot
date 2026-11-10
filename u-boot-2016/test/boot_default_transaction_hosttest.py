@@ -79,8 +79,6 @@ def main():
     assert "rt3_named_nand_write_window_open(m, tmpl->name, e->off, e->size)" in production
     assert "!strcmp(tmpl->name, \"0:BOOTCONFIG\") && off != 0x100000" in production
     assert "!strcmp(tmpl->name, \"0:BOOTCONFIG1\") && off != 0x140000" in production
-    assert "answer(response, 403" in production and "readonly_profile" in production
-    assert r'\"can_change\":false' in production
     with tempfile.TemporaryDirectory(prefix="boot-default-hosttest-") as temp:
         stub_root = Path(temp) / "stubs"
         for rel, content in STUBS.items():
@@ -88,10 +86,9 @@ def main():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
         profiles = {
-            "B": ["-DCONFIG_H3C_DEFAULT_WEB"],
-            "C_PRODUCTION": ["-DCONFIG_H3C_HW_C_PRODUCTION_PORT"],
-            "C_READONLY": ["-DCONFIG_H3C_HW_C_RAM_READONLY"],
-            "D_PRODUCTION": ["-DCONFIG_H3C_HW_D_PRODUCTION_PORT", "-DCONFIG_H3C_DEFAULT_WEB"],
+            "B": ["-DCONFIG_TARGET_IPQ5018_H3C_RT3000_B", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_DEFAULT_WEB"],
+            "C_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_C", "-DCONFIG_H3C_IPQ5018_COMMON"],
+            "D_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_D", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_DEFAULT_WEB"],
         }
         for profile, defines in profiles.items():
             exe = Path(temp) / f"boot-default-{profile.lower()}"

@@ -34,6 +34,7 @@ typedef int bool;
 #define false 0
 #define ENV_NAME_MAX_LEN 128
 #define CONFIG_TARGET_IPQ5018_H3C_RT3000_B 1
+#define CONFIG_H3C_IPQ5018_COMMON 1
 #define RT3_ENV_BOARD_LABEL "H3C HW-B"
 #define MAX_HTTP_FORM_VALUE_ITEMS 5
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))

@@ -9,7 +9,7 @@ common=r'''
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-typedef uint32_t u32;
+typedef uint32_t u32; typedef uint64_t u64;
 typedef int cmd_tbl_t;
 #define CMD_RET_SUCCESS 0
 #define CMD_RET_FAILURE 1
@@ -159,17 +159,12 @@ with tempfile.TemporaryDirectory(prefix='h3c-boot-runtime-') as td:
   'ipq_led.h':'void led_on(const char *);\nvoid led_off(const char *);\nvoid led_all_off(void);\n'}
  for name,text in headers.items():
   q=p/name;q.parent.mkdir(parents=True,exist_ok=True);q.write_text(text)
- (p/'driver.c').write_text(driver+'\n'+body)
+ (p/'driver.c').write_text('#define CONFIG_H3C_IPQ5018_COMMON 1\n'+driver+'\n'+body)
  profiles={
-  'A':['CONFIG_TARGET_IPQ5018_H3C_HW_A','CONFIG_H3C_HW_A_PRODUCTION_PORT'],
+  'A':['CONFIG_TARGET_IPQ5018_H3C_HW_A'],
   'B':['CONFIG_TARGET_IPQ5018_H3C_RT3000_B'],
-  'C':['CONFIG_TARGET_IPQ5018_H3C_HW_C','CONFIG_H3C_HW_C_PRODUCTION_PORT'],
-  'D':['CONFIG_TARGET_IPQ5018_H3C_HW_D','CONFIG_H3C_HW_D_RAM_WEB','CONFIG_H3C_HW_D_RAM_READONLY','CONFIG_H3C_HW_D_PRODUCTION_PORT'],
-  'A-RAM':['CONFIG_TARGET_IPQ5018_H3C_HW_A','CONFIG_H3C_HW_A_RAM_READONLY','TEST_FORCED_WEB'],
-  'C-RAM':['CONFIG_TARGET_IPQ5018_H3C_HW_C','CONFIG_H3C_HW_C_RAM_READONLY','TEST_FORCED_WEB'],
-  'D-SERVICE-RAM':['CONFIG_TARGET_IPQ5018_H3C_HW_D','CONFIG_H3C_HW_D_RAM_WEB','CONFIG_H3C_HW_D_PRODUCTION_PORT','CONFIG_H3C_HW_D_SERVICE_RAM','TEST_FORCED_WEB'],
-  'D-RAM':['CONFIG_TARGET_IPQ5018_H3C_HW_D','CONFIG_H3C_HW_D_RAM_WEB','CONFIG_H3C_HW_D_RAM_READONLY','TEST_FORCED_WEB'],
-  'D-NOR':['CONFIG_TARGET_IPQ5018_H3C_HW_D','CONFIG_H3C_HW_D_RAM_WEB','CONFIG_H3C_HW_D_NOR_RESCUE','TEST_FORCED_WEB'],
+  'C':['CONFIG_TARGET_IPQ5018_H3C_HW_C'],
+  'D':['CONFIG_TARGET_IPQ5018_H3C_HW_D'],
  }
  for name,defs in profiles.items():
   cmd=['cc','-std=c99','-Wall','-Wextra','-Werror','-DCONFIG_H3C_RELEASE_SYSTEM_DEFAULT','-DCONFIG_H3C_NAND_ECC_COMPAT','-DCONFIG_DISABLE_SIGNED_BOOT']+['-D'+v for v in defs]+['-I'+str(p),'-I'+str(r/'include'),str(r/'lib/h3c_boot_policy.c'),str(r/'lib/h3c_boot_policy_core.c'),str(p/'driver.c'),'-o',str(p/'test')]

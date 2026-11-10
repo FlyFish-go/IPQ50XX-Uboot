@@ -33,7 +33,8 @@ typedef int bool;
 #define true 1
 #define false 0
 #define ENV_NAME_MAX_LEN 128
-#define CONFIG_H3C_HW_D_PRODUCTION_PORT 1
+#define CONFIG_TARGET_IPQ5018_H3C_HW_D 1
+#define CONFIG_H3C_IPQ5018_COMMON 1
 #define CONFIG_IPQ5018_ENV 1
 #define RT3_ENV_BOARD_LABEL "H3C HW-B"
 #define MAX_HTTP_FORM_VALUE_ITEMS 5

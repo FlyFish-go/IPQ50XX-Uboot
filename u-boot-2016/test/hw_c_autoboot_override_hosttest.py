@@ -3,13 +3,12 @@ from pathlib import Path
 import subprocess, tempfile
 root=Path(__file__).resolve().parents[1]
 source=(root/'common/autoboot.c').read_text()
-start=source.index('#if defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)', source.index('void autoboot_command(const char *s)'))
+start=source.index('#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A', source.index('void autoboot_command(const char *s)'))
 end=source.index('\n\tdebug(\"### main_loop', start)
 override=source[start:end]
 profiles={
- 'c-production':('#define CONFIG_H3C_HW_C_PRODUCTION_PORT 1\n', 'bootipq', 3, 'eth1'),
- 'c-readonly':('#define CONFIG_H3C_HW_C_RAM_READONLY 1\n', 'httpd', 3, 'eth1'),
- 'a-production':('#define CONFIG_H3C_HW_A_PRODUCTION_PORT 1\n', 'httpd', 0, ''),
+ 'c-production':('#define CONFIG_TARGET_IPQ5018_H3C_HW_C 1\n', 'bootipq', 3, 'eth1'),
+ 'a-production':('#define CONFIG_TARGET_IPQ5018_H3C_HW_A 1\n', 'httpd', 0, ''),
 }
 for profile,(macros, expected_cmd, expected_delay, expected_ethact) in profiles.items():
     harness=r'''#include <stdio.h>
@@ -44,4 +43,4 @@ int main(void) {
         c=Path(td)/'test.c'; exe=Path(td)/'test'; c.write_text(harness)
         subprocess.run(['gcc','-std=gnu99','-Wall','-Wextra','-Werror','-Wno-unused-function',str(c),'-o',str(exe)],check=True)
         subprocess.run([str(exe)],check=True)
-print('C production preserves bootipq/bootdelay and eth1; A and C readonly recovery overrides PASS')
+print('C production preserves bootipq/bootdelay and eth1; A recovery override PASS')

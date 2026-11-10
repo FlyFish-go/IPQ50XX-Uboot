@@ -6,12 +6,10 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 autoboot = (root / "common/autoboot.c").read_text()
-start = autoboot.index("#elif defined(CONFIG_H3C_DEFAULT_WEB)",
+start = autoboot.index("#if defined(CONFIG_H3C_DEFAULT_WEB)",
                        autoboot.index("void autoboot_command(const char *s)"))
-end = autoboot.index("\n#elif", start)
-branch = autoboot[start:end].replace(
-    "#elif defined(CONFIG_H3C_DEFAULT_WEB)",
-    "#if defined(CONFIG_H3C_DEFAULT_WEB)", 1) + "\n#endif"
+end = autoboot.index("#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_A", start)
+branch = autoboot[start:end]
 
 source = r"""
 #include <stdio.h>
