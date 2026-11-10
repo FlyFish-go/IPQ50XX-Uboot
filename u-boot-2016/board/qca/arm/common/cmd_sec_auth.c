@@ -15,6 +15,7 @@
 #include <command.h>
 #include <asm/arch-qca-common/scm.h>
 #include <asm/arch-qca-common/smem.h>
+#include <slot_ops.h>
 
 #define PRIMARY_PARTITION	1
 #define SECONDARY_PARTITION	2
@@ -85,8 +86,8 @@ static int do_secure_authenticate(cmd_tbl_t *cmdtp, int flag, int argc, char *co
 	cmd_buf.size = simple_strtoul(argv[3], NULL, 16);
 
 #ifdef CONFIG_VERSION_ROLLBACK_PARTITION_INFO
-	if (smem_bootconfig_info() == 0){
-		ret = get_rootfs_active_partition();
+	if (slot_info_available()){
+		ret = slot_active_rootfs();
 		if (ret){
 			part = SECONDARY_PARTITION;
 		}

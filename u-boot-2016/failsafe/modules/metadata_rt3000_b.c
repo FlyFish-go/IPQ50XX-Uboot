@@ -14,6 +14,7 @@
 #include <rt3000_mibib.h>
 #include <h3c_build_id.h>
 #include <bootconfig.h>
+#include <slot_ops.h>
 #ifdef CONFIG_H3C_NAND_ECC_COMPAT
 #include <h3c_nand_ecc.h>
 #endif
@@ -96,7 +97,7 @@ static int mibib_validate(const void*data,u32 n)
  if(rt3_mibib_check(data,n,NULL))return -EINVAL;
  if(rt3_layout_resolve_raw((const u8*)data+RT3_MIBIB_TABLE_PAGE(0),RT3_MIBIB_PAGE,&l)||
     l.mode==RT3_LAYOUT_UNSUPPORTED)return -EINVAL;
- if(l.mode==RT3_LAYOUT_SINGLE&&get_bootconfig("rootfs")!=0)return -EBUSY;
+ if(l.mode==RT3_LAYOUT_SINGLE&&slot_default_rootfs()!=0)return -EBUSY;
  return 0;
 }
 static int layout_extent(const struct rt3_layout*l,const struct md_extent*e,struct md_extent*out)

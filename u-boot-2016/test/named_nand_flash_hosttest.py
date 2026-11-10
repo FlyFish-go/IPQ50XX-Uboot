@@ -117,6 +117,8 @@ static int getpart_offset_size(char *name, uint32_t *off, uint32_t *size) { (voi
 static int get_which_flash_param(char *name) { (void)name; return 0; }
 static int smem_bootconfig_info(void) { return -1; }
 static unsigned int get_rootfs_active_partition(void) { return 0; }
+#define slot_info_available() (smem_bootconfig_info() == 0)
+#define slot_active_rootfs() get_rootfs_active_partition()
 int run_command(const char *cmd,int flag) { (void)cmd;(void)flag; legacy_run_calls++; return 0; }
 #define C(x) do { if(!(x)) { fprintf(stderr,"FAIL line %d: %s\n",__LINE__,#x); return 1; } } while(0)
 """

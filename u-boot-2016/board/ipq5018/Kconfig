@@ -387,4 +387,11 @@ config H3C_BOOTCONFIG_RETAINED_FAILURE
     help
       Keep and export the pinned preimages of a failed BOOTCONFIG transaction.
 
+config SLOT_BACKEND_SINGLE
+    bool "The device has one system slot"
+    help
+      The boot chain records no second system, so slot queries answer
+      "slot 0" without reading BOOTCONFIG. Leave unset for BOOTCONFIG
+      dual-slot devices.
+
 endif

@@ -34,6 +34,7 @@ extern volatile int nx30_d_oem_fit_handoff_verified;
 #include <fdtdec.h>
 #include <stdlib.h>
 #include "fdt_info.h"
+#include <slot_ops.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -1195,8 +1196,8 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		if ((sfi->flash_secondary_type == SMEM_BOOT_NAND_FLASH) ||
 			(sfi->flash_secondary_type == SMEM_BOOT_QSPI_NAND_FLASH)) {
-			if(smem_bootconfig_info() == 0)
-				activepart = get_rootfs_active_partition();
+			if(slot_info_available())
+				activepart = slot_active_rootfs();
 			if (!activepart) {
 				snprintf(parts_str, sizeof(parts_str),
 				"mtdparts=nand0:0x%x@0(rootfs),"

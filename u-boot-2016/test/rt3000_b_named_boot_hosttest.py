@@ -28,6 +28,7 @@ static int mock_get_bootconfig(const char *name) {
  return selector_value;
 }
 #define get_bootconfig mock_get_bootconfig
+#define slot_default_rootfs() get_bootconfig("rootfs")
 static int mock_setenv(const char *key, const char *value) {
  setenv_calls++; snprintf(envkey,sizeof(envkey),"%s",key);
  snprintf(envvalue,sizeof(envvalue),"%s",value); return setenv_failed;

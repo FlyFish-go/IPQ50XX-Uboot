@@ -13,6 +13,7 @@
 
 #include <common.h>
 #include <command.h>
+#include <slot_ops.h>
 #ifdef CONFIG_H3C_RELEASE_SYSTEM_DEFAULT
 #include <h3c_boot_policy.h>
 #endif
@@ -117,7 +118,7 @@ static int rt3000b_prepare_boot_slot(int argc, char *const argv[])
 		/* BOOTCONFIG selects a physical rootfs extent, not an SMEM alias name.
 		 * The active table may pair those names with either physical extent.
 		 */
-		selector = get_bootconfig("rootfs");
+		selector = slot_default_rootfs();
 		ret = rt3_layout_default_target(&layout, selector, &part);
 		if (ret) {
 			puts("H3C: invalid default boot selector or layout; enter recovery\n");
@@ -885,8 +886,8 @@ static int set_fs_bootargs(int *fs_on_nand)
 			*fs_on_nand = 1;
 
 			if (sfi->rootfs.offset == 0xBAD0FF5E) {
-				if(smem_bootconfig_info() == 0)
-					active_part = get_rootfs_active_partition();
+				if(slot_info_available())
+					active_part = slot_active_rootfs();
 
 				sfi->rootfs.offset = active_part * IPQ_NAND_ROOTFS_SIZE;
 				sfi->rootfs.size = IPQ_NAND_ROOTFS_SIZE;
@@ -905,8 +906,8 @@ static int set_fs_bootargs(int *fs_on_nand)
 				setenv("fsbootargs", bootargs);
 		} else {
 			bootargs = boot_args;
-			if (smem_bootconfig_info() == 0) {
-				active_part = get_rootfs_active_partition();
+			if (slot_info_available()) {
+				active_part = slot_active_rootfs();
 				// TODO: AP8220 rootfs1 rootfs2
 				if (active_part) {
 					strlcpy(bootargs, "rootfsname=rootfs_1", sizeof(boot_args));
@@ -946,8 +947,8 @@ static int set_fs_bootargs(int *fs_on_nand)
 #ifdef CONFIG_QCA_MMC
 	} else if (sfi->flash_type == SMEM_BOOT_MMC_FLASH) {
 		bootargs = boot_args;
-		if (smem_bootconfig_info() == 0) {
-			active_part = get_rootfs_active_partition();
+		if (slot_info_available()) {
+			active_part = slot_active_rootfs();
 			if (active_part) {
 				strlcpy(bootargs, "rootfsname=rootfs_1 gpt", sizeof(boot_args));
 				ret  = set_uuid_bootargs(bootargs, "rootfs_1", sizeof(boot_args), true);
@@ -1125,8 +1126,8 @@ static int copy_rootfs(unsigned int request, uint32_t size)
 			((sfi->flash_type == SMEM_BOOT_SPI_FLASH) &&
 			(sfi->rootfs.offset == 0xBAD0FF5E))) {
 		blk_dev = mmc_get_dev(host->dev_num);
-		if (smem_bootconfig_info() == 0) {
-			active_part = get_rootfs_active_partition();
+		if (slot_info_available()) {
+			active_part = slot_active_rootfs();
 			if (active_part) {
 				ret = get_partition_info_efi_by_name(blk_dev,
 						"rootfs_1", &disk_info);
@@ -1298,8 +1299,8 @@ static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 	kernel_img_info.kernel_load_addr = request;
 
 #ifdef CONFIG_VERSION_ROLLBACK_PARTITION_INFO
-	if (smem_bootconfig_info() == 0){
-		ret = get_rootfs_active_partition();
+	if (slot_info_available()){
+		ret = slot_active_rootfs();
 		if (ret){
 			part = SECONDARY_PARTITION;
 		}
@@ -1358,8 +1359,8 @@ static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 			((sfi->flash_type == SMEM_BOOT_SPI_FLASH) &&
 			(sfi->rootfs.offset == 0xBAD0FF5E))) {
 		blk_dev = mmc_get_dev(host->dev_num);
-		if (smem_bootconfig_info() == 0) {
-			active_part = get_rootfs_active_partition();
+		if (slot_info_available()) {
+			active_part = slot_active_rootfs();
 			if (active_part) {
 				ret = get_partition_info_efi_by_name(blk_dev,
 						"0:HLOS_1", &disk_info);
@@ -1599,8 +1600,8 @@ static int do_boot_unsignedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const
 			printf("Using MMC device\n");
 		}
 		blk_dev = mmc_get_dev(host->dev_num);
-		if (smem_bootconfig_info() == 0) {
-			active_part = get_rootfs_active_partition();
+		if (slot_info_available()) {
+			active_part = slot_active_rootfs();
 			if (active_part) {
 				ret = get_partition_info_efi_by_name(blk_dev,
 						"0:HLOS_1", &disk_info);

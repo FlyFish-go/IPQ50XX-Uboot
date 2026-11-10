@@ -28,6 +28,7 @@
 #include <fdtdec.h>
 #include <asm/arch-qca-common/qpic_nand.h>
 #include <ipq_api.h>
+#include <slot_ops.h>
 #ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 #include <rt3000_b_fw_write.h>
 #endif
@@ -585,8 +586,8 @@ char * const argv[])
 			flash_type = sfi->flash_secondary_type;
 
 			if (sfi->rootfs.offset == 0xBAD0FF5E) {
-				if (smem_bootconfig_info() == 0)
-					active_part = get_rootfs_active_partition();
+				if (slot_info_available())
+					active_part = slot_active_rootfs();
 
 				offset = (ulong) active_part * IPQ_NAND_ROOTFS_SIZE;
 				part_size = (ulong) IPQ_NAND_ROOTFS_SIZE;
