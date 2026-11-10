@@ -87,8 +87,10 @@ def main():
             path.write_text(content)
         profiles = {
             "B": ["-DCONFIG_TARGET_IPQ5018_H3C_RT3000_B", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_DEFAULT_WEB"],
-            "C_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_C", "-DCONFIG_H3C_IPQ5018_COMMON"],
-            "D_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_D", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_DEFAULT_WEB"],
+            "C_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_C", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS"],
+            "D_PRODUCTION": ["-DCONFIG_TARGET_IPQ5018_H3C_HW_D", "-DCONFIG_H3C_IPQ5018_COMMON", "-DCONFIG_H3C_DEFAULT_WEB",
+                             "-DCONFIG_H3C_BOOTCONFIG_FIXED_EXTENTS", "-DCONFIG_H3C_BOOTCONFIG_RETAINED_FAILURE",
+                             "-DCONFIG_H3C_QPIC_EXACT_WRITE_WINDOW"],
         }
         for profile, defines in profiles.items():
             exe = Path(temp) / f"boot-default-{profile.lower()}"

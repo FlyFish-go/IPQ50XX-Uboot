@@ -8,7 +8,7 @@ cc -std=c11 -Wall -Wextra -Werror -I include -DCONFIG_H3C_HW_A_PRODUCTION_PORT t
 cc -std=c11 -Wall -Wextra -Werror -I include test/httpd_upload_limit_hosttest.c -o "$tmp_b"
 "$tmp_b"
 
-cc -std=c11 -Wall -Wextra -Werror -I include -DRT3_INITRAMFS_HOST_TEST -DCONFIG_TARGET_IPQ5018_H3C_RT3000_B test/httpd_upload_limit_hosttest.c -o "$tmp_b"
+cc -std=c11 -Wall -Wextra -Werror -I include -DRT3_INITRAMFS_HOST_TEST -DCONFIG_TARGET_IPQ5018_H3C_RT3000_B -DCONFIG_H3C_RESCUE_INITRAMFS_STAGE test/httpd_upload_limit_hosttest.c -o "$tmp_b"
 "$tmp_b"
 cc -std=c11 -Wall -Wextra -Werror -I include -DCONFIG_H3C_HW_C_RAM_READONLY test/httpd_upload_limit_hosttest.c -o "$tmp_b"
 "$tmp_b"
