@@ -123,6 +123,16 @@ if [[ -n "${H3C_NAND_PROFILE_ID:-}" ]]; then
   sed -i '/^CONFIG_H3C_NAND_PROFILE_ID=/d; /^CONFIG_H3C_NAND_SOURCE_MASK=/d; /^CONFIG_H3C_NAND_LOAD_ECC_BITS=/d; /^CONFIG_H3C_NAND_STORAGE_ECC_BITS=/d' "$build/.config"
   printf 'CONFIG_H3C_NAND_PROFILE_ID="%s"\nCONFIG_H3C_NAND_SOURCE_MASK=0x%x\nCONFIG_H3C_NAND_LOAD_ECC_BITS=%d\nCONFIG_H3C_NAND_STORAGE_ECC_BITS=%d\n' "$H3C_NAND_PROFILE_ID" "$H3C_NAND_SOURCE_MASK" "$H3C_NAND_LOAD_ECC_BITS" "$H3C_NAND_STORAGE_ECC_BITS" >> "$build/.config"
 fi
+# Run-time NAND profile selection: one image per board for every catalog chip.
+# It replaces the pin above, so the two are mutually exclusive.
+[[ "${H3C_NAND_AUTO:-0}" =~ ^[01]$ ]] || { echo "H3C_NAND_AUTO must be 0 or 1." >&2; exit 2; }
+if [[ "${H3C_NAND_AUTO:-0}" == 1 ]]; then
+  [[ -z "${H3C_NAND_PROFILE_ID:-}${H3C_NAND_SOURCE_MASK:-}${H3C_NAND_LOAD_ECC_BITS:-}${H3C_NAND_STORAGE_ECC_BITS:-}" ]] || {
+    echo "H3C_NAND_AUTO=1 excludes the H3C_NAND_* pin variables." >&2; exit 2;
+  }
+  sed -i '/^# CONFIG_H3C_NAND_AUTO_PROFILE is not set$/d; /^CONFIG_H3C_NAND_AUTO_PROFILE=/d' "$build/.config"
+  printf '%s\n' 'CONFIG_H3C_NAND_AUTO_PROFILE=y' >> "$build/.config"
+fi
 # A RAM rescue image runs below an installed U-Boot and is loaded with bootelf.
 text_base=0x4A920000
 if [[ "${H3C_RAM_RESCUE:-0}" == 1 ]]; then
@@ -133,6 +143,7 @@ fi
 make "${host_make_args[@]}" -C "$uboot" O="$build" olddefconfig
 [[ "${H3C_RAM_RESCUE:-0}" != 1 ]] || grep -Fxq 'CONFIG_H3C_RAM_RESCUE=y' "$build/.config"
 grep -Fxq 'CONFIG_H3C_RELEASE_SYSTEM_DEFAULT=y' "$build/.config"
+[[ "${H3C_NAND_AUTO:-0}" != 1 ]] || grep -Fxq 'CONFIG_H3C_NAND_AUTO_PROFILE=y' "$build/.config"
 [[ -z "$H3C_RELEASE_LABEL" ]] || grep -q "^CONFIG_LOCALVERSION=\"-h3c-common4.*-$H3C_RELEASE_LABEL\"\$" "$build/.config"
 grep -Fxq "$target=y" "$build/.config"
 grep -Fxq 'CONFIG_H3C_IPQ5018_COMMON=y' "$build/.config"
