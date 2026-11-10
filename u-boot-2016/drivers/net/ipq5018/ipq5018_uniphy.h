@@ -75,7 +75,7 @@
 
 void ppe_uniphy_mode_set(uint32_t mode, uint32_t phy_mode);
 int ppe_uniphy_mode_set_checked(uint32_t mode, uint32_t phy_mode);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 void ppe_uniphy_channel0_adapter_reset(void);
 #endif
 void ppe_uniphy_set_forceMode(void);

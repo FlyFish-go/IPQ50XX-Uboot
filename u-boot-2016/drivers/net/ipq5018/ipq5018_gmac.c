@@ -21,7 +21,7 @@
 #include <asm/global_data.h>
 #include "ipq_phy.h"
 #include "ipq5018_uniphy.h"
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 #include "rtl8367s.h"
 #endif
 #include <asm/arch-ipq5018/ipq5018_gmac.h>
@@ -104,7 +104,7 @@ static void ipq_eth_mac_cfg(struct eth_device *dev)
 			speed = priv->speed;
 
 		uint mac_tx_rx_enable = TX_ENABLE | RX_ENABLE;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 		if (priv->mac_unit == 1 && priv->gmac_board_cfg &&
 		    priv->gmac_board_cfg->rtl8367s_switch_enable)
 			mac_tx_rx_enable = 0;
@@ -471,7 +471,7 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 	}
 
 	if (priv->mac_unit){
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 		if (priv->gmac_board_cfg->rtl8367s_switch_enable) {
 			int ret = ppe_uniphy_mode_set_checked(mode, phy_mode);
 
@@ -498,7 +498,7 @@ int ipq_eth_init(struct eth_device *dev, bd_t *this)
 	struct eth_dma_regs *dma_reg = (struct eth_dma_regs *)priv->dma_regs_p;
 	u32 data;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 	if (priv->mac_unit == 1 && priv->gmac_board_cfg &&
 	    priv->gmac_board_cfg->rtl8367s_switch_enable) {
 		int ret = rtl8367s_sgmii_link_down();
@@ -533,7 +533,7 @@ int ipq_eth_init(struct eth_device *dev, bd_t *this)
 	ipq_gmac_rx_desc_setup(priv);
 
 	writel((uint)priv->desc_tx[0], &dma_reg->txdesclistaddr);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 	if (priv->mac_unit == 1 && priv->gmac_board_cfg &&
 	    priv->gmac_board_cfg->rtl8367s_switch_enable) {
 		int ret = rtl8367s_sgmii_link_up();
@@ -575,7 +575,7 @@ static int ipq_eth_send(struct eth_device *dev, void *packet, int length)
 	txdesc->length |= ((length <<DescSize1Shift) & DescSize1Mask);
 	txdesc->status |= (DescTxFirst | DescTxLast | DescTxIntEnable);
 	txdesc->buffer1 = virt_to_phys(packet);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_GMAC_TX_FLUSH_BEFORE_OWN)
 	/* Make packet data visible to DMA before publishing descriptor ownership. */
 	flush_dcache_range((unsigned long)(txdesc->buffer1),
 		(unsigned long)(txdesc->buffer1) + PKTSIZE_ALIGN);
@@ -585,7 +585,7 @@ static int ipq_eth_send(struct eth_device *dev, void *packet, int length)
 	flush_dcache_range((unsigned long)txdesc,
 			(unsigned long)txdesc + DESC_SIZE);
 
-#if !defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if !defined(CONFIG_H3C_GMAC_TX_FLUSH_BEFORE_OWN)
 	flush_dcache_range((unsigned long)(txdesc->buffer1),
 		(unsigned long)(txdesc->buffer1) + PKTSIZE_ALIGN);
 #endif
@@ -680,7 +680,7 @@ static int ipq_eth_recv(struct eth_device *dev)
 	return length;
 }
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
+#ifdef CONFIG_H3C_GMAC_NETDIAG
 static void ipq_eth_netdiag(struct eth_device *dev)
 {
 	struct ipq_eth_dev *priv;
@@ -763,7 +763,7 @@ static void ipq_eth_halt(struct eth_device *dev)
 {
 	if (dev->state != ETH_STATE_ACTIVE)
 		return;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
+#ifdef CONFIG_H3C_GMAC_NETDIAG
 	ipq_eth_netdiag(dev);
 #endif
 	/* reset the mac */
@@ -909,7 +909,7 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 
 	/* Getting the MAC address from ART partition */
 	ret = get_eth_mac_address(enet_addr, CONFIG_IPQ_NO_MACS);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_ETH_ART_MAC_REQUIRED)
 	if (ret < 0)
 		return ret;
 #endif
@@ -983,7 +983,7 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 		snprintf((char *)ipq_gmac_macs[i]->phy_name,
 				sizeof(ipq_gmac_macs[i]->phy_name), "IPQ MDIO%d", i);
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 		if (gmac_cfg->rtl8367s_switch_enable) {
 			phy_chip_id = 0;
 		} else
@@ -1009,7 +1009,7 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 					NULL);
 			phy_chip_id = (phy_chip_id1 << 16) | phy_chip_id2;
 		}
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 		if (gmac_cfg->rtl8367s_switch_enable) {
 			if (gmac_cfg->unit != 1 || gmac_cfg->phy_addr != 29 ||
 			    !gmac_cfg->phy_external_link) {

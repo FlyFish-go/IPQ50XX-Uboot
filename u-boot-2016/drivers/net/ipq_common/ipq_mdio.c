@@ -24,8 +24,7 @@
 // The C board routes RTL8367S on external MDIO1 at physical base 0x90000.
 // HW-A (IPQ5018 + QCA8337) reads corrupt switch registers at 0x1500F
 // (MASK_CTRL 0x0100 instead of 0x1302); its Linux port uses 0x1502F too.
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) || \
-    defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_H3C_MDIO_C22_1502F)
 #define IPQ_MDIO_CTRL0_C22_VALUE 0x1502f
 #define IPQ_MDIO_CTRL0_C45_VALUE 0x1512f
 #else

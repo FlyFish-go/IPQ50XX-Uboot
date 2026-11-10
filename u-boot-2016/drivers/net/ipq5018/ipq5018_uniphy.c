@@ -129,7 +129,7 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t mode, uint32_t phy_mode)
 {
 	uint32_t initial_phy_mode = UNIPHY_MISC2_REG_SGMII_MODE;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 	if (mode == PORT_WRAPPER_SGMII_PLUS)
 		initial_phy_mode = UNIPHY_MISC2_REG_SGMII_PLUS_MODE;
 #endif
@@ -202,7 +202,7 @@ void ppe_uniphy_mode_set(uint32_t mode, uint32_t phy_mode)
 	ppe_uniphy_sgmii_mode_set(mode, phy_mode);
 }
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 void ppe_uniphy_channel0_adapter_reset(void)
 {
 	uint32_t reg_value;
@@ -217,7 +217,7 @@ void ppe_uniphy_channel0_adapter_reset(void)
 }
 #endif
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 static int ppe_uniphy_sgmii_mode_set_checked(uint32_t mode, uint32_t phy_mode)
 {
 	int ret;
@@ -270,7 +270,7 @@ static int ppe_uniphy_sgmii_mode_set_checked(uint32_t mode, uint32_t phy_mode)
 
 int ppe_uniphy_mode_set_checked(uint32_t mode, uint32_t phy_mode)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_H3C_RTL8367S_SGMII)
 	return ppe_uniphy_sgmii_mode_set_checked(mode, phy_mode);
 #else
 	ppe_uniphy_mode_set(mode, phy_mode);

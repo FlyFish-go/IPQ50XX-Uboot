@@ -237,4 +237,34 @@ config H3C_IPQ5018_COMMON
     help
       Shared validated SMEM layout, dual-slot, metadata and recovery services.
 
+config H3C_RTL8367S_SGMII
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      RTL8367S switch on GMAC1 over SGMII/SGMII+.
+
+config H3C_GMAC_TX_FLUSH_BEFORE_OWN
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      Flush the TX buffer before handing the descriptor to the DMA engine.
+
+config H3C_GMAC_NETDIAG
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_C
+    help
+      GMAC register dump controlled by the hwc_netdiag environment variable.
+
+config H3C_ETH_ART_MAC_REQUIRED
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C || TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Fail GMAC init when the ART partition has no MAC addresses.
+
+config H3C_MDIO_C22_1502F
+    bool
+    default y if TARGET_IPQ5018_H3C_HW_A || TARGET_IPQ5018_H3C_HW_C
+    help
+      Program MDIO CTRL0 with 0x1502f for clause-22 access.
+
 endif

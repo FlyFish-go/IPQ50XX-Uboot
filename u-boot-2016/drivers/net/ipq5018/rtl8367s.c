@@ -30,7 +30,7 @@ static const struct rtl8367s_jam rtl8367s_init_jam_common[] = {
 	{ 0x0800, 0x0000 }, { 0x0802, 0x0000 }, { 0x09DA, 0x0013 },
 	{ 0x1D32, 0x0002 },
 };
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
+#ifdef CONFIG_H3C_RTL8367S_SGMII
 static const struct rtl8367s_jam rtl8367s_sds_jam_sgmii[] = {
 	{ 0x0480, 0x04D7 }, { 0x0481, 0xF994 }, { 0x0482, 0x2420 },
 	{ 0x0483, 0x6960 }, { 0x0484, 0x9728 }, { 0x0423, 0x9D85 },
@@ -142,7 +142,7 @@ static int sds_read(u16 addr,u16 *val) {
  if((ret=sds_wait())) return ret;
  return reg_read(0x6602,val);
 }
-#ifdef CONFIG_TARGET_IPQ5018_H3C_HW_C
+#ifdef CONFIG_H3C_RTL8367S_SGMII
 /* RTL8365MB QSDK fixed 1000/full SGMII setup (port 6 / EXT1). */
 static int sgmii_setup(void) {
  u16 option,nway; unsigned int i; int ret;
