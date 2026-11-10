@@ -267,4 +267,28 @@ config H3C_MDIO_C22_1502F
     help
       Program MDIO CTRL0 with 0x1502f for clause-22 access.
 
+config H3C_RESCUE_INITRAMFS_STAGE
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Web rescue only stages a validated initramfs; the generic firmware writers are compiled out.
+
+config H3C_METADATA_IMPLICIT_TARGET
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Metadata uploads without a target use the single-target writer.
+
+config H3C_FLASHRW_NAMED_NAND
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      flash <partition> on NAND goes through the validated named-partition writer.
+
+config H3C_LED_STATUS_AT_GPIO_INIT
+    bool
+    default y if TARGET_IPQ5018_H3C_RT3000_B
+    help
+      Clear inherited LED colours and light the status LED right after GPIO init.
+
 endif

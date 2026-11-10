@@ -38,7 +38,7 @@
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_metadata.h>
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 #include <rt3000_b_initramfs.h>
 DECLARE_GLOBAL_DATA_PTR;
 #endif
@@ -90,7 +90,7 @@ static ulong factory_fw_kernel_size;
 static char info[666];
 static char resp[888];
 static fw_type_t fw_type;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static struct rt3_hw_b_initramfs_validation validated_initramfs;
 
 void failsafe_initramfs_invalidate(void)
@@ -155,7 +155,7 @@ static void handle_wrong_fw_type(const char *expected_file_type_str)
 		expected_file_type_str, actual_file_type_str);
 }
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void handle_wrong_upgrade_type(void)
 {
 	strlcpy(info, "{\"type\":\"wrong_upgrade_type\"}", sizeof(info));
@@ -217,7 +217,7 @@ static void handle_invalid_qsdk_fw(const char *node_prefix)
 		"{\"type\":\"fit_node_not_found\",\"node_prefix\":\"%s\"}", node_prefix);
 }
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void handle_command_too_long(const char *file, const char *func, int line, int len)
 {
 	snprintf(info, sizeof(info),
@@ -230,7 +230,7 @@ static void handle_command_too_long(const char *file, const char *func, int line
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void handle_too_many_commands(const char *file, const char *func, int line)
 {
 	snprintf(info, sizeof(info),
@@ -243,7 +243,7 @@ static void handle_too_many_commands(const char *file, const char *func, int lin
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void handle_run_command_failed(const char *cmd, const char *output)
 {
 	char esc_cmd[MAX_CMD_LEN * 2];
@@ -412,7 +412,7 @@ void get_image_md5_str(const void *data_addr, ulong data_size, char *buf, size_t
 			return ret;	\
     } while (0)
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int _add_cmd_to_list(const char *file, const char *func, int line, const char *fmt, ...)
 {
 	va_list args;
@@ -435,7 +435,7 @@ static int _add_cmd_to_list(const char *file, const char *func, int line, const 
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void print_upgrade_hint(const char *upgrade_type_str)
 {
 	printf("\n"
@@ -446,7 +446,7 @@ static void print_upgrade_hint(const char *upgrade_type_str)
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int make_gpt_write_cmd(ulong data_addr, ulong data_size)
 {
 	block_dev_desc_t *mmc_dev;
@@ -466,7 +466,7 @@ static int make_gpt_write_cmd(ulong data_addr, ulong data_size)
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static ulong get_nand_writable_data_size(uint32_t data_size)
 {
 	uint32_t adj_size, writable_size = data_size;
@@ -482,14 +482,14 @@ static ulong get_nand_writable_data_size(uint32_t data_size)
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int failsafe_run_command(void *cmd)
 {
 	return run_command((const char *)cmd, 0);
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int failsafe_run_command_capture(const char *cmd)
 {
 	char output[FAILSAFE_CAPTURE_OUTPUT_SIZE];
@@ -507,7 +507,7 @@ static int failsafe_run_command_capture(const char *cmd)
 }
 #endif
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int failsafe_run_command_list(void)
 {
     for (int i = 0; i < runcmd->count; i++)
@@ -705,7 +705,7 @@ static int __maybe_unused failsafe_validate_initramfs(const void *data_addr, ulo
         return RET_WRONG_FW_TYPE;
     }
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	/* /upload owns 0x41000000..0x43000000; stage only at 0x44000000. */
 	if (!rt3_hw_b_initramfs_range_valid((rt3_hw_b_addr_t)data_addr, data_size,
 					   CONFIG_SYS_SDRAM_BASE, gd->ram_size) ||
@@ -725,7 +725,7 @@ static int __maybe_unused failsafe_validate_initramfs(const void *data_addr, ulo
 // 文件刷写函数
 // =============================================================================
 
-#ifndef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int failsafe_write_firmware(ulong data_addr, ulong data_size)
 {
 	print_upgrade_hint("FIRMWARE");
@@ -893,7 +893,7 @@ static int failsafe_write_simg(ulong data_addr, ulong data_size)
 // 暴露给外部的 API
 // =============================================================================
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static bool failsafe_initramfs_ram_available(rt3_hw_b_addr_t start, size_t size)
 {
 	return is_memory_region_available(start, size);
@@ -909,7 +909,7 @@ static void failsafe_initramfs_copy(rt3_hw_b_addr_t destination, rt3_hw_b_addr_t
 int boot_from_mem(ulong data_addr)
 {
 	char rcmd[99];
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	ulong data_size = rt3_hw_b_initramfs_validated_size(
 		&validated_initramfs, data_addr);
 	rt3_hw_b_addr_t staged_addr;
@@ -980,7 +980,7 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 	u32 target_offset = 0, target_size = 0, second_target_offset = 0, second_target_size = 0;
 	(void)filename;
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	failsafe_initramfs_invalidate();
 	fw_type = data_addr && data_size >= sizeof(u32) ?
 		check_fw_type((rt3_hw_b_addr_t)data_addr, data_size) : FW_TYPE_UNKNOWN;
@@ -992,7 +992,7 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 	httpd_debug("fw_type = %d (%s), data_addr = 0x%lx, data_size = %lu (0x%lx)\n",
 		fw_type, fw_type_to_string(fw_type), (ulong)data_addr, data_size, data_size);
 #ifdef CONFIG_H3C_IPQ5018_COMMON
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	failsafe_initramfs_invalidate();
 #endif
 	switch (upgrade_type) {
@@ -1003,7 +1003,7 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 	case WEBFAILSAFE_UPGRADE_TYPE_PTABLE: md_kind=RT3_MD_MIBIB; md_target="0:MIBIB"; break;
 	case WEBFAILSAFE_UPGRADE_TYPE_ART: md_kind=RT3_MD_ART; md_target="0:ART"; break;
 	case WEBFAILSAFE_UPGRADE_TYPE_CDT: md_kind=RT3_MD_CDT; md_target="0:CDT + 0:CDT_1"; break;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	case WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS:
 		rt3_metadata_invalidate();
 		ret=failsafe_validate_initramfs(data_addr, data_size);
@@ -1043,7 +1043,7 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 #endif
 		get_image_md5_str(data_addr, data_size, md5_str, sizeof(md5_str));
 #ifdef CONFIG_H3C_IPQ5018_COMMON
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 		if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS) {
 			snprintf(info, sizeof(info),
 				"{\"type\":\"initramfs\",\"size\":\"%lu\",\"md5\":\"%s\",\"name\":\"H3C HW-B Initramfs\",\"target\":\"RAM 0x44000000\"}",
@@ -1083,7 +1083,7 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
 
 	runcmd = &cmdlist;
 	runcmd->count = 0;
-	#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+	#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	fw_type = data_addr && data_size >= sizeof(u32) ?
 		check_fw_type((rt3_hw_b_addr_t)data_addr, data_size) : FW_TYPE_UNKNOWN;
 #else
@@ -1093,7 +1093,7 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
 	memset(info, 0, sizeof(info));
 	memset(resp, 0, sizeof(resp));
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	strlcpy(info, "{\"type\":\"read_only_stage0\"}", sizeof(info));
 	ret = -EROFS;
 #else

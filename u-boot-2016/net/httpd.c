@@ -23,7 +23,7 @@
 #include <linux/sizes.h>
 #include <failsafe/failsafe.h>
 #include <ipq_api.h>
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 #include <rt3000_b_initramfs.h>
 #include <rt3000_b_metadata.h>
 #endif
@@ -565,7 +565,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 
 	/* record URI */
 	pdata->uri = uri_ptr;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	/* A new legacy upload invalidates any previous RAM-boot validation, even
 	 * when its Content-Length is rejected before the URI callback runs. */
 	if (method == HTTP_POST && !strcmp(pdata->uri, "/upload")) {

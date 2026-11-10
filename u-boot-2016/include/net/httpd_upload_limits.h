@@ -2,7 +2,7 @@
 #ifndef __NET_HTTPD_UPLOAD_LIMITS_H__
 #define __NET_HTTPD_UPLOAD_LIMITS_H__
 #include <linux/sizes.h>
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 #include <rt3000_b_initramfs.h>
 #endif
 #define RT3_HTTP_UPLOAD_LIMIT (80U * SZ_1M + SZ_64K)
@@ -19,7 +19,7 @@ static inline int httpd_upload_uri_is_standard_upload(const char *uri)
 }
 static inline int httpd_upload_length_allowed(const char *uri, unsigned long length)
 {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)
+#if defined(CONFIG_H3C_RESCUE_INITRAMFS_STAGE)
     return rt3_hw_b_http_content_length_allowed(length, httpd_upload_uri_is_standard_upload(uri));
 #else
     if (length > RT3_HTTP_UPLOAD_LIMIT) return 0;

@@ -81,7 +81,7 @@ static inline void handle_success_led_state(void)
 bool httpd_is_running(void);
 void print_eth_init_halt_skip_hint(int init);
 int boot_from_mem(ulong data_addr);
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 void failsafe_initramfs_invalidate(void);
 bool failsafe_initramfs_is_validated(ulong data_addr, ulong data_size);
 #endif

@@ -132,7 +132,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 		rt3_metadata_invalidate();
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 		failsafe_initramfs_invalidate();
 #endif
 
@@ -178,7 +178,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 					   &has_cdt_target) ||
 		    request->form.count != (u32)(1 + has_cdt_target)) {
 			rt3_metadata_invalidate();
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 			failsafe_initramfs_invalidate();
 #endif
 			response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"invalid_upload_fields\"}}";
@@ -301,21 +301,21 @@ static void result_handler(enum httpd_uri_handler_status status,
 					else if (explicit_target)
 						st->ret=rt3_metadata_write_target(kind,target,token,response);
 					else {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)
+#if defined(CONFIG_H3C_METADATA_IMPLICIT_TARGET)
 						st->ret=rt3_metadata_write(kind,token,response);
 #else
 						st->ret=rt3_metadata_write_target(kind,RT3_MD_TARGET_DEFAULT,token,response);
 #endif
 					}
 				} else {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)
+#if defined(CONFIG_H3C_METADATA_IMPLICIT_TARGET)
 					st->ret=rt3_metadata_write(kind,token,response);
 #else
 					st->ret=rt3_metadata_write_target(kind,RT3_MD_TARGET_DEFAULT,token,response);
 #endif
 				}
 			} else {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 				if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS) {
 					rt3_metadata_invalidate();
 					if (failsafe_initramfs_is_validated((ulong)upload_data,
@@ -360,7 +360,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 			rt3_metadata_invalidate();
 #endif
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 			failsafe_initramfs_invalidate();
 #endif
 		}

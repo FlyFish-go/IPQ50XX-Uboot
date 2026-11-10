@@ -28,7 +28,7 @@
 #include <fdtdec.h>
 #include <asm/arch-qca-common/qpic_nand.h>
 #include <ipq_api.h>
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 #include <rt3000_b_fw_write.h>
 #endif
 
@@ -64,7 +64,7 @@ struct header {
 
 uint32_t flash_type_new = -1;
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 static int rt3_parse_hex_u32(const char *text, u32 *value)
 {
 	u32 parsed = 0;
@@ -399,7 +399,7 @@ char * const argv[])
 	uint32_t size_block, start_block, file_size_cpy = 0;
 	char *part_name = NULL, *filesize, *loadaddr;
 	int flash_type, ret;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 	int named_nand_path;
 #endif
 	unsigned int active_part = 0;
@@ -425,7 +425,7 @@ char * const argv[])
 	disk_partition_t disk_info = {0};
 	const qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 	flash_type = (flash_type_new != -1) ? flash_type_new : sfi->flash_type;
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 	named_nand_path = (flash_type == SMEM_BOOT_NAND_FLASH ||
 		flash_type == SMEM_BOOT_QSPI_NAND_FLASH);
 #endif
@@ -442,7 +442,7 @@ char * const argv[])
 		if (argc == 2) {
 			loadaddr = getenv("fileaddr");
 			if (loadaddr != NULL) {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 				if (named_nand_path) {
 					u32 parsed;
 					if (rt3_parse_hex_u32(loadaddr, &parsed))
@@ -456,7 +456,7 @@ char * const argv[])
 
 			filesize = getenv("filesize");
 			if (filesize != NULL) {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 				if (named_nand_path) {
 					u32 parsed;
 					if (rt3_parse_hex_u32(filesize, &parsed))
@@ -469,7 +469,7 @@ char * const argv[])
 				goto exit;
 
 		} else if (argc == 4) {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 			if (named_nand_path) {
 				u32 parsed_addr, parsed_size;
 				if (rt3_parse_hex_u32(argv[2], &parsed_addr) ||
@@ -509,7 +509,7 @@ char * const argv[])
 			goto exit;
 		}
 
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 		if (named_nand_path && (!sfi->flash_block_size ||
 		    start_block > 0xffffffffU / sfi->flash_block_size ||
 		    size_block > 0xffffffffU / sfi->flash_block_size)) {
@@ -651,7 +651,7 @@ char * const argv[])
 	}
 
 	if (flash_cmd) {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 		if (named_nand_path) {
 			ret = rt3_named_nand_write_partition(
 				&nand_info[CONFIG_NAND_FLASH_INFO_IDX], part_name,
@@ -714,7 +714,7 @@ char * const argv[])
 		}
 #endif
 	} else {
-#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
+#ifdef CONFIG_H3C_FLASHRW_NAMED_NAND
 		if (named_nand_path)
 			ret = rt3_named_nand_write_partition(
 				&nand_info[CONFIG_NAND_FLASH_INFO_IDX], part_name,
