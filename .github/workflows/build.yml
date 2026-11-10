@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'u-boot-2016/**'
+      - 'build-release.sh'
+      - 'release-tools/**'
+      - 'release-metadata/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'u-boot-2016/**'
+      - 'build-release.sh'
+      - 'release-tools/**'
+      - 'release-metadata/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SDK: openwrt-sdk-21.02.7-ipq40xx-generic_gcc-8.4.0_musl_eabi.Linux-x86_64
+  SDK_SHA256: df6510f055ab90635aa0d80e6974df38f36c76a75dfa2aba027854a9a126002c
+  SDK_URL: https://downloads.openwrt.org/releases/21.02.7/targets/ipq40xx/generic
+
+jobs:
+  board-conditionals:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 release-tools/board_conditionals.py --check
+
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { kind: h3c, name: A }
+          - { kind: h3c, name: B }
+          - { kind: h3c, name: C }
+          - { kind: h3c, name: D }
+          - { kind: defconfig, name: ipq5018_lingyan_lyw_30m }
+          - { kind: defconfig, name: ipq5018_tcl_t30_pro }
+          - { kind: defconfig, name: ipq5018_cucc_vs010 }
+    name: ${{ matrix.kind }} ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y bison flex bc libbsd-dev libssl-dev device-tree-compiler
+      - uses: actions/cache@v4
+        id: sdk
+        with:
+          path: ${{ env.SDK }}.tar.xz
+          key: ${{ env.SDK_SHA256 }}
+      - if: steps.sdk.outputs.cache-hit != 'true'
+        run: curl -fsSLO "$SDK_URL/$SDK.tar.xz"
+      - name: Unpack the toolchain
+        run: |
+          echo "$SDK_SHA256  $SDK.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/sdk"
+          tar xf "$SDK.tar.xz" -C "$RUNNER_TEMP/sdk" --strip-components=1 "$SDK/staging_dir"
+          staging="$RUNNER_TEMP/sdk/staging_dir"
+          echo "STAGING_DIR=$staging" >> "$GITHUB_ENV"
+          echo "CROSS_COMPILE=$staging/toolchain-arm_cortex-a7+neon-vfpv4_gcc-8.4.0_musl_eabi/bin/arm-openwrt-linux-" >> "$GITHUB_ENV"
+      - run: release-tools/ci-build.sh "${{ matrix.kind }}" "${{ matrix.name }}" "$RUNNER_TEMP/out"
