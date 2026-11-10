@@ -39,6 +39,6 @@ npm run docs:dev
 
 ## 来源与许可
 
-本项目基于 [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build)（uBootKit），代码历史来自 [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot)。许可见 [LICENSE](LICENSE) 和 [LICENSE-NOTICE.md](LICENSE-NOTICE.md)。
+本项目基于 [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build)（uBootKit），感谢 chenxin527 及 uBootKit 的上游贡献者，以及为上游 README 贡献过的 webbrain-one。上游的完整提交历史保留在 [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot)。许可见 [LICENSE](LICENSE) 和 [LICENSE-NOTICE.md](LICENSE-NOTICE.md)。
 
 本项目与各路由器厂商无关。
