@@ -80,8 +80,7 @@ static int extent_read(const struct bc_extent *tmpl, struct bc_extent *out)
  u32 off = 0, size = 0;
  if (!tmpl || !out || getpart_offset_size((char *)tmpl->name, &off, &size) ||
      size != BC_SIZE || off % BC_ERASE || off > BC_CHIP || size > BC_CHIP - off
-#if (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || \
-    defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY)
+#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG") && off != 0x100000)
      || (!strcmp(tmpl->name, "0:BOOTCONFIG1") && off != 0x140000)
 #endif
@@ -121,14 +120,10 @@ static int current_name(const struct rt3_layout *l, u32 selector, char out[16])
 
 static int bootcmd_compatible(void)
 {
-#ifdef CONFIG_H3C_HW_C_RAM_READONLY
- return 1;
-#else
  const char *s = getenv("bootcmd");
  /* C production uses the current RAM command after legacy ENV normalization. */
  /* A saved slot-specific or otherwise custom command would override BC. */
  return !s || !*s || !strcmp(s, "bootipq");
-#endif
 }
 
 static int read_exact(struct mtd_info *m, u32 off, void *buf, u32 n)
@@ -401,10 +396,6 @@ int rt3_boot_default_set_physical(int selector, char name[16])
 {
  char shown[16];
  enum bd_result res;
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_A_RAM_READONLY)
- (void)selector; if (name) name[0] = 0;
- return 1;
-#endif
  res = boot_default_apply(selector, NULL, shown);
  if (name) strlcpy(name, shown, 16);
  if (res == BD_OK_SAME || res == BD_OK_CHANGED) return res == BD_OK_CHANGED ? 0 : 2;
@@ -454,12 +445,6 @@ static void default_handler(enum httpd_uri_handler_status status,
   answer(response, 405, "{\"status\":\"fail\",\"error\":\"method_not_allowed\"}"); return;
  }
  post = request->method == HTTP_POST;
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_A_RAM_READONLY)
- if (post) {
-  answer(response, 403, "{\"status\":\"fail\",\"error\":\"readonly_profile\"}");
-  return;
- }
-#endif
  if (post) {
   char shown[16];
   for (i = 0; i < request->form.count; i++) {
@@ -489,10 +474,7 @@ static void default_handler(enum httpd_uri_handler_status status,
      current_name(&layout, view.rootfs_selector, active)) {
   free(check); free(page); free(storage); answer(response, 409, "{\"status\":\"fail\",\"error\":\"invalid_or_ambiguous_bootconfig\"}"); return;
  }
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_A_RAM_READONLY)
-  snprintf(reply, sizeof(reply), "{\"status\":\"ok\",\"default\":\"%s\",\"can_change\":false,\"locked\":%s,\"reason\":\"readonly_profile\",\"auto_web\":true,\"default_applies_to\":\"bootipq\"}",
-           active, partial_update_lock ? "true" : "false");
-#elif defined(CONFIG_H3C_DEFAULT_WEB)
+#if defined(CONFIG_H3C_DEFAULT_WEB)
   snprintf(reply, sizeof(reply), "{\"status\":\"ok\",\"default\":\"%s\",\"can_change\":%s,\"locked\":%s,\"reason\":\"%s\",\"auto_web\":true,\"default_applies_to\":\"bootipq\"}",
            active, bootcmd_compatible() && !partial_update_lock ? "true" : "false",
            partial_update_lock ? "true" : "false",

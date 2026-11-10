@@ -555,15 +555,9 @@ static void fw_layout_handler(enum httpd_uri_handler_status status,
 		fw_reply_json(response, 503, "{\"status\":\"unsupported\",\"write_supported\":false,\"ptable_write_supported\":false}");
 		return;
 	}
-	#if defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
-snprintf(fw_reply, sizeof(fw_reply),
-         "{\"status\":\"ok\",\"mode\":\"%s\",\"read_only\":true,\"write_supported\":false,\"ptable_write_supported\":false,\"partitions\":[",
-         rt3_layout_mode_name(layout.mode));
-#else
 snprintf(fw_reply, sizeof(fw_reply),
          "{\"status\":\"ok\",\"mode\":\"%s\",\"read_only\":false,\"write_supported\":true,\"ptable_write_supported\":true,\"partitions\":[",
          rt3_layout_mode_name(layout.mode));
-#endif
 	for (i = 0; i < layout.count; i++) {
 		char part_json[256];
 		snprintf(part_json, sizeof(part_json),
@@ -878,10 +872,6 @@ static void fw_write_handler(enum httpd_uri_handler_status status,
 	u8 digest[SHA256_SUM_LEN];
 	int ret, stage = RT3_FW_STAGE_NONE;
 	if (status != HTTP_CB_NEW) return;
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	fw_reply_json(response, 403, "{\"status\":\"fail\",\"error\":\"read-only target\"}");
-	return;
-#endif
 	if (!request || request->method != HTTP_POST) {
 		fw_reply_json(response, 405, "{\"status\":\"fail\",\"error\":\"POST required\"}");
 		return;

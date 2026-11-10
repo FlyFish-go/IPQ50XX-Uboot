@@ -259,15 +259,13 @@ int board_init(void)
 		printf("BUG: unsupported flash type : %d\n", sfi->flash_type);
 		BUG();
 	}
-#if (defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	/* D production retains the guarded storage driver flag, but must select
 	 * the actual NAND ENV backend. Diagnostic profiles remain volatile. */
 	saveenv = NULL;
 	env_ptr = NULL;
 #ifdef CONFIG_H3C_HW_D_RAM_READONLY
 	env_name_spec = "NX30 D RAM diagnostic (volatile ENV)";
-#elif defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	env_name_spec = "HW-C RAM-only validation";
 #else
 	env_name_spec = "HW-A RAM-only validation";
 #endif

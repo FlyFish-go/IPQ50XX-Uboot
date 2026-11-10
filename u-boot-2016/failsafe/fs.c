@@ -12,12 +12,6 @@
 
 const struct fs_desc *fs_find_file(const char *path)
 {
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-    if (!strcmp(path, "index.html"))
-        path = "nor_rescue.html";
-    else if (!strcmp(path, "main.js"))
-        path = "nor_rescue.js";
-#endif
     for (int i = 0; i < HTTPD_FS_NUMFILES; i++) {
         struct fs_desc *start = &httpd_filesystem[i];
 

@@ -48,22 +48,7 @@ extern upgrade_type_t upgrade_type;
 typedef void (*register_uri_handlers_func_t)(struct httpd_instance *inst);
 
 register_uri_handlers_func_t register_uri_handlers_funcs[] = {
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-	index_register_uri_handlers,
-	misc_register_uri_handlers,
-	network_register_uri_handlers,
-	sysinfo_register_uri_handlers,
-	upgrade_register_uri_handlers,
-#elif defined(CONFIG_H3C_HW_D_NAND_SERVICE) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
-	index_register_uri_handlers,
-	html_register_uri_handlers,
-	misc_register_uri_handlers,
-	sysinfo_register_uri_handlers,
-	nor_nand_autoecc_register_uri_handlers,
-	service_hwd_register_uri_handlers,
-	slots_rt3000_b_register_uri_handlers,
-	syslog_register_uri_handlers,
-#elif defined(CONFIG_H3C_HW_D_RAM_WEB) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
+#if defined(CONFIG_H3C_HW_D_RAM_WEB) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 #ifdef CONFIG_H3C_HW_D_RAM_AUTOECC
 	nor_nand_autoecc_register_uri_handlers,
 #endif

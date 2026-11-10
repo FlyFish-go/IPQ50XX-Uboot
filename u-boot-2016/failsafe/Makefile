@@ -5,11 +5,6 @@ ifneq ($(CONFIG_SPL_BUILD),y)
 obj-y += modules/
 obj-y += fs.o failsafe.o
 
-# All H3C NAND board configurations embed the same public web assets.
-ifeq ($(CONFIG_H3C_HW_D_NOR_RESCUE),y)
-FS_SELECTED_FILES := nor_rescue.html nor_rescue.js
-endif
-
 FS_GEN_SCRIPT := makefsdata
 FSDATA_C := $(obj)/httpd-fsdata.c
 

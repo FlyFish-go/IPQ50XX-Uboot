@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
 #define RT3_MAC_BOARD_LABEL "H3C HW-C"
 #else
 #define RT3_MAC_BOARD_LABEL "RT3000-B"

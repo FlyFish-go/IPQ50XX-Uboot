@@ -42,18 +42,10 @@
 
 #define CONFIG_SYS_BOOTM_LEN		(200 << 20)
 
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-#define CONFIG_ENV_SIZE_MAX			(64 << 10) /* NOR APPSBLENV is 64 KiB */
-#else
 #define CONFIG_ENV_SIZE_MAX			(256 << 10) /* 256 KB */
-#endif
 
 /* Software-only shared port; HW-A remains a distinct target identity. */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || \
-    defined(CONFIG_H3C_HW_A_RAM_READONLY) || \
-    defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY) || \
-    defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 #define CONFIG_H3C_IPQ5018_DUALSLOT_PORT
 #endif
 
@@ -161,7 +153,7 @@ extern loff_t board_env_size;
 #define CONFIG_ENV_OFFSET			board_env_offset
 #define CONFIG_ENV_SIZE				CONFIG_ENV_SIZE_MAX
 #define CONFIG_ENV_RANGE			board_env_range
-#if defined(CONFIG_H3C_HW_D_STORAGE_PORT) || defined(CONFIG_H3C_HW_D_NOR_RESCUE) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
+#if defined(CONFIG_H3C_HW_D_STORAGE_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 #define CONFIG_SYS_MALLOC_LEN			(8 << 20)
 #else
 #define CONFIG_SYS_MALLOC_LEN			(CONFIG_ENV_SIZE_MAX + (500 << 10))
@@ -371,7 +363,7 @@ extern loff_t board_env_size;
 #define CONFIG_SYS_MEMTEST_END			CONFIG_SYS_MEMTEST_START + 0x100
 
 /* NSS firmware loaded using bootm */
-#if defined(CONFIG_H3C_HW_D_NOR_RESCUE) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#ifdef CONFIG_H3C_HW_A_PRODUCTION_PORT
 #define CONFIG_BOOTCOMMAND			"httpd"
 #else
 #define CONFIG_BOOTCOMMAND			"bootipq"
@@ -379,11 +371,7 @@ extern loff_t board_env_size;
 #define CONFIG_BOOTARGS				"console=ttyMSM0,115200n8"
 #define QCA_ROOT_FS_PART_NAME			"rootfs"
 
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-#define CONFIG_BOOTDELAY			0
-#else
 #define CONFIG_BOOTDELAY			3
-#endif
 
 #define NUM_ALT_PARTITION			16
 
@@ -464,7 +452,7 @@ extern loff_t board_env_size;
  * generic UBI command available, but leave all QCA volume-write support off;
  * the B QPIC driver also rejects NAND program/erase operations.
  */
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
 #define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 #define CONFIG_LZO
@@ -525,11 +513,11 @@ extern loff_t board_env_size;
 #define CONFIG_CMD_BOOTFLASH
 #endif
 #define CONFIG_CMD_IMI
-#if (!defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_D_RAM_WEB) || defined(CONFIG_H3C_HW_D_NOR_RESCUE)
+#if !defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_WEB)
 #define CONFIG_HTTPD
 #define CONFIG_TCP
 #define CONFIG_LIB_RAND
-#if !defined(CONFIG_H3C_HW_D_RAM_WEB) && !defined(CONFIG_H3C_HW_D_NOR_RESCUE)
+#ifndef CONFIG_H3C_HW_D_RAM_WEB
 #define CONFIG_HTTPD_DEBUG
 #endif
 #endif

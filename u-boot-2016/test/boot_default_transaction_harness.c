@@ -277,16 +277,6 @@ int main(void)
  CHECK(call_post("rootfs_1",&r)==409 && strstr(r.data,"custom_bootcmd") && erase_count==0);
  puts("C production BOOTCONFIG GET metadata host test PASS"); return 0;
 }
-#elif defined(CONFIG_H3C_HW_C_RAM_READONLY)
-int main(void)
-{
- struct httpd_response r={0}; defaults_setup(0,0);
- CHECK(call_get(&r)==200 && strstr(r.data,"\"auto_web\":true") &&
-       strstr(r.data,"\"default_applies_to\":\"bootipq\"") &&
-       strstr(r.data,"\"can_change\":false"));
- CHECK(call_post("rootfs_1",&r)==403 && strstr(r.data,"readonly_profile") && erase_count==0);
- puts("C readonly BOOTCONFIG auto-web host test PASS"); return 0;
-}
 #elif defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 int main(void)
 {

@@ -1234,7 +1234,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 #if defined (CONFIG_IPQ_TINY) && !defined(CONFIG_NAND_FLASH)
 		ipq_nor_fdt_fixup(blob, nodes);
 #else
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
 		/* Keep labels from the selected FIT when it already defines partitions. */
 		if (!getenv("h3c_hw_c_keep_fit_partitions") ||
 		    strcmp(getenv("h3c_hw_c_keep_fit_partitions"), "1"))

@@ -27,7 +27,7 @@
 #include <flashrw.h>
 #include <bootconfig.h>
 
-#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#ifdef CONFIG_H3C_HW_C_PRODUCTION_PORT
 #define H3C_BOOTCFG_POLICY_LABEL "H3C HW-C"
 #else
 #define H3C_BOOTCFG_POLICY_LABEL "RT3000-B"
@@ -206,7 +206,7 @@ int read_bootconfig(bootconfig_info_t *bootcfg, bool skip_validation, bool quiet
 	}
 
 	if (bootcfg->info.numaltpart > NUM_ALT_PARTITION) {
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 		return -EINVAL; /* Do not guess a slot from a malformed table. */
 #endif
 		if (!quiet)
@@ -227,7 +227,7 @@ int read_bootconfig_and_write_back_if_needed(bootconfig_info_t *bootcfg)
 	bootcfg->size = sizeof(struct bootconfig_info);
 
 	ret = read_bootconfig(bootcfg, false, false);
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	if (!ret)
 		return 0;
 	backup_bootcfg.part_name = BOOTCONFIG_BACKUP_PART_NAME;
@@ -269,7 +269,7 @@ int read_bootconfig_and_write_back_if_needed(bootconfig_info_t *bootcfg)
  */
 int write_bootconfig(bootconfig_info_t *bootcfg)
 {
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	printf("BOOTCONFIG writes blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else
@@ -328,7 +328,7 @@ done:
  */
 int sync_bootconfig(bool reverse)
 {
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	printf("BOOTCONFIG sync blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else
@@ -400,7 +400,7 @@ int print_bootconfig(void)
 		return ret;
 
 	puts("\n========== Bootconfig Information ==========\n");
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	printf("Source Partition: %s\n", bootcfg.part_name);
 #endif
 	printf("Magic Start:      0x%08x %s\n", bootcfg.info.magic_start,
@@ -431,7 +431,7 @@ int get_bootconfig(const char *part_name)
 #else
 	bootconfig_info_t bootcfg;
 	int ret;
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	int found = -1;
 #endif
 
@@ -442,7 +442,7 @@ int get_bootconfig(const char *part_name)
 	for (int i = 0; i < bootcfg.info.numaltpart && i < NUM_ALT_PARTITION; i++) {
 		if (strncmp(bootcfg.info.per_part_entry[i].name, part_name,
 			    ALT_PART_NAME_LENGTH) == 0) {
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 			if (found >= 0)
 				return -EINVAL; /* Duplicate selector is ambiguous. */
 			found = i;
@@ -451,7 +451,7 @@ int get_bootconfig(const char *part_name)
 #endif
 		}
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	if (found >= 0)
 		return bootcfg.info.per_part_entry[found].primaryboot;
 #endif
@@ -466,7 +466,7 @@ int get_bootconfig(const char *part_name)
  */
 int set_bootconfig(const char *name, uint32_t value)
 {
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	printf("BOOTCONFIG changes blocked by %s stage-0 policy\n", H3C_BOOTCFG_POLICY_LABEL);
 	return -EROFS;
 #else

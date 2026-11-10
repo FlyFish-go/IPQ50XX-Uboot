@@ -228,7 +228,7 @@ static bool failsafe_env_exists(void)
 	if (strcmp(failsafe_start_mode, "always")) {
 		/* 非 always 模式，删除 failsafe 环境变量，防止重启后再次启动 httpd */
 		setenv("failsafe", NULL);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 		puts("Failsafe setting cleared in RAM only; environment save is disabled\n");
 #else
 		saveenv();
@@ -416,7 +416,7 @@ void do_network_check(void)
 		printf("    ipaddr: %s\n", default_ipaddr);
 		printf("    netmask: %s\n", default_netmask);
 		printf("    serverip: %s\n", default_serverip);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
 		puts("Network defaults updated in RAM only; environment save is disabled\n");
 #else
 		saveenv();

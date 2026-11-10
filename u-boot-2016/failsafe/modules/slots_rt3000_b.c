@@ -46,7 +46,7 @@ static char slots_json[4096];
 static char escaped_part[SLOT_N][128];
 static char escaped_label[SLOT_N][128];
 static char escaped_version[SLOT_N][256];
-#if defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || (defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
+#if defined(CONFIG_H3C_HW_D_RAM_READONLY) && !defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 #define SLOT_ACCESS_JSON "\"read_only\":true,\"boot_supported\":false,"
 #else
 #define SLOT_ACCESS_JSON "\"read_only\":false,\"boot_supported\":true,"

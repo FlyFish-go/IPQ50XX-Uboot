@@ -79,10 +79,6 @@ static void h3c_hw_a_sample_buttons(int *reset_level, int *wps_level)
 	*wps_level = gpio_get_value(H3C_HW_A_WPS_GPIO);
 }
 
-#ifdef CONFIG_H3C_HW_A_RAM_READONLY
-/* Kept reachable for an explicitly invoked RAM test; never called at autoboot. */
-static int (*volatile h3c_hw_a_reset_test_entry)(void);
-#endif
 
 static void buttons_h3c_hw_a_handler(enum httpd_uri_handler_status status,
 		struct httpd_request *request, struct httpd_response *response)
@@ -119,9 +115,6 @@ static void buttons_h3c_hw_a_handler(enum httpd_uri_handler_status status,
 
 void buttons_h3c_hw_a_register_uri_handlers(struct httpd_instance *inst)
 {
-#ifdef CONFIG_H3C_HW_A_RAM_READONLY
-	h3c_hw_a_reset_test_entry = h3c_hw_a_reset_held_3s;
-#endif
 	httpd_register_uri_handler(inst, "/board/buttons",
 				   buttons_h3c_hw_a_handler, NULL);
 }

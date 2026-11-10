@@ -485,26 +485,12 @@ static void fail(struct httpd_response*r,const char*type,const char*target)
  snprintf(reply,sizeof(reply),"{\"status\":\"fail\",\"info\":{\"type\":\"%s\",\"target\":\"%s\"}}",type,target);
  r->status=HTTP_RESP_STD;r->info.code=200;r->info.connection_close=1;r->info.content_type="application/json";r->data=reply;r->size=strlen(reply);
 }
-#ifdef CONFIG_H3C_HW_C_RAM_READONLY
-static int metadata_readonly(struct httpd_response *r)
-{
- if(!r)return -EINVAL;
- r->status=HTTP_RESP_STD;r->info.code=403;r->info.connection_close=1;
- r->info.content_type="application/json";
- r->data="{\"status\":\"fail\",\"error\":\"read-only target\"}";
- r->size=strlen(r->data);return -EINVAL;
-}
-#endif
 static int metadata_write_internal(enum rt3_md_kind k,enum rt3_md_target requested,
                                    const char*token,struct httpd_response*r)
 {
  const struct md_extent*e=primary(k);struct md_extent target,second;
  struct md_extent current_primary,current_secondary;struct rt3_layout l;
  struct md_pending tx;u8 d[32];int ret;
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY)
- rt3_metadata_invalidate();
- return metadata_readonly(r);
-#endif
  if(!r)return -EINVAL;
  if(!pending.valid||!token||strlen(token)!=64||strcmp(token,pending.token)||
     pending.kind!=k||!e||requested!=pending.target){

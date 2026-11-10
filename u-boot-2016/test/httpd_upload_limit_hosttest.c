@@ -8,7 +8,7 @@ int main(void)
  CHECK(httpd_upload_length_allowed("/upload",fit_request));
  CHECK(httpd_upload_length_allowed("/upload",32UL*SZ_1M));
  CHECK(!httpd_upload_length_allowed("/upload",32UL*SZ_1M+1UL));
-#elif defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#elif defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
  CHECK(httpd_upload_length_allowed("/upload",fit_request));
  CHECK(httpd_upload_length_allowed("/upload",16UL*SZ_1M));
  CHECK(httpd_upload_length_allowed("/upload",RT3_HTTP_RECOVERY_UPLOAD_LIMIT));

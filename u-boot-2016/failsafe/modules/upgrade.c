@@ -18,7 +18,7 @@
 #include <net/httpd.h>
 #include <failsafe/failsafe.h>
 #include <ipq_api.h>
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 #include <rt3000_b_metadata.h>
 #endif
 
@@ -37,7 +37,6 @@ struct result_session {
 	bool auto_reboot;
 };
 
-#ifndef CONFIG_H3C_HW_D_NOR_RESCUE
 static const struct {
 	upgrade_type_t type;
 	const char *label;
@@ -50,19 +49,16 @@ static const struct {
 	{ WEBFAILSAFE_UPGRADE_TYPE_SIMG, "simg" },
 	{ WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS, "initramfs" }
 };
-#endif
 
 bool auto_action_pending;
 const void *upload_data;
 upgrade_type_t upgrade_type;
 
-#ifndef CONFIG_H3C_HW_D_NOR_RESCUE
 static u32 fs_upload_id;
 static u32 upload_data_id;
 static size_t upload_size;
-#endif
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 static int metadata_kind_for_upgrade(upgrade_type_t type, enum rt3_md_kind *kind)
 {
 	if (!kind) return -EINVAL;
@@ -113,7 +109,6 @@ static int metadata_upload_target(struct httpd_request *request,
 }
 #endif
 
-#ifndef CONFIG_H3C_HW_D_NOR_RESCUE
 static void upload_handler(enum httpd_uri_handler_status status,
         struct httpd_request *request,
         struct httpd_response *response)
@@ -121,7 +116,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 	struct httpd_form_value *form_value;
 	struct upload_session *sess;
 	enum rt3_md_target metadata_target = RT3_MD_TARGET_DEFAULT;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	int has_cdt_target;
 #endif
 	int idx;
@@ -134,7 +129,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 		}
 
 		handle_start_led_state();
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 		rt3_metadata_invalidate();
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
@@ -178,7 +173,7 @@ static void upload_handler(enum httpd_uri_handler_status status,
 			}
 		}
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 		if (metadata_upload_target(request, upgrade_type, &metadata_target,
 					   &has_cdt_target) ||
 		    request->form.count != (u32)(1 + has_cdt_target)) {
@@ -246,16 +241,6 @@ static void result_handler(enum httpd_uri_handler_status status,
 	u32 size;
 
 	if (status == HTTP_CB_NEW) {
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY)
-		rt3_metadata_invalidate();
-		response->status = HTTP_RESP_STD;
-		response->info.code = 403;
-		response->info.connection_close = 1;
-		response->info.content_type = "application/json";
-		response->data = "{\"status\":\"fail\",\"error\":\"read-only target\"}";
-		response->size = strlen(response->data);
-		return;
-#endif
 		st = calloc(1, sizeof(*st));
 		if (!st) {
 			response->info.code = 500;
@@ -301,7 +286,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 		}
 
 		if (upload_data_id == fs_upload_id) {
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 			enum rt3_md_kind kind;
 			if (metadata_kind_for_upgrade(upgrade_type,&kind)) {
 				char token[65];
@@ -372,7 +357,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 				upload_data_id, fs_upload_id);
 			response->data = st->buf;
 			st->ret = RET_UPLOAD_ID_MISMATCH;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 			rt3_metadata_invalidate();
 #endif
 #ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B
@@ -380,7 +365,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 #endif
 		}
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 		/* Headers were already streamed; preserve the custom body lifecycle
 		 * even when a metadata helper formats a standard error response. */
 		response->status = HTTP_RESP_CUSTOM;
@@ -423,24 +408,14 @@ static void result_handler(enum httpd_uri_handler_status status,
 	}
 }
 
-#endif /* !CONFIG_H3C_HW_D_NOR_RESCUE */
 
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-extern void nor_upgrade_register_uri_handlers(struct httpd_instance *inst);
-extern void nor_nand_autoecc_register_uri_handlers(struct httpd_instance *inst);
-#endif
 
 void upgrade_register_uri_handlers(struct httpd_instance *inst)
 {
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-	nor_upgrade_register_uri_handlers(inst);
-	nor_nand_autoecc_register_uri_handlers(inst);
-#else
 	httpd_register_uri_handler(inst, "/upload", &upload_handler, NULL);
 	httpd_register_uri_handler(inst, "/result", &result_handler, NULL);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	/* Metadata commits are token-gated in the result handler. */
 	httpd_register_uri_handler(inst, "/write", &result_handler, NULL);
-#endif
 #endif
 }

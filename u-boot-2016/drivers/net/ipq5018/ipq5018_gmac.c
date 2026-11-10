@@ -28,26 +28,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY)
-struct ipq_hwc_tx_diag {
-	unsigned int attempts;
-	unsigned int busy;
-	unsigned int completed;
-	unsigned int timeouts;
-	unsigned int errors;
-	unsigned int last_index;
-	u32 last_status;
-	int last_complete;
-};
-
-static struct ipq_hwc_tx_diag ipq_hwc_tx_diags[IPQ5018_GMAC_PORT];
-
-#define HWC_TX_ERROR_STATUS_MASK (DescTxIpv4ChkError | DescTxTimeout | \
-	DescTxFrameFlushed | DescTxPayChkError | DescTxLostCarrier | \
-	DescTxNoCarrier | DescTxLateCollision | DescTxExcCollisions | \
-	DescTxExcDeferral | DescTxUnderflow)
-#endif
 
 #define ipq_info        printf
 #define ipq_dbg         printf
@@ -518,12 +498,6 @@ int ipq_eth_init(struct eth_device *dev, bd_t *this)
 	struct eth_dma_regs *dma_reg = (struct eth_dma_regs *)priv->dma_regs_p;
 	u32 data;
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	if (priv->mac_unit < IPQ5018_GMAC_PORT)
-		memset(&ipq_hwc_tx_diags[priv->mac_unit], 0,
-		       sizeof(ipq_hwc_tx_diags[priv->mac_unit]));
-#endif
 #if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 	if (priv->mac_unit == 1 && priv->gmac_board_cfg &&
 	    priv->gmac_board_cfg->rtl8367s_switch_enable) {
@@ -588,15 +562,6 @@ static int ipq_eth_send(struct eth_device *dev, void *packet, int length)
 	struct eth_dma_regs *dma_p = (struct eth_dma_regs *)priv->dma_regs_p;
 	ipq_gmac_desc_t *txdesc = priv->desc_tx[priv->next_tx];
 	int i;
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	struct ipq_hwc_tx_diag *txdiag = NULL;
-
-	if (priv->mac_unit < IPQ5018_GMAC_PORT) {
-		txdiag = &ipq_hwc_tx_diags[priv->mac_unit];
-		txdiag->attempts++;
-	}
-#endif
 
 	invalidate_dcache_range((unsigned long)txdesc,
 		       (unsigned long)txdesc + DESC_FLUSH_SIZE);
@@ -604,11 +569,6 @@ static int ipq_eth_send(struct eth_device *dev, void *packet, int length)
 	/* Check if the dma descriptor is still owned by DMA */
 	if (ipq_gmac_owned_by_dma(txdesc)) {
 		ipq_info("BUG: Tx descriptor is owned by DMA %p\n", txdesc);
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY)
-		if (txdiag)
-			txdiag->busy++;
-#endif
 		return NETDEV_TX_BUSY;
 	}
 
@@ -644,20 +604,6 @@ static int ipq_eth_send(struct eth_device *dev, void *packet, int length)
 			break;
 	}
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C) && \
-    defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	if (txdiag) {
-		txdiag->last_index = priv->next_tx;
-		txdiag->last_status = txdesc->status;
-		txdiag->last_complete = !ipq_gmac_owned_by_dma(txdesc);
-		if (txdiag->last_complete)
-			txdiag->completed++;
-		if (i == MAX_WAIT)
-			txdiag->timeouts++;
-		if (txdesc->status & HWC_TX_ERROR_STATUS_MASK)
-			txdiag->errors++;
-	}
-#endif
 	if (i == MAX_WAIT) {
 		ipq_info("Tx Timed out\n");
 	}
@@ -740,35 +686,19 @@ static void ipq_eth_netdiag(struct eth_device *dev)
 	struct ipq_eth_dev *priv;
 	struct eth_mac_regs *mac_reg;
 	struct eth_dma_regs *dma_reg;
-#ifndef CONFIG_H3C_HW_C_RAM_READONLY
 	const char *enabled = getenv("hwc_netdiag");
-#endif
 	const u8 *header;
 	unsigned int rx_index;
 	int i;
 
-#ifndef CONFIG_H3C_HW_C_RAM_READONLY
 	if (!enabled || strcmp(enabled, "1"))
 		return;
-#endif
 	if (!dev || !dev->priv) {
 		printf("HWC-NETDIAG device/private state unavailable\n");
 		return;
 	}
 
 	priv = dev->priv;
-#if defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	if (priv->mac_unit < IPQ5018_GMAC_PORT) {
-		struct ipq_hwc_tx_diag *txdiag =
-			&ipq_hwc_tx_diags[priv->mac_unit];
-
-		printf("HWC-NETDIAG tx macunit=%u attempts=%u busy=%u completed=%u timeouts=%u errors=%u last_idx=%u last_status=%08x last_complete=%d\n",
-		       priv->mac_unit, txdiag->attempts, txdiag->busy,
-		       txdiag->completed, txdiag->timeouts, txdiag->errors,
-		       txdiag->last_index, txdiag->last_status,
-		       txdiag->last_complete);
-	}
-#endif
 	mac_reg = (struct eth_mac_regs *)priv->mac_regs_p;
 	dma_reg = (struct eth_dma_regs *)priv->dma_regs_p;
 	printf("HWC-NETDIAG dev=%s state=%d devmac=%02x:%02x:%02x:%02x:%02x:%02x netmac=%02x:%02x:%02x:%02x:%02x:%02x\n",

@@ -1,12 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
 
-ifeq ($(CONFIG_H3C_HW_D_NOR_RESCUE),y)
-# The NOR rescue image serves only the rescue UI, read-only diagnostics,
-# network information, and the NOR-specific upgrade endpoints.
-obj-y += misc.o network.o sysinfo.o upgrade.o
-obj-y += nor_upgrade.o nor_upgrade_core.o
-obj-y += nor_nand_autoecc.o nor_nand_autoecc_core.o
-else
 obj-y += backup.o
 obj-y += env.o
 ifeq ($(CONFIG_H3C_IPQ5018_COMMON),y)
@@ -33,7 +26,6 @@ ifneq ($(filter y,$(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) $(CONFIG_TARGET_IPQ5018_
 obj-y += boot_default_rt3000_b.o boot_default_rt3000_b_core.o
 endif
 obj-y += upgrade.o
-obj-$(CONFIG_H3C_HW_D_NOR_RESCUE) += nor_upgrade.o nor_upgrade_core.o
 obj-y += webterm.o
 ifneq ($(filter y,$(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) $(CONFIG_H3C_HW_D_PRODUCTION_PORT)),)
 obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac_rt3000_b.o
@@ -48,8 +40,3 @@ endif
 obj-$(CONFIG_H3C_IPQ5018_COMMON) += squashfs_release.o xz/
 
 ccflags-$(CONFIG_H3C_IPQ5018_COMMON) += -DXZ_UBOOT_BUILD -DXZ_INTERNAL_CRC32=1
-endif
-
-ifneq ($(CONFIG_H3C_HW_D_PRODUCTION_PORT),y)
-obj-$(CONFIG_H3C_HW_D_NAND_SERVICE) += service_hwd.o
-endif

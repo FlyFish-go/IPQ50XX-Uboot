@@ -40,9 +40,6 @@ void misc_register_uri_handlers(struct httpd_instance *inst);
 void network_register_uri_handlers(struct httpd_instance *inst);
 void sysinfo_register_uri_handlers(struct httpd_instance *inst);
 void syslog_register_uri_handlers(struct httpd_instance *inst);
-#ifdef CONFIG_H3C_HW_D_NAND_SERVICE
-void service_hwd_register_uri_handlers(struct httpd_instance *inst);
-#endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 int failsafe_env_set_persistent(const char *name, const char *value);
 void slots_rt3000_b_register_uri_handlers(struct httpd_instance *inst);

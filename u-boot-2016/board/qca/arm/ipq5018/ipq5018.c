@@ -710,11 +710,7 @@ void board_nand_init(void)
 	if (!fdtdec_get_is_enabled(gd->fdt_blob, node)) {
 		printf("QPIC: disabled, skipping initialization\n");
 	} else {
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-		puts("QPIC: deferred; run nor_nand_probe 4 for read-only ECC4 probe\n");
-#else
 		qpic_nand_init(NULL);
-#endif
 	}
 #endif
 
@@ -1273,11 +1269,7 @@ int board_eth_init(bd_t *bis)
 		 gmac_cfg[loop].unit = -1;
 
 	status = ipq_gmac_init(gmac_cfg);
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-	puts("NOR rescue: automatic ART calibration read deferred\n");
-#else
 	board_update_caldata();
-#endif
 
 	return status;
 }

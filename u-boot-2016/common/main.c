@@ -12,10 +12,6 @@
 #include <cli.h>
 #include <console.h>
 #include <version.h>
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-#include <h3c_hw_d_nor_rescue.h>
-const char h3c_hw_d_nor_rescue_marker[] = H3C_HW_D_NOR_RESCUE_MARKER;
-#endif
 #if defined(CONFIG_HTTPD)
 #include <asm/arch-qca-common/gpio.h>
 #include <ipq_api.h>
@@ -71,10 +67,6 @@ void main_loop(void)
 	const char *s = NULL;
 
 	bootstage_mark_name(BOOTSTAGE_ID_MAIN_LOOP, "main_loop");
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-	puts(h3c_hw_d_nor_rescue_marker);
-	putc('\n');
-#endif
 
 #ifndef CONFIG_SYS_GENERIC_BOARD
 	puts("Warning: Your board does not use generic board. Please read\n");
@@ -91,27 +83,6 @@ void main_loop(void)
 
 	cli_init();
 
-#ifdef CONFIG_H3C_HW_D_NOR_RESCUE
-	/*
-	 * Do not enter the generic preboot/autoboot path: old SPI ENV values,
-	 * bootconfig, key detection, and board HTTPD checks can select NAND paths.
-	 * Establish a RAM-only recovery environment and start the HTTP server now.
-	 */
-	setenv("preboot", NULL);
-	setenv("bootcmd", "httpd");
-	setenv("bootdelay", "0");
-	setenv("bootargs", "");
-	setenv("ethprime", "eth1");
-	setenv("ethact", "eth1");
-	setenv("ipaddr", "192.168.10.1");
-	setenv("netmask", "255.255.255.0");
-	setenv("serverip", "192.168.10.2");
-	ipq_gpio_init();
-	puts("NOR rescue: forced eth1 HTTP recovery at 192.168.10.1\n");
-	run_command("httpd", 0);
-	cli_loop();
-	return;
-#endif
 
 #if !defined(CONFIG_REDUCE_FOOTPRINT) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 	run_preboot_environment_command();

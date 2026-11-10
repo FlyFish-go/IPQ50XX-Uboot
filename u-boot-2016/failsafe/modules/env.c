@@ -20,10 +20,10 @@
 #include <malloc.h>
 #include <net/httpd.h>
 #include <failsafe_env_text.h>
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 #include <rt3000_b_env.h>
 #endif
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 #include <search.h>
 #endif
 
@@ -34,7 +34,7 @@
 
 #define ENV_NAME_MAX_LEN 128
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 DECLARE_GLOBAL_DATA_PTR;
 
 static struct failsafe_env_text_buffer *failsafe_env_current_text;
@@ -81,7 +81,7 @@ static int failsafe_env_get_form_value(struct httpd_request *request,
 	if (!request || !key || !out)
 		return -EINVAL;
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	{
 		u32 i, matches = 0;
 		if (request->form.count > MAX_HTTP_FORM_VALUE_ITEMS)
@@ -116,7 +116,7 @@ static int failsafe_env_get_form_value(struct httpd_request *request,
 		return -EINVAL;
 	if (n > max_len)
 		return -E2BIG;
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	if (memchr(v->data, '\0', n))
 		return -EINVAL;
 #endif
@@ -131,7 +131,7 @@ static int failsafe_env_get_form_value(struct httpd_request *request,
 	return 0;
 }
 
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) && !defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 static char *failsafe_env_export_text(size_t *out_len)
 {
 	env_t *envbuf;
@@ -181,7 +181,7 @@ static char *failsafe_env_export_text(size_t *out_len)
 
 #endif /* generic fixed-size ENV export */
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 static bool failsafe_env_ram_ready(void)
 {
 	return (gd->flags & GD_FLG_ENV_READY) && env_htab.table;
@@ -231,7 +231,7 @@ static char *failsafe_env_export_ram_text(size_t *out_len)
 
 #endif /* A/B shared RAM ENV read path */
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 #define RT3_ENV_PROTECTED_COUNT 6
 
 static const char * const rt3_env_protected_names[RT3_ENV_PROTECTED_COUNT] = {
@@ -510,16 +510,12 @@ int failsafe_env_set_persistent(const char *name, const char *value)
 
 #endif /* B-only persistent mutation helpers */
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 static void env_info_handler(enum httpd_uri_handler_status status,
 		struct httpd_request *request,
 		struct httpd_response *response)
 {
-#if defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)
-	static const char info[] = "{\"source\":\"current RAM environment\",\"read_only\":true,\"persistent_write_supported\":false}";
-#else
 	static const char info[] = "{\"source\":\"current RAM environment\",\"read_only\":false,\"persistent_write_supported\":true,\"persistent_target\":\"0:APPSBLENV\",\"persistent_verify\":\"full 512 KiB readback after explicit save\"}";
-#endif
 	static const char no_backend[] = "{\"source\":\"current RAM environment\",\"read_only\":true,\"persistent_write_supported\":false}";
 	static const char unavailable[] = "{\"error\":\"environment unavailable\"}";
 
@@ -565,7 +561,7 @@ static void env_list_handler(enum httpd_uri_handler_status status,
 		return;
 	}
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 	if (!failsafe_env_ram_ready()) {
 		failsafe_http_reply_text(response, 503, "environment unavailable");
 		return;
@@ -593,7 +589,7 @@ static void env_set_handler(enum httpd_uri_handler_status status,
 		struct httpd_response *response)
 {
 	int ret;
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 	char *name = NULL, *value = NULL, *current_value = NULL;
 	bool changed = false;
 #endif
@@ -604,7 +600,7 @@ static void env_set_handler(enum httpd_uri_handler_status status,
 		failsafe_http_reply_text(response, 405, "method");
 		return;
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	{
 		static const char * const fields[] = { "name", "value" };
 		char *name = NULL, *value = NULL;
@@ -671,7 +667,7 @@ static void env_unset_handler(enum httpd_uri_handler_status status,
 		struct httpd_response *response)
 {
 	int ret;
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 	char *name = NULL;
 #endif
 
@@ -681,7 +677,7 @@ static void env_unset_handler(enum httpd_uri_handler_status status,
 		failsafe_http_reply_text(response, 405, "method");
 		return;
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	{
 		static const char * const fields[] = { "name" };
 		char *name = NULL;
@@ -729,7 +725,7 @@ static void env_reset_all_handler(enum httpd_uri_handler_status status,
 		failsafe_http_reply_text(response, 405, "method");
 		return;
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	if (rt3_env_form_schema(request, NULL, 0)) {
 		failsafe_http_reply_text(response, 400, "unexpected fields");
 		return;
@@ -749,7 +745,7 @@ static void env_reset_single_handler(enum httpd_uri_handler_status status,
 		struct httpd_response *response)
 {
 	int ret;
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 	char *name, *current_value, *default_value;
 	bool changed = false;
 #endif
@@ -760,7 +756,7 @@ static void env_reset_single_handler(enum httpd_uri_handler_status status,
 		failsafe_http_reply_text(response, 405, "method");
 		return;
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	{
 		static const char * const fields[] = { "name" };
 		char *name = NULL;
@@ -814,7 +810,7 @@ static void env_restore_handler(enum httpd_uri_handler_status status,
 		struct httpd_request *request,
 		struct httpd_response *response)
 {
-#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if !(defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT))
 	struct httpd_form_value *envfile;
 	uint32_t crc;
 	env_t *envptr;
@@ -833,7 +829,7 @@ static void env_restore_handler(enum httpd_uri_handler_status status,
 		failsafe_http_reply_text(response, 405, "method");
 		return;
 	}
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
 	if (rt3_env_form_schema(request, fields, ARRAY_SIZE(fields))) {
 		failsafe_http_reply_text(response, 400, "bad file fields");
 		return;
@@ -900,7 +896,7 @@ static void env_restore_handler(enum httpd_uri_handler_status status,
 void env_register_uri_handlers(struct httpd_instance *inst)
 {
 	httpd_register_uri_handler(inst, "/env/list", &env_list_handler, NULL);
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || (defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_PRODUCTION_PORT) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 	httpd_register_uri_handler(inst, "/env/info", &env_info_handler, NULL);
 #endif
 	httpd_register_uri_handler(inst, "/env/set", &env_set_handler, NULL);

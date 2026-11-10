@@ -34,7 +34,7 @@
 #include <spi_flash.h>
 /* Self-guarded: defines QPIC_NAND_HAVE_MODEL_INFO when the driver has it. */
 #include <qpic_nand_model.h>
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #include <h3c_build_id.h>
 #include <h3c_fem.h>
 #include <h3c_nand_catalog.h>
@@ -113,7 +113,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
     const char *board_compat = NULL;
     char esc_board_hostname[128], esc_board_model[128], esc_board_compat[128];
     char esc_version_string[256];
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
     const char *board_family;
     char esc_board_family[64];
 #endif
@@ -140,15 +140,9 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
     APPEND_JSON_TO_BUF("\"is_9008_mode\":%s,", is_9008_mode() ? "true" : "false");
 #if defined(CONFIG_H3C_HW_D_PRODUCTION_PORT)
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,\"profile\":\"common\",");
-#elif defined(CONFIG_H3C_HW_D_NAND_SERVICE)
-#ifdef CONFIG_H3C_HW_D_SERVICE_RAM
-    APPEND_JSON_TO_BUF("\"ram_only\":true,\"read_only\":false,\"profile\":\"nand-service-ram\",");
-#else
-    APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,\"profile\":\"nand-service\",");
-#endif
 #elif defined(CONFIG_H3C_HW_D_NAND_READONLY)
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":true,\"profile\":\"nand-readonly\",");
-#elif defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_READONLY)
+#elif defined(CONFIG_H3C_HW_D_RAM_READONLY)
     APPEND_JSON_TO_BUF("\"ram_only\":true,\"read_only\":true,");
 #elif defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
     APPEND_JSON_TO_BUF("\"ram_only\":false,\"read_only\":false,");
@@ -216,7 +210,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
     json_escape(board_compat, esc_board_compat, sizeof(esc_board_compat));
 
 	APPEND_JSON_TO_BUF("\"board\":{");
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_READONLY)) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_D_RAM_READONLY) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) || defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
     /* Family is the compiled hardware series; it is not a BOM probe. */
     board_family = fdt_getprop(gd->fdt_blob, 0, "h3c,board-family", NULL);
     json_escape(board_family, esc_board_family, sizeof(esc_board_family));
@@ -246,7 +240,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 
 	/* SPI info */
 	APPEND_JSON_TO_BUF("\"spi\":{");
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	{
 		const struct spi_flash *spi = get_detected_spi_flash();
 		char esc_spi_name[128];
@@ -270,7 +264,7 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 #endif
 	APPEND_JSON_TO_BUF("},"); /* devices: spi */
 
-#if (defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_A_RAM_READONLY) || defined(CONFIG_H3C_HW_C_RAM_READONLY))
+#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) || defined(CONFIG_H3C_HW_A_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_PRODUCTION_PORT)
 	/* Configured probe location only; this is not an exhaustive wiring scan. */
 	{
 		const struct spi_flash *spi = get_detected_spi_flash();
