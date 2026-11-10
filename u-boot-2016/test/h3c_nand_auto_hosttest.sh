@@ -23,4 +23,12 @@ for variant in auto pinned; do
     -DCONFIG_TARGET_IPQ5018_H3C_HW_A $defs -Iinclude -idirafter include \
     test/h3c_build_id_auto_hosttest.c failsafe/modules/h3c_build_id.c -o "$tmp/id-$variant"
   "$tmp/id-$variant"
+  # The object alone must carry exactly one identity key, or every image
+  # built from it is refused by its own rescue page.
+  # shellcheck disable=SC2086
+  cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -DH3C_BUILD_ID_HOST_TEST \
+    -DCONFIG_TARGET_IPQ5018_H3C_HW_A $defs -Iinclude -idirafter include \
+    -c failsafe/modules/h3c_build_id.c -o "$tmp/id-$variant.o"
+  keys="$(grep -aoF 'H3C-UBOOT-ID:v1;' "$tmp/id-$variant.o" | wc -l)"
+  [ "$keys" -eq 1 ] || { echo "h3c_build_id.o ($variant): $keys identity keys" >&2; exit 1; }
 done

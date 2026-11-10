@@ -115,14 +115,17 @@ static int h3c_id_field(const char **p, const char *key, char *out, size_t cap)
 	return 0;
 }
 
-/* Parse "H3C-UBOOT-ID:v1;board=..;profile=..;mask=..;ecc=..;" exactly. */
+/* Parse "<key>board=..;profile=..;mask=..;ecc=..;" exactly. The caller has
+ * already matched the key at s. It is not spelled out here: a second plain
+ * copy in this file would make every image carry two keys and fail the
+ * exactly-one check in h3c_build_id_check(). */
 static int h3c_id_parse(const char *s, size_t avail, struct h3c_id_fields *f)
 {
-	static const char prefix[] = "H3C-UBOOT-ID:v1;";
+	const size_t key_len = sizeof(h3c_build_id_key) - 1;
 
-	if (!memchr(s, 0, avail) || strncmp(s, prefix, sizeof(prefix) - 1))
+	if (avail <= key_len || !memchr(s, 0, avail))
 		return -1;
-	s += sizeof(prefix) - 1;
+	s += key_len;
 	if (h3c_id_field(&s, "board=", f->board, sizeof(f->board)) ||
 	    h3c_id_field(&s, "profile=", f->profile, sizeof(f->profile)) ||
 	    h3c_id_field(&s, "mask=", f->mask, sizeof(f->mask)) ||

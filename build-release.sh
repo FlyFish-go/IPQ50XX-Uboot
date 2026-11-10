@@ -186,6 +186,13 @@ if [[ "${H3C_RAM_RESCUE:-0}" == 1 ]]; then
 fi
 cp -- "$build/u-boot" "$out/$stem.elf"
 "${CROSS_COMPILE}strip" "$out/$stem.elf" -o "$out/$stem.strip.elf"
+# The rescue page refuses an upload unless it holds exactly one identity key.
+python3 - "$out/$stem.strip.elf" <<'PYID'
+import sys
+n = open(sys.argv[1], "rb").read().count(b"H3C-UBOOT-ID:v1;")
+if n != 1:
+    raise SystemExit(f"{sys.argv[1]}: {n} build identity keys, the rescue page needs exactly 1")
+PYID
 cp -- "$build/.config" "$out/build.config"
 # The APPSBL packager only accepts the flash link address.
 [[ "$profile" == ram-rescue ]] || python3 "$packager" "$out/$stem.strip.elf" "$out/appsbl.mbn" \
