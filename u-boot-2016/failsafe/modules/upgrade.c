@@ -314,7 +314,9 @@ static void result_handler(enum httpd_uri_handler_status status,
 					st->ret=rt3_metadata_write_target(kind,RT3_MD_TARGET_DEFAULT,token,response);
 #endif
 				}
-			} else {
+			} else
+#endif /* CONFIG_H3C_IPQ5018_COMMON */
+			{
 #ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 				if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS) {
 					rt3_metadata_invalidate();
@@ -348,7 +350,6 @@ static void result_handler(enum httpd_uri_handler_status status,
 				}
 #endif
 			}
-#endif
 		} else {
 			snprintf(st->buf, sizeof(st->buf),
 				"{\"status\":\"fail\","
