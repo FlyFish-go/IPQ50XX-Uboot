@@ -323,6 +323,121 @@ done:
     return ret ? false : true;
 }
 
+#if !defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
+#define BOOTCONFIG_PROBE_BYTES	2048
+
+/* Partition that the reader of @entry uses when its flag is @value. */
+static int bootconfig_target_name(const char *entry, uint32_t value,
+				  char *out, size_t out_len)
+{
+	int n = snprintf(out, out_len, value ? "%.*s_1" : "%.*s",
+			 ALT_PART_NAME_LENGTH, entry);
+
+	return (n < 0 || (size_t)n >= out_len) ? -ENAMETOOLONG : 0;
+}
+
+static int bootconfig_read_head(int offset, void *buf, size_t len)
+{
+	switch (sfi->flash_type) {
+	case SMEM_BOOT_NOR_FLASH:
+	case SMEM_BOOT_NORPLUSEMMC:
+	case SMEM_BOOT_NORPLUSNAND:
+	case SMEM_BOOT_SPI_FLASH:
+		return read_data_from_spi(offset, len, buf, len);
+	case SMEM_BOOT_NAND_FLASH:
+	case SMEM_BOOT_ONENAND_FLASH:
+	case SMEM_BOOT_QSPI_NAND_FLASH:
+		return read_data_from_nand(offset, len, buf, len);
+	case SMEM_BOOT_MMC_FLASH:
+	case SMEM_BOOT_NO_FLASH:
+	case SMEM_BOOT_SDC_FLASH:
+		return read_data_from_mmc(offset, len, buf, len);
+	default:
+		return -EINVAL;
+	}
+}
+
+/*
+ * A flag may only select a copy that holds data. Some stock layouts
+ * (Lingyan LYW-30M / CUCC VS010) ship with every *_1 boot-chain
+ * partition erased; flipping 0:QSEE, 0:DEVCFG, 0:CDT or 0:APPSBL there
+ * leaves SBL1 nothing to load. Entries that have no partition of their
+ * own (0:HLOS, 0:WIFIFW and 0:BTFW live inside rootfs on NAND) are not
+ * checked.
+ */
+static int bootconfig_target_ready(const char *entry, uint32_t value)
+{
+	char name[ALT_PART_NAME_LENGTH + 3];
+	unsigned char *buf;
+	int offset, ret, i, erased_ff = 1, erased_00 = 1;
+
+	if (bootconfig_target_name(entry, 0, name, sizeof(name)))
+		return -EINVAL;
+	if (get_bootconfig_part_offset(name) == -ENOENT)
+		return 0;
+	if (bootconfig_target_name(entry, value, name, sizeof(name)))
+		return -EINVAL;
+	offset = get_bootconfig_part_offset(name);
+	if (offset < 0) {
+		printf("%.*s -> %u: partition %s not found\n",
+		       ALT_PART_NAME_LENGTH, entry, value, name);
+		return offset;
+	}
+
+	buf = malloc(BOOTCONFIG_PROBE_BYTES);
+	if (!buf)
+		return -ENOMEM;
+	ret = bootconfig_read_head(offset, buf, BOOTCONFIG_PROBE_BYTES);
+	if (!ret) {
+		for (i = 0; i < BOOTCONFIG_PROBE_BYTES; i++) {
+			erased_ff &= buf[i] == 0xff;
+			erased_00 &= buf[i] == 0x00;
+		}
+		if (erased_ff || erased_00)
+			ret = -ENODATA;
+	}
+	free(buf);
+
+	if (ret == -ENODATA)
+		printf("%.*s -> %u: %s is empty\n",
+		       ALT_PART_NAME_LENGTH, entry, value, name);
+	else if (ret)
+		printf("%.*s -> %u: cannot read %s (%d)\n",
+		       ALT_PART_NAME_LENGTH, entry, value, name, ret);
+	return ret;
+}
+
+/*
+ * Check every entry of @next that differs from @prev (all entries when
+ * @prev is NULL). Returns 0 when each selected copy holds data.
+ */
+static int bootconfig_check_targets(const struct bootconfig_info *prev,
+				    const struct bootconfig_info *next)
+{
+	int i, bad = 0;
+
+	for (i = 0; i < next->numaltpart && i < NUM_ALT_PARTITION; i++) {
+		const struct bootconfig_part_entry *e = &next->per_part_entry[i];
+
+		if (prev && i < prev->numaltpart &&
+		    !strncmp(prev->per_part_entry[i].name, e->name, ALT_PART_NAME_LENGTH) &&
+		    prev->per_part_entry[i].primaryboot == e->primaryboot)
+			continue;
+		if (e->primaryboot > 1) {
+			printf("%.*s: invalid value %u\n",
+			       ALT_PART_NAME_LENGTH, e->name, e->primaryboot);
+			bad = 1;
+			continue;
+		}
+		if (bootconfig_target_ready(e->name, e->primaryboot))
+			bad = 1;
+	}
+	if (bad)
+		puts("BOOTCONFIG not changed: it would select an empty or unreadable copy\n");
+	return bad ? -EPERM : 0;
+}
+#endif
+
 /**
  * sync_bootconfig - Sync 0:BOOTCONFIG1 with 0:BOOTCONFIG or vice versa
  */
@@ -375,6 +490,15 @@ int sync_bootconfig(bool reverse)
 	}
 
 	/* They are different, need to sync */
+	ret = bootconfig_check_targets(
+		(dst.info.magic_start == BOOTCONFIG_MAGIC_START ||
+		 dst.info.magic_start == BOOTCONFIG_MAGIC_START_TRYMODE) &&
+		dst.info.magic_end == BOOTCONFIG_MAGIC_END &&
+		dst.info.numaltpart <= NUM_ALT_PARTITION ? &dst.info : NULL,
+		&src.info);
+	if (ret)
+		return ret;
+
 	memcpy(&dst.info, &src.info, src.size);
 
 	ret = write_bootconfig(&dst);
@@ -471,6 +595,7 @@ int set_bootconfig(const char *name, uint32_t value)
 	return -EROFS;
 #else
 	bootconfig_info_t bootcfg;
+	struct bootconfig_info before;
 	int idx, modified = 0;
 	int ret;
 
@@ -482,6 +607,7 @@ int set_bootconfig(const char *name, uint32_t value)
 	ret = read_bootconfig_and_write_back_if_needed(&bootcfg);
 	if (ret)
 		return ret;
+	memcpy(&before, &bootcfg.info, sizeof(before));
 
 	if (strcmp(name, "all") == 0) {
 		/* Handle "all" special case */
@@ -544,6 +670,9 @@ int set_bootconfig(const char *name, uint32_t value)
 
 	/* Only write back if modifications were made */
 	if (modified) {
+		ret = bootconfig_check_targets(&before, &bootcfg.info);
+		if (ret)
+			return ret;
 		ret = write_bootconfig(&bootcfg);
 		if (ret)
 			return ret;
