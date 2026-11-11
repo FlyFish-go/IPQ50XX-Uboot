@@ -2110,6 +2110,9 @@ static void qpic_serial_update_dev_params(struct mtd_info *mtd)
 	mtd->size = dev->density;
 	dev->spare_size = serial_params->spare_size;
 	ecc_bits = serial_params->num_bits_ecc_correctability;
+#if defined(CONFIG_QPIC_NAND_ECC_BITS) && CONFIG_QPIC_NAND_ECC_BITS
+	ecc_bits = CONFIG_QPIC_NAND_ECC_BITS;
+#endif
 #ifdef CONFIG_H3C_NAND_PROFILE_ID
 	if (qpic_source_profile) {
 		dev->spare_size = qpic_source_profile->appsbl_raw_spare_bytes;
