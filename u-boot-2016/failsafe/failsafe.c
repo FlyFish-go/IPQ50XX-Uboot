@@ -107,9 +107,9 @@ static void print_greeting_message(void)
 	printf("\nPress Ctrl+C to exit\n\n");
 }
 
-#ifdef CONFIG_H3C_IPQ5018_COMMON
+#ifdef CONFIG_FAILSAFE_LAN_FIRST
 /*
- * H3C IPQ5018 boards: eth0 is the SoC GE PHY (WAN) and eth1 the LAN switch.
+ * eth0 is the SoC GE PHY (WAN) and eth1 the LAN switch.
  * The WAN PHY links about 1.5 s before the switch ports finish
  * autonegotiation after the switch reset, and eth_init() takes the first
  * device with link, so with both cables plugged the page could land on WAN
@@ -157,7 +157,7 @@ static int failsafe_loop(void)
 	}
 #endif
 
-#ifdef CONFIG_H3C_IPQ5018_COMMON
+#ifdef CONFIG_FAILSAFE_LAN_FIRST
 	failsafe_select_lan();
 	/* Select the requested device before net_init copies its MAC to ARP. */
 	eth_set_current();

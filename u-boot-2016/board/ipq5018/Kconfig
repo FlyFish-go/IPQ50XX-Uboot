@@ -147,6 +147,13 @@ config TARGET_IPQ5018_TCL_T30_PRO
 	  with the stock CDT (AP-MP02.1, board ID 0x8040000) and the stock
 	  dual-system layout.
 
+config FAILSAFE_LAN_FIRST
+    bool
+    default y if H3C_IPQ5018_COMMON
+    help
+	  The web failsafe page starts on eth1 (LAN switch) and falls back
+	  to eth0 (WAN GE PHY) after a grace period.
+
 config QPIC_NAND_ECC_BITS
     int "Override the serial NAND ECC strength (0 = use the ID table)"
     default 0
