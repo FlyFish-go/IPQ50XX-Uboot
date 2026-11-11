@@ -147,15 +147,25 @@ config TARGET_IPQ5018_TCL_T30_PRO
 	  with the stock CDT (AP-MP02.1, board ID 0x8040000) and the stock
 	  dual-system layout.
 
+config TARGET_IPQ5018_HW3000B1
+    bool "HW3000B1 board support"
+	default n
+    help
+	  Enable support for the HW3000B1 router (stock build
+	  HW3000B1-ZHJ-V2.1) with the stock CDT (AP-MP03.3, board ID
+	  0x8040002), FM25LS01 SPI NAND in 8-bit ECC and the stock
+	  dual-system layout.
+
 config FAILSAFE_LAN_FIRST
     bool
-    default y if H3C_IPQ5018_COMMON
+    default y if H3C_IPQ5018_COMMON || TARGET_IPQ5018_HW3000B1
     help
 	  The web failsafe page starts on eth1 (LAN switch) and falls back
 	  to eth0 (WAN GE PHY) after a grace period.
 
 config QPIC_NAND_ECC_BITS
     int "Override the serial NAND ECC strength (0 = use the ID table)"
+    default 8 if TARGET_IPQ5018_HW3000B1
     default 0
     help
 	  Some boards format a serial NAND with a stronger ECC than the

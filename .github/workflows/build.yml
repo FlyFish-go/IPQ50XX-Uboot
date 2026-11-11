@@ -45,6 +45,7 @@ jobs:
           - { kind: h3c, name: D }
           - { kind: defconfig, name: ipq5018_lingyan_lyw_30m }
           - { kind: defconfig, name: ipq5018_tcl_t30_pro }
+          - { kind: defconfig, name: ipq5018_hw3000b1 }
           - { kind: defconfig, name: ipq5018_cucc_vs010 }
     name: ${{ matrix.kind }} ${{ matrix.name }}
     steps:

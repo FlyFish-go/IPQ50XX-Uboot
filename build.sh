@@ -71,6 +71,7 @@ DEVICE_LIST=(
     "ipq50xx:jdcloud_ax3000:ipq5018_jdcloud_ax3000:JDCloud AX3000"
     "ipq50xx:lingyan_lyw-30m:ipq5018_lingyan_lyw_30m:Lingyan LYW-30M / CUCC VS010 / VS010 MAX"
     "ipq50xx:tcl_t30-pro:ipq5018_tcl_t30_pro:TCL T30 Pro (CMCC)"
+    "ipq50xx:hw3000b1:ipq5018_hw3000b1:HW3000B1"
     "ipq53xx:jdcloud_re-cs-06:ipq5332_jdcloud_re_cs_06:JDCloud BE6500"
     "ipq53xx:jdcloud_re-cs-08:ipq5332_jdcloud_re_cs_08:JDCloud ER2"
     "ipq53xx:xiaomi_be3600-pro:ipq5332_xiaomi_be3600_pro:Xiaomi BE3600 Pro (5/8 Ethernet ports)"

@@ -1,0 +1,98 @@
+/*
+ * HW3000B1 (stock build HW3000B1-ZHJ-V2.1).
+ * Stock boot chain reports IPQ5018 AP-MP03.3, board ID 0x8040002 (CDT),
+ * boots FIT config@mp03.3 and keeps QCA BOOTCONFIG dual slots.
+ * WAN = gmac1 internal GE PHY 7; LAN = gmac2 to a QCA8337 (S17c, PHYs 0-3,
+ * reset GPIO39), as in the stock U-Boot DTB (MP03.3 reference has them swapped).
+ * NAND FM25LS01 is formatted with 8-bit ECC (CONFIG_QPIC_NAND_ECC_BITS).
+ *
+ * Buttons and LEDs match the stock kernel DTB: RESET GPIO25, WPS GPIO38;
+ * LEDs power GPIO34, red GPIO26, blue GPIO27, WPS GPIO28, 2.4G GPIO30,
+ * 5G GPIO24 (all active high).
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ */
+#include "ipq5018-mp03.3.dts"
+
+/ {
+	host_name = "HW3000B1";
+	model = "HW3000B1";
+	compatible = "qca,ipq5018", "qca,ipq5018-mp03.3";
+	machid = <0x8040002>;
+	config_name = "config@mp03.3";
+
+	/* Same QUP SPI BAM pipes as the other stock MP03.3 boards. */
+	spi {
+		/delete-property/ wr_pipe_1;
+		/delete-property/ rd_pipe_1;
+		/delete-property/ wr_pipe_2;
+		/delete-property/ rd_pipe_2;
+	};
+
+	gmac_cfg {
+		gmac1_cfg {
+			/delete-property/ mac_pwr;
+			/delete-property/ s17c_switch_enable;
+			/delete-property/ switch_port_count;
+			/delete-property/ switch_phy_address;
+		};
+		gmac2_cfg {
+			/delete-property/ phy_address;
+			/delete-property/ napa_gpio;
+			mac_pwr = <0xaa545>;
+			s17c_switch_enable = <1>;
+			switch_port_count = <4>;
+			switch_phy_address = <0 1 2 3>;
+			switch_gpio = <39>;
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			gpio = <25>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+
+		wps {
+			gpio = <38>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_power {
+			label = "power_led";
+			gpio = <34>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_blue {
+			label = "blink_led", "system_led";
+			gpio = <27>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+};
