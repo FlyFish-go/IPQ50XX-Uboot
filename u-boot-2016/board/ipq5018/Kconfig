@@ -163,14 +163,27 @@ config FAILSAFE_LAN_FIRST
 	  The web failsafe page starts on eth1 (LAN switch) and falls back
 	  to eth0 (WAN GE PHY) after a grace period.
 
+config QPIC_NAND_ECC_PROBE
+    bool "Detect the serial NAND ECC strength from the boot chain"
+    depends on QPIC_SERIAL && !H3C_IPQ5018_COMMON
+    default y
+    help
+	  The BCH strength (4 or 8 bit) is chosen by the vendor, not by the
+	  chip: the same part is formatted differently on different boards
+	  and vendor ID tables disagree. At NAND init, SBL1, the MIBIB and
+	  both APPSBL copies are read in each format the spare area can hold
+	  and the one that yields valid images is used. With no evidence the
+	  QCA SBL1 default applies (ECC8 for 128-byte spare, else ECC4); with
+	  contradicting evidence or read errors NAND writes are refused.
+	  H3C boards keep their own source-bound catalog instead.
+
 config QPIC_NAND_ECC_BITS
-    int "Override the serial NAND ECC strength (0 = use the ID table)"
-    default 8 if TARGET_IPQ5018_HW3000B1
+    int "Force the serial NAND ECC strength (0 = detect / ID table)"
     default 0
     help
-	  Some boards format a serial NAND with a stronger ECC than the
-	  QPIC ID table lists for that chip; the boot chain on such a board
-	  must be read and written in the same mode. 0 keeps the table value.
+	  Debug override: use this BCH strength for every chip and skip
+	  QPIC_NAND_ECC_PROBE. 0 detects it (or uses the ID table when the
+	  probe is disabled).
 config H3C_RELEASE_SYSTEM_DEFAULT
     bool "H3C release: selected system by default, RESET recovery"
     depends on H3C_IPQ5018_COMMON

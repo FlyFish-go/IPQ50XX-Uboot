@@ -78,6 +78,11 @@ static unsigned int qpic_auto_storage_bits; /* ECC of the stored boot chain */
 #include <linux/mtd/nand.h>
 #include <asm/arch-qca-common/bam.h>
 #include <asm/arch-qca-common/qpic_nand.h>
+#ifdef CONFIG_QPIC_NAND_ECC_PROBE
+#include <qpic_ecc_probe.h>
+/* Set when the boot-chain ECC could not be established: no writes. */
+static int qpic_ecc_probe_ro;
+#endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <asm/arch-qca-common/smem.h>
 #endif
@@ -2112,6 +2117,11 @@ static void qpic_serial_update_dev_params(struct mtd_info *mtd)
 	ecc_bits = serial_params->num_bits_ecc_correctability;
 #if defined(CONFIG_QPIC_NAND_ECC_BITS) && CONFIG_QPIC_NAND_ECC_BITS
 	ecc_bits = CONFIG_QPIC_NAND_ECC_BITS;
+#elif defined(CONFIG_QPIC_NAND_ECC_PROBE)
+	/* The table value is a vendor choice that differs between boards.
+	 * Start in the format the QCA SBL1 uses for an unknown chip; the
+	 * boot chain is read back after registration (qpic_ecc_probe_board). */
+	ecc_bits = qpic_ecc_probe_fallback(dev->spare_size);
 #endif
 #ifdef CONFIG_H3C_NAND_PROFILE_ID
 	if (qpic_source_profile) {
@@ -5133,6 +5143,12 @@ static int qpic_nand_write_oob(struct mtd_info *mtd, loff_t to,
 	u_long num_pages;
 	enum nand_cfg_value cfg_mode;
 
+#ifdef CONFIG_QPIC_NAND_ECC_PROBE
+	if (qpic_ecc_probe_ro) {
+		printf("qpic_nand: boot-chain ECC unknown, write refused\n");
+		return -EROFS;
+	}
+#endif
 #ifdef CONFIG_H3C_QPIC_EXACT_WRITE_WINDOW
 	if (!ops || ops->mode != MTD_OPS_AUTO_OOB || ops->ooblen ||
 	    ops->oobbuf || !nx30_d_qpic_write_window_allows(mtd,to,ops->len))
@@ -5391,6 +5407,12 @@ qpic_nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	struct nand_chip *chip = MTD_NAND_CHIP(mtd);
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
 
+#ifdef CONFIG_QPIC_NAND_ECC_PROBE
+	if (qpic_ecc_probe_ro) {
+		printf("qpic_nand: boot-chain ECC unknown, erase refused\n");
+		return -EROFS;
+	}
+#endif
 #ifdef CONFIG_H3C_QPIC_EXACT_WRITE_WINDOW
 	if (!instr || !nx30_d_qpic_write_window_allows(mtd,instr->addr,instr->len))
 		return h3c_hw_d_nand_write_rejected();
@@ -5800,6 +5822,99 @@ err:
 
 static struct nand_chip nand_chip[CONFIG_SYS_MAX_NAND_DEVICE];
 
+#ifdef CONFIG_QPIC_NAND_ECC_PROBE
+/* Rebuild the cached controller configuration for 4- or 8-bit BCH. */
+static int qpic_ecc_probe_set_format(void *ctx, unsigned int bits)
+{
+	struct mtd_info *mtd = ctx;
+	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
+	unsigned int old = mtd->ecc_strength;
+	int ret;
+
+	if (bits != 4U && bits != 8U)
+		return -EINVAL;
+	if (old == bits)
+		return 0;
+	dev->cfg0 = 0;
+	dev->cfg1 = 0;
+	dev->cfg0_raw = 0;
+	dev->cfg1_raw = 0;
+	dev->ecc_bch_cfg = 0;
+	mtd->ecc_strength = bits;
+	mtd->oobsize = dev->spare_size;
+	ret = qpic_nand_save_config(mtd);
+	if (ret) {
+		/* ECC8 codewords do not fit this spare area: go back. */
+		dev->cfg0 = 0;
+		dev->cfg1 = 0;
+		dev->cfg0_raw = 0;
+		dev->cfg1_raw = 0;
+		dev->ecc_bch_cfg = 0;
+		mtd->ecc_strength = old;
+		mtd->oobsize = dev->spare_size;
+		if (qpic_nand_save_config(mtd))
+			printf("qpic_nand: cannot restore %u-bit ECC\n", old);
+		return ret;
+	}
+	mtd->bitflip_threshold = DIV_ROUND_UP(mtd->ecc_strength * 3, 4);
+	return 0;
+}
+
+static int qpic_ecc_probe_read(void *ctx, unsigned long long offset,
+			       unsigned char *buf, unsigned int len)
+{
+	struct mtd_info *mtd = ctx;
+	struct mtd_ecc_stats saved = mtd->ecc_stats;
+	size_t retlen = 0;
+	int ret = mtd_read(mtd, offset, len, &retlen, buf);
+	int failed = mtd->ecc_stats.failed != saved.failed;
+
+	/* Wrong-format reads are expected here: keep them out of the stats. */
+	mtd->ecc_stats = saved;
+	if (ret == -EBADMSG || failed)
+		return QPIC_ECC_PROBE_READ_ECC;
+	if ((ret && ret != -EUCLEAN) || retlen != len)
+		return ret < 0 ? ret : -EIO;
+	return QPIC_ECC_PROBE_READ_OK;
+}
+
+static void qpic_ecc_probe_board(struct mtd_info *mtd)
+{
+	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
+	struct qpic_ecc_probe_result res;
+	struct qpic_ecc_probe_ops ops;
+	unsigned int max_bits;
+
+	qpic_ecc_probe_ro = 0;
+#if defined(CONFIG_QPIC_NAND_ECC_BITS) && CONFIG_QPIC_NAND_ECC_BITS
+	return;		/* fixed by the board configuration */
+#endif
+	if (mtd->writesize != QPIC_ECC_PROBE_PAGE_BYTES)
+		return;
+	/* 8-bit BCH needs 532-byte codewords: 80 spare bytes per 2 KiB page. */
+	max_bits = dev->spare_size >= 80 ? 8U : 4U;
+	memset(&ops, 0, sizeof(ops));
+	ops.ctx = mtd;
+	ops.set_format = qpic_ecc_probe_set_format;
+	ops.read_page = qpic_ecc_probe_read;
+	ops.block_size = mtd->erasesize;
+	ops.chip_size = mtd->size;
+	ops.buf = memalign(ARCH_DMA_MINALIGN, QPIC_ECC_PROBE_PAGE_BYTES);
+	if (!ops.buf) {
+		qpic_ecc_probe_ro = 1;
+		printf("NAND ECC: no memory to probe, writes disabled\n");
+		return;
+	}
+	if (qpic_ecc_probe_run(&ops, max_bits, dev->spare_size, &res))
+		qpic_ecc_probe_ro = 1;
+	free(ops.buf);
+	printf("NAND ECC: %u-bit, %s (ECC4 pages %u, ECC8 pages %u)%s\n",
+	       mtd->ecc_strength, qpic_ecc_probe_state_name(res.state),
+	       res.valid4, res.valid8,
+	       qpic_ecc_probe_ro ? ", writes disabled" : "");
+}
+#endif
+
 void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 {
 	struct mtd_info *mtd;
@@ -5810,7 +5925,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	size_t alloc_size;
 	unsigned char *buf;
 	struct qpic_nand_init_config config;
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 	size_t alloc_oob_size;
 #endif
 	fdt_addr_t nand_base;
@@ -5954,7 +6069,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	 * dev->zero_oob, dev->tmp_datbuf, dev->tmp_oobbuf
 	 *
 	 */
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 	alloc_oob_size = max_t(size_t, mtd->oobsize, dev->spare_size);
 #ifdef CONFIG_PAGE_SCOPE_MULTI_PAGE_READ
 	alloc_size = 3 * (mtd->writesize + (alloc_oob_size * MAX_MULTI_PAGE));
@@ -5980,7 +6095,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	dev->pad_dat = buf;
 	buf += mtd->writesize;
 	dev->pad_oob = buf;
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 #ifdef CONFIG_PAGE_SCOPE_MULTI_PAGE_READ
 	buf += alloc_oob_size * MAX_MULTI_PAGE;
 #else
@@ -5998,14 +6113,14 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	buf += mtd->writesize;
 
 	dev->zero_oob = buf;
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 	buf += alloc_oob_size;
 #else
 	buf += mtd->oobsize;
 #endif
 
 	memset(dev->zero_page, 0x0, mtd->writesize);
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 	memset(dev->zero_oob, 0x0, alloc_oob_size);
 #else
 	memset(dev->zero_oob, 0x0, mtd->oobsize);
@@ -6014,7 +6129,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	dev->tmp_datbuf = buf;
 	buf += mtd->writesize;
 	dev->tmp_oobbuf = buf;
-#ifdef CONFIG_H3C_QPIC_DUAL_ECC
+#if defined(CONFIG_H3C_QPIC_DUAL_ECC) || defined(CONFIG_QPIC_NAND_ECC_PROBE)
 	buf += alloc_oob_size;
 #else
 	buf += mtd->oobsize;
@@ -6081,6 +6196,9 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 #ifdef CONFIG_H3C_QPIC_DUAL_ECC
 		/* Only the completed QPIC + buffer + MTD registration path sets this. */
 		nx30_nor_nand_qpic_complete = 1;
+#endif
+#ifdef CONFIG_QPIC_NAND_ECC_PROBE
+		qpic_ecc_probe_board(mtd);
 #endif
 		return;
 	}

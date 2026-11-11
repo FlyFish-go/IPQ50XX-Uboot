@@ -4,7 +4,7 @@
  * boots FIT config@mp03.3 and keeps QCA BOOTCONFIG dual slots.
  * WAN = gmac1 internal GE PHY 7; LAN = gmac2 to a QCA8337 (S17c, PHYs 0-3,
  * reset GPIO39), as in the stock U-Boot DTB (MP03.3 reference has them swapped).
- * NAND FM25LS01 is formatted with 8-bit ECC (CONFIG_QPIC_NAND_ECC_BITS).
+ * NAND FM25LS01 is formatted with 8-bit ECC (detected at boot, QPIC_NAND_ECC_PROBE).
  *
  * Buttons and LEDs match the stock kernel DTB: RESET GPIO25, WPS GPIO38;
  * LEDs power GPIO34, red GPIO26, blue GPIO27, WPS GPIO28, 2.4G GPIO30,
