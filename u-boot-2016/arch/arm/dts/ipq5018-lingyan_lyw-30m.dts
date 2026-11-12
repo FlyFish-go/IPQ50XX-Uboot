@@ -3,6 +3,12 @@
  * One PCB sold under three carrier names; stock boot chain reports
  * IPQ5018 AP-MP03.3, board ID 0x8040002 (CDT), and boots FIT config@mp03.3.
  *
+ * eth0 = gmac1 internal GE PHY 7, eth1 = gmac2 to a QCA8337 (S17c, PHYs 0-3,
+ * reset GPIO39), as in the stock kernel DTB; the MP03.3 reference (and the
+ * stock U-Boot DTB) has the switch on gmac1. Stock firmware uses switch
+ * port 2 as WAN and switch ports 3-4 plus the GE PHY as LAN. Some VS010 MAX
+ * batches may carry an RTL8367 switch instead; eth1 will not work there.
+ *
  * Buttons and LEDs match the stock kernel DTB (config@mp03.3):
  * WPS GPIO38, RESET GPIO27, LEDs GPIO23 (power) and GPIO28 (mesh).
  * Board description adapted from Jioyzen/uboot-qsdk12.5-build
@@ -28,6 +34,24 @@
 		/delete-property/ rd_pipe_1;
 		/delete-property/ wr_pipe_2;
 		/delete-property/ rd_pipe_2;
+	};
+
+	gmac_cfg {
+		gmac1_cfg {
+			/delete-property/ mac_pwr;
+			/delete-property/ s17c_switch_enable;
+			/delete-property/ switch_port_count;
+			/delete-property/ switch_phy_address;
+		};
+		gmac2_cfg {
+			/delete-property/ phy_address;
+			/delete-property/ napa_gpio;
+			mac_pwr = <0xaa545>;
+			s17c_switch_enable = <1>;
+			switch_port_count = <4>;
+			switch_phy_address = <0 1 2 3>;
+			switch_gpio = <39>;
+		};
 	};
 
 	keys {
