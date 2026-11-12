@@ -18,4 +18,4 @@ This project is not affiliated with any router vendor.
 
 ## Support
 
-This is a one-person hobby project; code and firmware stay free. If it helped you, you can chip in on [Afdian](https://ifdian.net/a/FlyFish-go) (Chinese platform, WeChat/Alipay). Money goes to new devices and debug tools; it does not buy a promise to support any model. Lending or donating a device is just as welcome — open an issue.
+This is a one-person hobby project; code and firmware stay free. If it helped you, you can chip in on [Afdian](https://ifdian.net/a/FlyFish-go) or via [WeChat / Alipay](docs/sponsor.md). Money goes to new devices and debug tools; it does not buy a promise to support any model. Lending or donating a device is just as welcome — open an issue.
