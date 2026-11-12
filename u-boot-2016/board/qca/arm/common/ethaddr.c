@@ -46,6 +46,51 @@ extern  struct sdhci_host mmc_host;
 #endif
 #endif
 
+#ifdef CONFIG_ETHADDR_ASCII
+#include <linux/ctype.h>
+
+/*
+ * Some vendors leave ART empty and keep the base MAC as text
+ * ("88:6E:DD:48:E7:B8") in their own NAND partition. Read it from there;
+ * every further interface gets the base plus its index, as the OEM loader does.
+ */
+static int ethaddr_from_ascii_part(uchar *enetaddr, uint no_of_macs)
+{
+	char text[18];
+	size_t len = sizeof(text) - 1;
+	u32 start, size;
+	loff_t off;
+	uint i;
+	int j;
+
+	if (smem_getpart(CONFIG_ETHADDR_ASCII_PART, &start, &size) < 0)
+		return -ENOENT;
+	off = (loff_t)qca_smem_flash_info.flash_block_size * start +
+	      CONFIG_ETHADDR_ASCII_OFFSET;
+	if (nand_read(&nand_info[CONFIG_NAND_FLASH_INFO_IDX], off, &len,
+		      (u_char *)text) < 0 || len != sizeof(text) - 1)
+		return -EIO;
+	text[sizeof(text) - 1] = '\0';
+	for (i = 0; i < sizeof(text) - 1; i++) {
+		if (i % 3 == 2 ? text[i] != ':' : !isxdigit((uchar)text[i]))
+			return -EINVAL;
+	}
+	eth_parse_enetaddr(text, enetaddr);
+	if (!is_valid_ethaddr(enetaddr))
+		return -EINVAL;
+	for (i = 1; i < no_of_macs; i++) {
+		uchar *mac = enetaddr + i * 6;
+
+		memcpy(mac, mac - 6, 6);
+		for (j = 5; j >= 0; j--)
+			if (++mac[j])
+				break;
+	}
+	printf("MAC: base %s from %s\n", text, CONFIG_ETHADDR_ASCII_PART);
+	return 0;
+}
+#endif
+
 /*
  * Gets the ethernet address from the ART partition table and return the value
  */
@@ -249,6 +294,11 @@ int get_eth_mac_address(uchar *enetaddr, uint no_of_macs)
 #endif
 		if (ret < 0)
 			printf("ART partition read failed..\n");
+#ifdef CONFIG_ETHADDR_ASCII
+		if ((ret < 0 || !is_valid_ethaddr(enetaddr)) &&
+		    ethaddr_from_ascii_part(enetaddr, no_of_macs) == 0)
+			ret = 0;
+#endif
 #ifdef CONFIG_QCA_MMC
 	} else {
 		blk_dev = mmc_get_dev(mmc_host.dev_num);

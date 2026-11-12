@@ -156,6 +156,23 @@ config TARGET_IPQ5018_HW3000B1
 	  0x8040002), FM25LS01 SPI NAND in 8-bit ECC and the stock
 	  dual-system layout.
 
+config ETHADDR_ASCII
+    bool "Fall back to a text base MAC in a vendor NAND partition"
+    default n
+    help
+	  When ART has no valid MAC, read "xx:xx:xx:xx:xx:xx" from
+	  ETHADDR_ASCII_PART and give interface N the base MAC plus N.
+
+config ETHADDR_ASCII_PART
+    string "SMEM partition holding the base MAC text"
+    depends on ETHADDR_ASCII
+    default "factory"
+
+config ETHADDR_ASCII_OFFSET
+    hex "Offset of the MAC text in ETHADDR_ASCII_PART"
+    depends on ETHADDR_ASCII
+    default 0x0
+
 config FAILSAFE_LAN_FIRST
     bool
     default y if H3C_IPQ5018_COMMON || TARGET_IPQ5018_HW3000B1
