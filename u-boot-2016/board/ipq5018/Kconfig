@@ -364,11 +364,14 @@ config H3C_FLASHRW_NAMED_NAND
     help
       flash <partition> on NAND goes through the validated named-partition writer.
 
-config H3C_LED_STATUS_AT_GPIO_INIT
+config LED_STATUS_AT_GPIO_INIT
     bool
-    default y if TARGET_IPQ5018_H3C_RT3000_B
+    default y if TARGET_IPQ5018_H3C_RT3000_B || !H3C_IPQ5018_COMMON
     help
-      Clear inherited LED colours and light the status LED right after GPIO init.
+      Clear inherited LED colours and light the status LED (system_led)
+      right after GPIO init. Without it the DTS leaves every LED off and
+      the board stays dark until Linux sets its LEDs, 10-20 s after
+      power-on.
 
 config H3C_BOOTCONFIG_STAGE0_POLICY
     bool

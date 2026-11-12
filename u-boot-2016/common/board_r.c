@@ -69,7 +69,7 @@
 #endif
 #ifdef CONFIG_HTTPD
 #include <ipq_api.h>
-#ifdef CONFIG_H3C_LED_STATUS_AT_GPIO_INIT
+#ifdef CONFIG_LED_STATUS_AT_GPIO_INIT
 #include <ipq_led.h>
 #endif
 #endif
@@ -592,7 +592,7 @@ static int initr_ethaddr(void)
 static int initr_ipq_gpio(void)
 {
 	ipq_gpio_init();
-#ifdef CONFIG_H3C_LED_STATUS_AT_GPIO_INIT
+#ifdef CONFIG_LED_STATUS_AT_GPIO_INIT
 	/* TLMM init ORs the output bit: clear inherited colors before green. */
 	led_all_off();
 	led_on("system_led");
