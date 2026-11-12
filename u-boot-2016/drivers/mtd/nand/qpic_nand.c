@@ -82,6 +82,11 @@ static unsigned int qpic_auto_storage_bits; /* ECC of the stored boot chain */
 #include <qpic_ecc_probe.h>
 /* Set when the boot-chain ECC could not be established: no writes. */
 static int qpic_ecc_probe_ro;
+/* Set while the probe reads in a candidate format: failures are expected. */
+static int qpic_ecc_probe_quiet;
+#define QPIC_ECC_FAIL_QUIET()	qpic_ecc_probe_quiet
+#else
+#define QPIC_ECC_FAIL_QUIET()	0
 #endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <asm/arch-qca-common/smem.h>
@@ -4991,8 +4996,9 @@ static int qpic_nand_read_page_scope_multi_page(struct mtd_info *mtd,
 	}
 
 	if (ecc_failures != mtd->ecc_stats.failed) {
-		printf("%s: ecc failure while reading from %llx\n",
-		       __func__, to);
+		if (!QPIC_ECC_FAIL_QUIET())
+			printf("%s: ecc failure while reading from %llx\n",
+			       __func__, to);
 		return -EBADMSG;
 	}
 
@@ -5069,8 +5075,9 @@ static int qpic_nand_read_oob(struct mtd_info *mtd, loff_t to,
 	}
 
 	if (ecc_failures != mtd->ecc_stats.failed) {
-		printf("%s: ecc failure while reading from %llx\n",
-		       __func__, to);
+		if (!QPIC_ECC_FAIL_QUIET())
+			printf("%s: ecc failure while reading from %llx\n",
+			       __func__, to);
 		return -EBADMSG;
 	}
 
@@ -5919,8 +5926,12 @@ static int qpic_ecc_probe_read(void *ctx, unsigned long long offset,
 	struct mtd_info *mtd = ctx;
 	struct mtd_ecc_stats saved = mtd->ecc_stats;
 	size_t retlen = 0;
-	int ret = mtd_read(mtd, offset, len, &retlen, buf);
-	int failed = mtd->ecc_stats.failed != saved.failed;
+	int ret, failed;
+
+	qpic_ecc_probe_quiet = 1;
+	ret = mtd_read(mtd, offset, len, &retlen, buf);
+	qpic_ecc_probe_quiet = 0;
+	failed = mtd->ecc_stats.failed != saved.failed;
 
 	/* Wrong-format reads are expected here: keep them out of the stats. */
 	mtd->ecc_stats = saved;
