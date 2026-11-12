@@ -37,6 +37,10 @@ npm run docs:dev
 
 复制 `site/devices/` 下一个现有文件，改成新机型的资料，文件名与 `id` 一致。`status` 只能是 `verified`、`community`、`testing`、`planned` 之一。
 
+## 支持项目
+
+本项目是个人业余维护，代码和固件始终免费公开。如果它帮到了你，可以在 [爱发电](https://ifdian.net/a/FlyFish-go) 支持一下。捐款用于购买新机型和调试工具（TTL、编程器等），不对应任何机型的适配承诺或时间；采购会公开。也欢迎借机、送机，请开 issue 联系。
+
 ## 来源与许可
 
 本项目基于 [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build)（uBootKit），感谢 chenxin527 及 uBootKit 的上游贡献者，以及为上游 README 贡献过的 webbrain-one。上游的完整提交历史保留在 [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot)。许可见 [LICENSE](LICENSE) 和 [LICENSE-NOTICE.md](LICENSE-NOTICE.md)。

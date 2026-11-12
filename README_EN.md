@@ -15,3 +15,7 @@ First-time H3C installs use [BootBridge Web](https://flyfish-go.github.io/H3C-NX
 Build instructions: [BUILDING.md](BUILDING.md). Based on [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build) (uBootKit); see [LICENSE](LICENSE) and [LICENSE-NOTICE.md](LICENSE-NOTICE.md).
 
 This project is not affiliated with any router vendor.
+
+## Support
+
+This is a one-person hobby project; code and firmware stay free. If it helped you, you can chip in on [Afdian](https://ifdian.net/a/FlyFish-go) (Chinese platform, WeChat/Alipay). Money goes to new devices and debug tools; it does not buy a promise to support any model. Lending or donating a device is just as welcome — open an issue.
