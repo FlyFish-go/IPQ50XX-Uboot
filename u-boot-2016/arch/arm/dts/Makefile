@@ -170,6 +170,7 @@ dtb-$(CONFIG_TARGET_IPQ5018_CUCC_VS010)        += ipq5018-cucc_vs010.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000)    += ipq5018-jdcloud_ax3000.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_LINGYAN_LYW_30M)  += ipq5018-lingyan_lyw-30m.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_TCL_T30_PRO)      += ipq5018-tcl_t30-pro.dtb
+dtb-$(CONFIG_TARGET_IPQ5018_XIAOMI_CR8806)    += ipq5018-xiaomi_cr8806.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_HW3000B1)         += ipq5018-hw3000b1.dtb
 dtb-$(CONFIG_TARGET_IPQ5332_JDCLOUD_RE_CS_06)  += ipq5332-jdcloud_re-cs-06.dtb
 dtb-$(CONFIG_TARGET_IPQ5332_JDCLOUD_RE_CS_08)  += ipq5332-jdcloud_re-cs-08.dtb

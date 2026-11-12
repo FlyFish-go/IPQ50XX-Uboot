@@ -1,0 +1,118 @@
+/*
+ * Xiaomi CR8806 (China Mobile custom), IPQ5018, 256 MiB, 128 MiB SPI NAND
+ * (ESMT F50D1G41LB, 4-bit ECC). Stock CDT board ID 0x8040000 (AP-MP02.1);
+ * the stock kernel boots FIT config@mp02.1.
+ *
+ * Dual system: BOOTCONFIG stays at slot 0 and U-Boot picks rootfs or
+ * rootfs_1 from flag_* variables in a 64 KiB environment, as the stock
+ * bootmiwifi command does (CONFIG_SLOT_BACKEND_XIAOMI).
+ *
+ * From the stock U-Boot MP02.1 DTB and the stock kernel DTB: internal GE
+ * PHY 7 on GMAC1, QCA8337 (4 ports, reset GPIO26) on GMAC2; console on the
+ * reference pins; RESET GPIO25 and MESH GPIO23 (active low); LEDs system
+ * blue GPIO19, system yellow GPIO17, net blue GPIO22, net yellow GPIO20
+ * (active high). MACs are at the start of ART.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ */
+#include "ipq5018-mp02.1.dts"
+
+/ {
+	host_name = "Xiaomi CR8806";
+	model = "Xiaomi CR8806";
+	compatible = "qca,ipq5018", "qca,ipq5018-mp02.1";
+	machid = <0x8040000>;
+	config_name = "config@mp02.1";
+
+	/* This tree's mp02.1 file has a QCA8033 PHY on GMAC2; the board has
+	 * the reference QCA8337 there. */
+	gmac_cfg {
+		gmac2_cfg {
+			/delete-property/ phy_address;
+			/delete-property/ 8033_gpio;
+			mac_pwr = <0xaa545>;
+			s17c_switch_enable = <1>;
+			switch_port_count = <4>;
+			switch_phy_address = <0 1 2 3>;
+			switch_gpio = <26>;
+		};
+	};
+
+	/* The stock MP02.1 DTB configures only QUP SPI BAM pipe 0. */
+	spi {
+		/delete-property/ wr_pipe_1;
+		/delete-property/ rd_pipe_1;
+		/delete-property/ wr_pipe_2;
+		/delete-property/ rd_pipe_2;
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			gpio = <25>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+
+		mesh {
+			gpio = <23>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_sys_yellow {
+			label = "power_led";
+			gpio = <17>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_sys_blue {
+			label = "blink_led", "system_led";
+			gpio = <19>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_net_blue {
+			label = "net_blue";
+			gpio = <22>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_net_yellow {
+			label = "net_yellow";
+			gpio = <20>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+	};
+};

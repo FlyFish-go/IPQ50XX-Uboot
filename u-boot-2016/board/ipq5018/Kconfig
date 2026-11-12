@@ -156,6 +156,14 @@ config TARGET_IPQ5018_HW3000B1
 	  0x8040002), FM25LS01 SPI NAND in 8-bit ECC and the stock
 	  dual-system layout.
 
+config TARGET_IPQ5018_XIAOMI_CR8806
+    bool "Xiaomi CR8806 board support"
+	default n
+    help
+	  Enable support for the Xiaomi CR8806 (China Mobile) router with
+	  the stock CDT (AP-MP02.1, board ID 0x8040000) and the stock
+	  dual-system layout selected by U-Boot environment flags.
+
 config ETHADDR_ASCII
     bool "Fall back to a text base MAC in a vendor NAND partition"
     default n
@@ -479,6 +487,7 @@ config SLOT_BACKEND_SINGLE
 config SLOT_BACKEND_XIAOMI
     bool "Xiaomi environment flags select the system slot"
     depends on !SLOT_BACKEND_SINGLE && !H3C_IPQ5018_COMMON
+    default y if TARGET_IPQ5018_XIAOMI_CR8806
     help
       Stock miwifi firmware keeps BOOTCONFIG at slot 0 and lets U-Boot
       choose rootfs or rootfs_1 from flag_* variables in the environment,
