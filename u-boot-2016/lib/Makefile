@@ -113,4 +113,5 @@ obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_D) += nx30_d_service.o nx30_d_uboot.o nx30_d_
 obj-$(CONFIG_H3C_NAND_ECC_COMPAT) += h3c_nand_ecc_core.o h3c_nand_ecc.o
 obj-$(CONFIG_H3C_NAND_AUTO_PROFILE) += h3c_nand_auto_core.o h3c_nand_auto.o
 obj-$(CONFIG_QPIC_NAND_ECC_PROBE) += qpic_ecc_probe.o
+obj-$(CONFIG_SLOT_BACKEND_XIAOMI) += slot_xiaomi.o
 obj-$(CONFIG_H3C_RELEASE_SYSTEM_DEFAULT) += h3c_boot_policy_core.o h3c_boot_policy.o

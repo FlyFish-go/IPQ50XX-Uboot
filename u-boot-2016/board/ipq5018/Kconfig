@@ -476,4 +476,21 @@ config SLOT_BACKEND_SINGLE
       "slot 0" without reading BOOTCONFIG. Leave unset for BOOTCONFIG
       dual-slot devices.
 
+config SLOT_BACKEND_XIAOMI
+    bool "Xiaomi environment flags select the system slot"
+    depends on !SLOT_BACKEND_SINGLE && !H3C_IPQ5018_COMMON
+    help
+      Stock miwifi firmware keeps BOOTCONFIG at slot 0 and lets U-Boot
+      choose rootfs or rootfs_1 from flag_* variables in the environment,
+      which Linux updates with nvram. Boot the slot those flags select
+      and record it the way the stock bootmiwifi command does.
+
+config ENV_SIZE_64K
+    bool
+    default y if SLOT_BACKEND_XIAOMI
+    help
+      Stock Xiaomi firmware keeps a single 64 KiB environment (CRC32 then
+      data) that Linux edits with nvram. Reading it as 256 KiB gives a bad
+      CRC, and saving 256 KiB would break it for Linux.
+
 endif

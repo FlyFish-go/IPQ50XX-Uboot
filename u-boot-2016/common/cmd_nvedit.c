@@ -634,7 +634,7 @@ char *getenv(const char *name)
 
 		return ep ? ep->data : NULL;
 	} else {
-#ifdef CONFIG_ENV_SIZE_MAX
+#if defined(CONFIG_ENV_SIZE_MAX) && !defined(CONFIG_ENV_SIZE_64K)
 /* for first time set maximum */
 #define CONFIG_ENV_SIZE CONFIG_ENV_SIZE_MAX
 #endif

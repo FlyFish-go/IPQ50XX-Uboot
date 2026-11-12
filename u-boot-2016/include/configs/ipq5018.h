@@ -144,7 +144,11 @@ extern loff_t board_env_size;
 
 #define CONFIG_IPQ5018_ENV			1
 #define CONFIG_ENV_OFFSET			board_env_offset
+#ifdef CONFIG_ENV_SIZE_64K
+#define CONFIG_ENV_SIZE				(64 << 10)
+#else
 #define CONFIG_ENV_SIZE				CONFIG_ENV_SIZE_MAX
+#endif
 #define CONFIG_ENV_RANGE			board_env_range
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #define CONFIG_SYS_MALLOC_LEN			(8 << 20)

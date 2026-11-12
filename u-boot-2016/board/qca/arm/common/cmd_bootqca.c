@@ -937,6 +937,9 @@ static int set_fs_bootargs(int *fs_on_nand)
 		}
 	} else if (((sfi->flash_type == SMEM_BOOT_NAND_FLASH) ||
 			(sfi->flash_type == SMEM_BOOT_QSPI_NAND_FLASH))) {
+		ret = slot_prepare_boot();
+		if (ret)
+			return ret;
 		bootargs = nand_rootfs;
 		if (getenv("fsbootargs") == NULL)
 			setenv("fsbootargs", bootargs);
@@ -1754,6 +1757,7 @@ boot_done:
 	}
 #else
 	if (ret == CMD_RET_FAILURE) {
+		slot_boot_failed();
 #ifdef CONFIG_HTTPD
 	puts("bootipq failed, enter web failsafe mode\n");
 	run_command("httpd", 0);

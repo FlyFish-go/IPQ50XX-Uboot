@@ -13,6 +13,21 @@
 static inline bool slot_info_available(void) { return false; }
 static inline unsigned int slot_active_rootfs(void) { return 0; }
 static inline int slot_default_rootfs(void) { return 0; }
+/* Macros, not inlines: keeps other images byte-identical. */
+#define slot_prepare_boot()	0
+#define slot_boot_failed()	do { } while (0)
+
+#elif defined(CONFIG_SLOT_BACKEND_XIAOMI)
+
+/* Xiaomi miwifi: U-Boot environment flags, see lib/slot_xiaomi.c. */
+unsigned int xiaomi_slot_select(void);
+static inline bool slot_info_available(void) { return true; }
+static inline unsigned int slot_active_rootfs(void) { return xiaomi_slot_select(); }
+static inline int slot_default_rootfs(void) { return xiaomi_slot_select(); }
+/* NAND boot: point rootfs and bootargs at the slot and record it. */
+int slot_prepare_boot(void);
+/* The kernel could not be loaded or started: mark the slot, maybe reset. */
+void slot_boot_failed(void);
 
 #else /* Qualcomm BOOTCONFIG */
 
@@ -36,6 +51,11 @@ static inline int slot_default_rootfs(void)
 {
 	return get_bootconfig("rootfs");
 }
+
+/* SBL already swapped the partition names; nothing to do. Macros, not
+ * inlines: keeps other images byte-identical. */
+#define slot_prepare_boot()	0
+#define slot_boot_failed()	do { } while (0)
 
 #endif
 #endif /* __SLOT_OPS_H__ */

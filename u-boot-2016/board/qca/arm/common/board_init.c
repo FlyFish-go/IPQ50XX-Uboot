@@ -240,7 +240,7 @@ int board_init(void)
 	switch (sfi->flash_type) {
 	case SMEM_BOOT_NAND_FLASH:
 	case SMEM_BOOT_QSPI_NAND_FLASH:
-		board_env_range = CONFIG_ENV_SIZE_MAX;
+		board_env_range = CONFIG_ENV_SIZE; /* env read/write length = buffer size */
 		BUG_ON(board_env_size < CONFIG_ENV_SIZE_MAX);
 		break;
 	case SMEM_BOOT_SPI_FLASH:
