@@ -6210,6 +6210,17 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	printf("RT3000-B stage-0: skip serial training; keep 50 MHz default\n");
 	ret = 0;
 #else
+	/*
+	 * ESMT F50D1G41LB does not pass serial training, and the stock
+	 * Xiaomi CR8806 U-Boot skips it for this part. A kernel whose
+	 * qcom_nandc does not redo the training (OpenWrt 5.4) then reads
+	 * only 0xff from a trained 200 MHz bus, so stay at the default.
+	 */
+	if (serial_params && serial_params->id[0] == 0xc8 &&
+	    serial_params->id[1] == 0x11) {
+		printf("%s: skip serial training\n", serial_params->name);
+		ret = -1;
+	} else {
 #ifdef CONFIG_QSPI_LAYOUT_SWITCH
 	if (qpic_layout != QPIC_NAND_LAYOUT_SBL)
 		ret = qpic_execute_serial_training(mtd);
@@ -6220,6 +6231,7 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 #else
 	ret = qpic_execute_serial_training(mtd);
 #endif
+	}
 #endif
 
 	if (ret) {
