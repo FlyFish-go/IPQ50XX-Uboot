@@ -84,4 +84,17 @@ typedef enum {
 fw_type_t check_fw_type(uintptr_t addr, size_t size);
 char *fw_type_to_string(fw_type_t fw_type);
 
+/*
+ * Firmware writes on boards whose slot is not chosen by BOOTCONFIG. The hook
+ * sits on an existing line of failsafe_write_firmware(): ADD_CMD_TO_LIST
+ * records __LINE__, and other images must stay byte-identical.
+ */
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size);
+#define FAILSAFE_FIRMWARE_SLOT_HOOK(addr, size) \
+	return failsafe_write_firmware_xiaomi(addr, size)
+#else
+#define FAILSAFE_FIRMWARE_SLOT_HOOK(addr, size) do { } while (0)
+#endif
+
 #endif /* __FW_DEC_H__ */

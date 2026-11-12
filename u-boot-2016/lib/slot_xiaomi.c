@@ -129,6 +129,50 @@ void slot_boot_failed(void)
 	run_command("reset", 0);
 }
 
+/*
+ * Make slot the one that boots next, robustly: with L = R = slot, both
+ * failure flags clear and no OTA pending, the rules above return slot.
+ */
+static int xiaomi_slot_set_next(unsigned int slot)
+{
+	xm_set_flag("flag_last_success", slot);
+	xm_set_flag("flag_boot_rootfs", slot);
+	xm_set_flag("flag_try_sys1_failed", 0);
+	xm_set_flag("flag_try_sys2_failed", 0);
+	xm_set_flag("flag_ota_reboot", 0);
+	xm_set_flag("flag_boot_success", 1);
+	return saveenv();
+}
+
+static int do_xiaomi_slot(cmd_tbl_t *cmdtp, int flag, int argc,
+			  char *const argv[])
+{
+	unsigned long slot;
+
+	if (argc == 1) {
+		printf("next boot: slot %u (%s)\n", xiaomi_slot_select(),
+		       xiaomi_slot_select() ? "rootfs_1" : "rootfs");
+		return CMD_RET_SUCCESS;
+	}
+	if (argc != 3 || strcmp(argv[1], "select"))
+		return CMD_RET_USAGE;
+	slot = simple_strtoul(argv[2], NULL, 10);
+	if (slot > 1 || strlen(argv[2]) != 1)
+		return CMD_RET_USAGE;
+	if (xiaomi_slot_set_next(slot)) {
+		puts("xiaomi_slot: cannot save the environment\n");
+		return CMD_RET_FAILURE;
+	}
+	printf("next boot: slot %lu (%s)\n", slot, slot ? "rootfs_1" : "rootfs");
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(xiaomi_slot, 3, 0, do_xiaomi_slot,
+	   "show or choose the Xiaomi system slot for the next boot",
+	   "\n    - show the slot the flags select\n"
+	   "xiaomi_slot select <0|1>\n"
+	   "    - boot rootfs (0) or rootfs_1 (1) from now on; saves the environment");
+
 /* The stock environment says bootcmd=bootmiwifi; keep it working. */
 static int do_bootmiwifi(cmd_tbl_t *cmdtp, int flag, int argc,
 			 char *const argv[])

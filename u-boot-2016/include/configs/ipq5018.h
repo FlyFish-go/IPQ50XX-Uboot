@@ -172,6 +172,10 @@ extern loff_t board_env_size;
 #define CONFIG_CMD_NAND
 #endif
 #define CONFIG_ENV_IS_IN_NAND			1
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+/* Web firmware install of UBI images into a Xiaomi slot. */
+#define CONFIG_CMD_NAND_TRIMFFS
+#endif
 #define CONFIG_QPIC_NAND
 #define CONFIG_SYS_NAND_ONFI_DETECTION
 #define CONFIG_CMD_NAND_YAFFS

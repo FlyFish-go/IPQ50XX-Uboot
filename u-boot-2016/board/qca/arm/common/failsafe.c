@@ -728,7 +728,7 @@ static int __maybe_unused failsafe_validate_initramfs(const void *data_addr, ulo
 #ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static int failsafe_write_firmware(ulong data_addr, ulong data_size)
 {
-	print_upgrade_hint("FIRMWARE");
+	FAILSAFE_FIRMWARE_SLOT_HOOK(data_addr, data_size); print_upgrade_hint("FIRMWARE");
 
 	switch (fw_type) {
 	case FW_TYPE_FIT:
@@ -1130,3 +1130,47 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
 
     return ret;
 }
+
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+#include <slot_ops.h>
+/*
+ * Xiaomi slots: like stock OTA, write the slot that is not selected now and
+ * then select it, so the current system stays as the fallback (a new system
+ * that fails to boot gets marked failed and U-Boot goes back). Kept at the end
+ * of the file so no ADD_CMD_TO_LIST above changes its __LINE__.
+ */
+int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
+{
+	unsigned int slot = 1 - xiaomi_slot_select();
+	char *part = slot ? "rootfs_1" : "rootfs";
+	nand_info_t *nand = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
+	uint32_t offset, size, pos, room = 0;
+
+	print_upgrade_hint("FIRMWARE");
+	if (fw_type != FW_TYPE_UBI) {
+		handle_wrong_fw_type("UBI");
+		return RET_WRONG_FW_TYPE;
+	}
+	RETURN_IF_NAND_FLASH_NOT_FOUND;
+	if (getpart_offset_size(part, &offset, &size)) {
+		handle_part_not_found(part);
+		return RET_PART_NOT_FOUND;
+	}
+	/* nand write skips bad blocks: never let it run into overlay. */
+	for (pos = offset; pos < offset + size; pos += nand->erasesize)
+		if (!nand_block_isbad(nand, pos))
+			room += nand->erasesize;
+	if (data_size > room) {
+		handle_file_too_big("firmware", data_size, part, room);
+		return RET_FILE_TOO_BIG;
+	}
+	printf("Xiaomi slots: installing into %s (slot %u)\n", part, slot);
+	ADD_CMD_TO_LIST("nand device %d", CONFIG_NAND_FLASH_INFO_IDX);
+	ADD_CMD_TO_LIST("nand erase 0x%x 0x%x", offset, size);
+	/* trimffs: erased 0xff pages stay erased for UBI to write later. */
+	ADD_CMD_TO_LIST("nand write.trimffs 0x%lx 0x%x 0x%lx",
+			data_addr, offset, data_size);
+	ADD_CMD_TO_LIST("xiaomi_slot select %u", slot);
+	return failsafe_run_command_list();
+}
+#endif
