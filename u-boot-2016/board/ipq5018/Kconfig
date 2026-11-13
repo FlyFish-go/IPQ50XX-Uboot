@@ -198,6 +198,16 @@ config TARGET_IPQ5018_RUIJIE_RG_MA3063
 	  1.00) with the stock CDT (AP-MP02.1, board ID 0x8040000) and the
 	  stock BOOTCONFIG dual-system layout.
 
+config TARGET_IPQ5018_RUIJIE_RG_MA3063_V3
+    bool "Ruijie RG-MA3063 V3 board support (untested)"
+	default n
+	select BOARD_UNTESTED
+    help
+	  Enable support for the Ruijie RG-MA3063 hardware 3.00 (China
+	  Mobile "wuhu3") with CDT AP-MP03.5-C1 (board ID 0x8040004) and the
+	  BOOTCONFIG dual-system layout. Built from a third-party device tree
+	  only; not verified on hardware.
+
 config ETHADDR_ASCII
     bool "Fall back to a text base MAC in a vendor NAND partition"
     default n

@@ -64,6 +64,7 @@ jobs:
           - { kind: defconfig, name: ipq5018_cucc_vs010 }
           - { kind: defconfig, name: ipq5018_cmcc_rax3000q }
           - { kind: defconfig, name: ipq5018_cmcc_pz_l8 }
+          - { kind: defconfig, name: ipq5018_ruijie_rg_ma3063_v3 }
     name: ${{ matrix.kind }} ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4

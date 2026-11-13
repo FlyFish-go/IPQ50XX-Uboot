@@ -1,0 +1,94 @@
+/*
+ * Ruijie RG-MA3063 V3 (China Mobile "wuhu3", hardware 3.00), IPQ5000, 256 MiB,
+ * 128 MiB SPI NAND. Stock CDT board ID 0x8040004 (AP-MP03.5-C1).
+ *
+ * UNTESTED: written from a public third-party device tree (1980490718/
+ * u-boot-2016, ipq5018-ruijie-ma3063-mp03.5-c1.dts, GPL-2.0), never run on
+ * this hardware and with no stock DTB to check it against. Derived from the
+ * verified RG-MA3063 (hardware 1.00, MP02.1) file: same QCA8337 on GMAC2
+ * (4 ports, reset GPIO26), internal GE PHY 7 on GMAC1, RESET GPIO33 and
+ * MESH GPIO34, MACs at the start of ART. Console is GPIO20/21 function 1
+ * (from the MP03.5-C1 reference file, not GPIO28/29 as on MP02.1).
+ *
+ * LEDs: only GPIO19 and GPIO22, which are the system and network LEDs on
+ * hardware 1.00 and also appear in the third-party file. That file's third
+ * LED, GPIO38, does not match any hardware 1.00 LED and is left out.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ */
+#include "ipq5018-mp03.5-c1.dts"
+
+/ {
+	host_name = "Ruijie RG-MA3063 V3";
+	model = "Ruijie RG-MA3063 V3";
+	compatible = "qca,ipq5018", "qca,ipq5018-mp03.5-c1";
+	machid = <0x8040004>;
+	config_name = "config@mp03.5-c1";
+
+	/* The reference MP03.5-C1 file has a NAPA PHY on GMAC2; the board has
+	 * a QCA8337 there. */
+	gmac_cfg {
+		gephy_led = <30>;
+
+		gmac1_cfg {
+			phy_external_link = <0>;
+		};
+		gmac2_cfg {
+			/delete-property/ phy_address;
+			/delete-property/ napa_gpio;
+			mac_pwr = <0xaa545>;
+			s17c_switch_enable = <1>;
+			switch_port_count = <4>;
+			switch_phy_address = <0 1 2 3>;
+			switch_gpio = <26>;
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			gpio = <33>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+
+		mesh {
+			gpio = <34>;
+			func = <0>;
+			pull = <GPIO_PULL_UP>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_DISABLE>;
+			active_level = <GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_sys {
+			label = "power_led", "blink_led", "system_led";
+			gpio = <19>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+
+		led_net {
+			label = "net_led";
+			gpio = <22>;
+			func = <0>;
+			out = <GPIO_OUT_LOW>;
+			pull = <GPIO_NO_PULL>;
+			drvstr = <GPIO_8MA>;
+			oe = <GPIO_OE_ENABLE>;
+			active_level = <GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
