@@ -838,6 +838,11 @@ static void reset_s17c_switch_gpio(int gpio)
 	writel(0x0, GPIO_IN_OUT_ADDR(gpio));
 	mdelay(500);
 	writel(0x2, GPIO_IN_OUT_ADDR(gpio));
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* Some QCA8337 boards (Ruijie RG-MA3063) do not answer on MDIO right
+	 * after reset is released, so the switch was not detected. */
+	mdelay(100);
+#endif
 }
 
 static void cmn_blk_clk_set(void)
