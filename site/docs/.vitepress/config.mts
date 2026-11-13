@@ -46,6 +46,7 @@ export default defineConfig({
         text: '设备',
         items: [
           { text: '全部设备', link: '/devices/' },
+          { text: '仅收录资料与不做的机型', link: '/devices/research' },
           ...loadDevices().map((d) => ({
             text: `${d.vendor} ${d.name}${statusMark[d.status] ?? ''}`,
             link: `/devices/${d.id}`
