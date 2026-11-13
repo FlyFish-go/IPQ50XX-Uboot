@@ -812,7 +812,10 @@ compile_device() {
 
     # 复制并重命名文件
     log_message "复制 u-boot.mbn 到输出目录并重命名"
-    local output_file="${output_dir}/uboot-${platform}-${device_name}-${uboot_version}.bin"
+    # Boards built from public sources only get "-untested" in the file name.
+    local untested_suffix=""
+    grep -q '^CONFIG_BOARD_UNTESTED=y' .config && untested_suffix="-untested"
+    local output_file="${output_dir}/uboot-${platform}-${device_name}${untested_suffix}-${uboot_version}.bin"
     if [ ! -f "./u-boot.mbn" ]; then
         log_message "错误: 文件不存在: ./u-boot.mbn"
         cd "$SCRIPT_DIR"

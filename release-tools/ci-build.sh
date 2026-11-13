@@ -37,6 +37,19 @@ defconfig)
   args=(HOST_LOADLIBES=-l:libbsd.so.0)
   make "${args[@]}" -C "$src/u-boot-2016" O="$out/$name" "${name}_defconfig"
   make "${args[@]}" -C "$src/u-boot-2016" O="$out/$name" -j1   # dtb_combined is not parallel-safe
+
+  # Flash image for the APPSBL partition. A board nobody has verified on
+  # hardware (CONFIG_BOARD_UNTESTED) carries "-untested" in every artifact name.
+  sfx=
+  grep -q '^CONFIG_BOARD_UNTESTED=y' "$out/$name/.config" && sfx=-untested
+  mkdir -p "$out/dist"
+  "${CROSS_COMPILE}strip" "$out/$name/u-boot" -o "$out/$name/u-boot.strip.elf"
+  python3 -I - "$src/release-tools" "$out/$name/u-boot.strip.elf" "$out/dist/$name$sfx.mbn" <<'PYEOF'
+import pathlib, sys
+sys.path.insert(0, sys.argv[1])
+import appsbl_packager
+appsbl_packager.write_outputs(pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))
+PYEOF
   ;;
 *)
   echo "Unknown kind: $kind" >&2; exit 2 ;;

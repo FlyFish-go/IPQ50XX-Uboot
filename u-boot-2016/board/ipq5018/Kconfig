@@ -58,6 +58,15 @@ config BOARD_TYPES
 config LIST_OF_CONFIG_NAMES_SUPPORT
 	bool "List of config names support"
 
+config BOARD_UNTESTED
+	bool
+	help
+	  Selected by every target that was built from public sources only
+	  and has not been verified on hardware. Such a build prints an
+	  UNTESTED BOARD line in its banner, reports "untested" in /sysinfo
+	  and gets "-untested" in its release artifact names. Drop the
+	  select in the commit that records the first hardware verification.
+
 config LIST_FUSE
 	bool "Enable fuse list command"
 	default n

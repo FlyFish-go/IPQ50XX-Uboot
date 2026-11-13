@@ -193,6 +193,11 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 #else
     APPEND_JSON_TO_BUF("\"ram_rescue\":false,");
 #endif
+#if defined(CONFIG_BOARD_UNTESTED)
+    APPEND_JSON_TO_BUF("\"untested\":true,");
+#elif !defined(CONFIG_H3C_IPQ5018_COMMON)
+    APPEND_JSON_TO_BUF("\"untested\":false,");
+#endif
     json_escape(version_string, esc_version_string, sizeof(esc_version_string));
     APPEND_JSON_TO_BUF("\"uboot_version\":\"%s\",", esc_version_string);
 

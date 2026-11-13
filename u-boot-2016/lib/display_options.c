@@ -20,6 +20,9 @@ int display_options (void)
 #else
 	printf ("\n\n%s\n\n", version_string);
 #endif
+#ifdef CONFIG_BOARD_UNTESTED
+	printf ("UNTESTED BOARD: not verified on hardware\n\n");
+#endif
 	return 0;
 }
 
