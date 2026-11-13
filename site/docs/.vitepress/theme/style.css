@@ -20,6 +20,8 @@
   --info-bg: rgba(59, 130, 246, 0.12);
   --warn-fg: #9a3412;
   --warn-bg: rgba(251, 146, 60, 0.14);
+  --bad-fg: #b91c1c;
+  --bad-bg: rgba(239, 68, 68, 0.12);
   --muted-fg: #57534e;
   --muted-bg: rgba(120, 113, 108, 0.14);
 }
@@ -39,6 +41,8 @@
   --info-bg: rgba(96, 165, 250, 0.14);
   --warn-fg: #fdba74;
   --warn-bg: rgba(251, 146, 60, 0.13);
+  --bad-fg: #fca5a5;
+  --bad-bg: rgba(248, 113, 113, 0.14);
   --muted-fg: #a8a29e;
   --muted-bg: rgba(168, 162, 158, 0.14);
 }

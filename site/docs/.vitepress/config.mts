@@ -6,7 +6,9 @@ const statusMark: Record<string, string> = {
   verified: '',
   community: ' · 社区',
   testing: ' · 测试中',
-  planned: ' · 调研中'
+  untested: ' · 未验证',
+  planned: ' · 调研中',
+  research: ' · 资料'
 }
 
 export default defineConfig({

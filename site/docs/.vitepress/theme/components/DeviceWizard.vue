@@ -6,6 +6,7 @@ import { MECHANISM, STATUS, INSTALL_SHORT } from '../meta'
 import StatusBadge from './StatusBadge.vue'
 import StepList from './StepList.vue'
 
+const WARN = ['planned', 'testing', 'untested', 'research']
 const selected = ref<string | null>(null)
 const stepsEl = ref<HTMLElement | null>(null)
 const device = computed(() => devices.find((d) => d.id === selected.value) ?? null)
@@ -61,7 +62,7 @@ onMounted(() => {
             :key="d.id"
             type="button"
             class="card"
-            :class="{ 'card--on': selected === d.id, 'card--planned': d.status === 'planned' }"
+            :class="{ 'card--on': selected === d.id, 'card--planned': d.status === 'planned' || d.status === 'research' }"
             :aria-pressed="selected === d.id"
             @click="choose(d.id)"
           >
@@ -95,14 +96,15 @@ onMounted(() => {
           <button type="button" class="wiz__change" @click="clear">换一个机型</button>
         </div>
       </header>
-      <div v-if="device.status === 'planned' || device.status === 'testing'" class="wiz__alert">
+      <div v-if="WARN.includes(device.status)" class="wiz__alert" :class="{ 'wiz__alert--bad': device.status === 'untested' }">
         <strong>{{ STATUS[device.status].label }}</strong>
-        <span>{{ STATUS[device.status].hint }}。下面的步骤只用来说明计划，不要照着刷。</span>
+        <span v-if="device.status === 'untested'">未验证，不建议刷入。{{ STATUS[device.status].hint }}。下面的步骤是 RAM 试跑，不会写闪存；请不要把试跑当成已通过。</span>
+        <span v-else>{{ STATUS[device.status].hint }}。下面的步骤只用来说明计划，不要照着刷。</span>
       </div>
       <StepList
         :steps="device.steps ?? []"
         :store-key="device.id"
-        :checkable="device.status !== 'planned'"
+        :checkable="!['planned', 'research'].includes(device.status)"
       />
     </section>
   </div>
@@ -155,6 +157,7 @@ onMounted(() => {
   display: flex; gap: 10px; margin: 0 0 22px; padding: 12px 16px; border-radius: 10px;
   font-size: 14px; line-height: 1.65; color: var(--warn-fg); background: var(--warn-bg);
 }
+.wiz__alert--bad { color: var(--bad-fg); background: var(--bad-bg); }
 .wiz__alert strong { flex: none; }
 @media (max-width: 640px) {
   .wiz__grid { grid-template-columns: 1fr 1fr; gap: 10px; }

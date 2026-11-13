@@ -24,10 +24,14 @@ export interface Device {
   name: string
   aliases?: string[]
   soc?: string
-  status: 'verified' | 'community' | 'testing' | 'planned'
+  status: 'verified' | 'community' | 'testing' | 'untested' | 'planned' | 'research'
   family?: string
   summary?: string
   hardware?: { label: string; value: string }[]
+  tested?: string[]
+  not_tested?: string[]
+  differences?: string[]
+  artifact?: string
   slots?: { mechanism: string; note?: string }
   install?: { method: string; label: string; url?: string }
   steps?: Step[]
@@ -37,7 +41,7 @@ export interface Device {
   links?: { text: string; url: string }[]
 }
 
-const STATUSES = ['verified', 'community', 'testing', 'planned']
+const STATUSES = ['verified', 'community', 'testing', 'untested', 'planned', 'research']
 
 export function loadDevices(): Device[] {
   const files = fs

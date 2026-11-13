@@ -7,11 +7,13 @@ import { renderInline } from '../inline'
 import StatusBadge from './StatusBadge.vue'
 import StepList from './StepList.vue'
 
+const WARN = ['planned', 'testing', 'untested', 'research']
 const props = defineProps<{ id: string }>()
 const d = computed(() => devices.find((x) => x.id === props.id)!)
 const facts = computed(() => {
   const list = [...(d.value.hardware ?? [])]
   if (d.value.soc) list.unshift({ label: '芯片', value: d.value.soc })
+  if (d.value.artifact) list.push({ label: '构建名', value: '`' + d.value.artifact + '`' })
   return list
 })
 </script>
@@ -46,14 +48,37 @@ const facts = computed(() => {
 
     <p v-if="d.slots?.note" class="dd__note">{{ d.slots.note }}</p>
 
+    <template v-if="d.tested?.length || d.not_tested?.length">
+      <h2 id="tested">验证情况</h2>
+      <div class="dd__tcols">
+        <div v-if="d.tested?.length" class="dd__tcol dd__tcol--ok">
+          <h3>测过</h3>
+          <ul><li v-for="(t, i) in d.tested" :key="i" v-html="renderInline(t)" /></ul>
+        </div>
+        <div v-if="d.not_tested?.length" class="dd__tcol dd__tcol--no">
+          <h3>没测</h3>
+          <ul><li v-for="(t, i) in d.not_tested" :key="i" v-html="renderInline(t)" /></ul>
+        </div>
+      </div>
+    </template>
+
+    <template v-if="d.differences?.length">
+      <h2 id="differences">与原厂行为的差异</h2>
+      <ul>
+        <li v-for="(t, i) in d.differences" :key="i" v-html="renderInline(t)" />
+      </ul>
+    </template>
+
     <h2 id="install">安装步骤</h2>
-    <div v-if="d.status === 'planned' || d.status === 'testing'" class="dd__alert">
-      <strong>{{ STATUS[d.status].label }}</strong><span>{{ STATUS[d.status].hint }}。</span>
+    <div v-if="WARN.includes(d.status)" class="dd__alert" :class="{ 'dd__alert--bad': d.status === 'untested' }">
+      <strong>{{ STATUS[d.status].label }}</strong>
+      <span v-if="d.status === 'untested'">未验证，不建议刷入。{{ STATUS[d.status].hint }}。</span>
+      <span v-else>{{ STATUS[d.status].hint }}。</span>
     </div>
     <p v-if="d.install?.url" class="dd__cta">
       <a class="dd__btn" :href="d.install.url" target="_blank" rel="noreferrer">打开 {{ d.install.label }} ↗</a>
     </p>
-    <StepList :steps="d.steps ?? []" :store-key="d.id" :checkable="d.status !== 'planned'" />
+    <StepList :steps="d.steps ?? []" :store-key="d.id" :checkable="!['planned', 'research'].includes(d.status)" />
 
     <template v-if="d.recovery?.length">
       <h2 id="recovery">出问题怎么办</h2>
@@ -103,7 +128,17 @@ const facts = computed(() => {
   display: flex; gap: 10px; margin: 0 0 20px; padding: 12px 16px; border-radius: 10px;
   font-size: 14px; color: var(--warn-fg); background: var(--warn-bg);
 }
+.dd__alert--bad { color: var(--bad-fg); background: var(--bad-bg); }
 .dd__alert strong { flex: none; }
+.dd__tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.dd__tcol { padding: 4px 16px 8px; border-radius: 10px; font-size: 14px; }
+.dd__tcol h3 { margin: 10px 0 4px; font-size: 14px; letter-spacing: .04em; }
+.dd__tcol ul { margin: 4px 0; padding-left: 18px; }
+.dd__tcol--ok { background: var(--ok-bg); }
+.dd__tcol--ok h3 { color: var(--ok-fg); }
+.dd__tcol--no { background: var(--warn-bg); }
+.dd__tcol--no h3 { color: var(--warn-fg); }
+@media (max-width: 640px) { .dd__tcols { grid-template-columns: 1fr; } }
 .dd__cta { margin: 0 0 22px; }
 .dd__btn {
   display: inline-block; padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 14px;

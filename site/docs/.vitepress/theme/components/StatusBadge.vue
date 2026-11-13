@@ -30,5 +30,7 @@ const info = computed(() => STATUS[props.status] ?? { label: props.status, hint:
 .sb--verified { --st-fg: var(--ok-fg); --st-bg: var(--ok-bg); }
 .sb--community { --st-fg: var(--info-fg); --st-bg: var(--info-bg); }
 .sb--testing { --st-fg: var(--warn-fg); --st-bg: var(--warn-bg); }
+.sb--untested { --st-fg: var(--bad-fg); --st-bg: var(--bad-bg); }
+.sb--research { --st-fg: var(--muted-fg); --st-bg: var(--muted-bg); }
 .sb--planned { --st-fg: var(--muted-fg); --st-bg: var(--muted-bg); }
 </style>
