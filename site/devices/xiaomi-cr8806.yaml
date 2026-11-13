@@ -2,33 +2,68 @@ id: xiaomi-cr8806
 order: 10
 vendor: 小米
 name: CR8806
-aliases: [CR8806, CR880x 系列]
-soc: IPQ50xx
-status: planned
+aliases: [CR8806, CR8808, CR8809, Redmi AX3000（RA81）]
+soc: IPQ5018
+status: verified
 family: 小米 CR880x
-summary: 第一台非 H3C 机型，正在调研。还没有可用的 U-Boot，请勿尝试刷入。
+summary: "小米 CR8806 已实机刷入：小米环境变量双系统、网页刷固件、冷启动 10 次通过。按键没有测。CR8808、CR8809、Redmi AX3000 是同硬件，没有实机验证。"
+artifact: ipq5018_xiaomi_cr8806
 hardware:
-  - { label: 闪存, value: 待确认 }
-  - { label: 安全启动, value: 待确认 }
-  - { label: 原厂双系统, value: 是（小米环境变量方案，待实机确认） }
+  - { label: 闪存, value: "NAND（ESMT F50D1G41LB，ECC 4 位；该颗粒 U-Boot 不做串行训练，和原厂一致）" }
+  - { label: 主板分类, value: "AP-MP02.1，machid `0x8040000`" }
+  - { label: 网络, value: "QCA8337 交换芯片，复位 GPIO26" }
+  - { label: 安全启动, value: "样机未开启" }
+  - { label: 原厂 LAN 地址, value: "`192.168.31.1`" }
+tested:
+  - "两份 APPSBL 写入，读回校验一致"
+  - "冷启动 10 次通过（走第二套 rootfs，串口横幅、内核、LAN 都正常）"
+  - "小米环境变量双系统：读写原厂环境变量、切换 rootfs 槽、原厂系统和 U-Boot 互相读到对方写的环境"
+  - "救援页「固件更新」写入另一个槽并切换，写入后启动正常"
+  - "UBI 卷写入读回校验，无 UBI、ECC 错误"
+not_tested:
+  - "Reset、Mesh 按键"
+  - "失败启动时「标记失败槽并重启」的路径（只在设计上走通）"
+  - "Redmi / CR8808 / CR8809 等别名机型"
+  - "从原厂 SSH 一键安装"
+warnings:
+  - "同一硬件，未实机验证：小米 CR8808、CR8809、Redmi AX3000（RA81，M79 / M81 两版）。第三方 OpenWrt 项目用同一个设备树覆盖这几款，GPIO 和 CR8806 一致，但我们没有看过它们的启动链、分区表和安全启动状态。刷入前先做 RAM 试跑，并核对原厂的 `nvram get model`。"
+  - "小米原厂默认关闭串口输出。要在 U-Boot 里执行 `setenv boot_wait on; setenv uart_en 1; saveenv`（或按原厂文档）打开串口，否则 TTL 什么都看不到。"
+  - "部分小米机型的零售版可能开启了安全启动，装之前必须确认熔丝是关闭的。"
 slots:
   mechanism: xiaomi-env
-  note: 原厂用 flag_boot_rootfs 等环境变量在两个 rootfs 之间切换，本项目会照原厂逻辑实现。
+  note: "原厂用 flag_boot_rootfs 等环境变量在两个 rootfs 之间切换，本项目的 U-Boot 照原厂逻辑读写这些变量，所以原厂系统和 U-Boot 可以互相切换。网页刷固件会写入另一个槽，再切换过去。"
 install:
-  method: ssh
-  label: 原厂 SSH + 安装脚本（计划中）
+  method: ttl
+  label: TTL 串口 + 救援页（暂无安装脚本）
 steps:
-  - title: 开启原厂 SSH
+  - title: 准备 TTL 串口
     body: |
-      社区工具 [XMiR-Patcher](https://github.com/openwrt-xiaomi/xmir-patcher) 支持为 CR880x 系列开启 SSH。本项目还没有在 CR8806 上实测这一步。
-  - title: 只读采集设备信息
+      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 原厂默认关闭串口输出，见上面的提示。
+    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
+  - title: 完整备份
     body: |
-      我们需要分区表、安全启动状态和原厂启动标志来完成适配。采集脚本还在准备中，见[参与收录](/contribute/)。
-  - title: 安装 U-Boot
+      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
+
+      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
+  - title: 确认安全启动没有开启
     body: |
-      还没有可用版本。实机验证通过后，这里会给出安装包和逐步命令。
-    warn: 现在刷入任何第三方 U-Boot 都可能变砖，请等待「已验证」状态。
+      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
+  - title: RAM 试跑
+    body: |
+      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_xiaomi_cr8806`。
+  - title: 在救援页写入 U-Boot
+    body: |
+      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_xiaomi_cr8806.mbn`，两份 APPSBL 会一起写入并读回校验。
+    warn: 写入过程中不要断电。
+  - title: 冷启动检查
+    body: |
+      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+rescue:
+  how: TTL 截停启动后输入 `httpd`
+  address: 192.168.1.1
 recovery:
-  - 适配完成后补充。
+  - 写入前的备份是唯一的退路。救援页「固件更新」可以把备份的分区原样写回。
+  - 启动程序本身损坏时，需要 TTL 加 RAM 试跑包重新进救援页，或者用编程器；先到 QQ 群 1131957442 联系维护者。
 links:
-  - { text: XMiR-Patcher, url: "https://github.com/openwrt-xiaomi/xmir-patcher" }
+  - { text: IPQ50XX-Uboot 仓库, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot" }
+  - { text: XMiR-Patcher（开启原厂 SSH 的社区工具）, url: "https://github.com/openwrt-xiaomi/xmir-patcher" }

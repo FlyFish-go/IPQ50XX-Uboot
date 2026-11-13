@@ -1,0 +1,60 @@
+id: hw3000b1
+order: 22
+vendor: 其他
+name: HW3000B1
+aliases: [HW3000B1, HW3000B1-ZHJ]
+soc: IPQ5018
+status: verified
+family: HW3000B1
+summary: "主板标识 HW3000B1-ZHJ 的路由器，已实机刷入，冷启动 5 次通过。"
+artifact: ipq5018_hw3000b1
+hardware:
+  - { label: 闪存, value: "NAND（FM25LS01，ECC 8 位，U-Boot 自动识别）" }
+  - { label: 主板分类, value: "AP-MP03.3，machid `0x8040002`" }
+  - { label: 网络, value: "GE 口（WAN）+ QCA8337 交换芯片（LAN），复位 GPIO39" }
+  - { label: 无线, value: "QCN6122 + QCN9000" }
+tested:
+  - "两份 APPSBL 写入，冷启动 5 次通过，原厂系统正常"
+  - "ECC 8 位自动识别"
+  - "BOOTCONFIG 切到 1 启动，再切回 0 后字节和原来一致"
+not_tested:
+  - "最新构建（LED 点亮、LAN 优先之后）还没有重刷，只测过更早的构建"
+  - "Reset、WPS 按键"
+  - "从原厂 SSH 一键安装"
+slots:
+  mechanism: bootconfig
+  note: "原厂用 BOOTCONFIG 选启动槽。"
+install:
+  method: ttl
+  label: TTL 串口 + 救援页（暂无安装脚本）
+steps:
+  - title: 准备 TTL 串口
+    body: |
+      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 样机的原厂系统有 root 串口 shell，不需要密码。
+    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
+  - title: 完整备份
+    body: |
+      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
+
+      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
+  - title: 确认安全启动没有开启
+    body: |
+      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
+  - title: RAM 试跑
+    body: |
+      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_hw3000b1`。
+  - title: 在救援页写入 U-Boot
+    body: |
+      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_hw3000b1.mbn`，两份 APPSBL 会一起写入并读回校验。
+    warn: 写入过程中不要断电。
+  - title: 冷启动检查
+    body: |
+      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+rescue:
+  how: TTL 截停启动后输入 `httpd`
+  address: 192.168.1.1
+recovery:
+  - 写入前的备份是唯一的退路。救援页「固件更新」可以把备份的分区原样写回。
+  - 启动程序本身损坏时，需要 TTL 加 RAM 试跑包重新进救援页，或者用编程器；先到 QQ 群 1131957442 联系维护者。
+links:
+  - { text: IPQ50XX-Uboot 仓库, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot" }

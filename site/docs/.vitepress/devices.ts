@@ -31,6 +31,7 @@ export interface Device {
   tested?: string[]
   not_tested?: string[]
   differences?: string[]
+  warnings?: string[]
   artifact?: string
   slots?: { mechanism: string; note?: string }
   install?: { method: string; label: string; url?: string }

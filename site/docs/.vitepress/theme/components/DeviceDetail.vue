@@ -48,6 +48,13 @@ const facts = computed(() => {
 
     <p v-if="d.slots?.note" class="dd__note">{{ d.slots.note }}</p>
 
+    <div v-if="d.warnings?.length" class="dd__warns">
+      <h2 id="warnings">先看这几条</h2>
+      <ul>
+        <li v-for="(t, i) in d.warnings" :key="i" v-html="renderInline(t)" />
+      </ul>
+    </div>
+
     <template v-if="d.tested?.length || d.not_tested?.length">
       <h2 id="tested">验证情况</h2>
       <div class="dd__tcols">
@@ -130,6 +137,9 @@ const facts = computed(() => {
 }
 .dd__alert--bad { color: var(--bad-fg); background: var(--bad-bg); }
 .dd__alert strong { flex: none; }
+.dd__warns { margin-top: 8px; padding: 2px 18px 8px; border-radius: 10px; background: var(--warn-bg); }
+.dd__warns h2 { margin: 12px 0 4px; padding: 0; border: 0; font-size: 16px; color: var(--warn-fg); }
+.dd__warns ul { margin: 4px 0; font-size: 14px; line-height: 1.7; }
 .dd__tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
 .dd__tcol { padding: 4px 16px 8px; border-radius: 10px; font-size: 14px; }
 .dd__tcol h3 { margin: 10px 0 4px; font-size: 14px; letter-spacing: .04em; }
