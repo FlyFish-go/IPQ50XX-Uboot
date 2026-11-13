@@ -50,6 +50,15 @@ sys.path.insert(0, sys.argv[1])
 import appsbl_packager
 appsbl_packager.write_outputs(pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))
 PYEOF
+
+  # RAM trial image for the stock U-Boot (bootm). Not for H3C, which has its own
+  # RAM rescue build.
+  if ! grep -q '^CONFIG_H3C_IPQ5018_COMMON=y' "$out/$name/.config"; then
+    make "${args[@]}" -C "$src/u-boot-2016" O="$out/$name-ram" "${name}_defconfig"
+    echo CONFIG_RAM_TRIAL_BUILD=y >> "$out/$name-ram/.config"
+    make "${args[@]}" -C "$src/u-boot-2016" O="$out/$name-ram" -j1
+    python3 -I "$src/release-tools/mkramuimg.py" "$out/$name-ram/u-boot" "$out/dist/$name$sfx-ram.uimg"
+  fi
   ;;
 *)
   echo "Unknown kind: $kind" >&2; exit 2 ;;

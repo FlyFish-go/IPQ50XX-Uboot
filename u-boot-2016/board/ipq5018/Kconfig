@@ -67,6 +67,15 @@ config BOARD_UNTESTED
 	  and gets "-untested" in its release artifact names. Drop the
 	  select in the commit that records the first hardware verification.
 
+config RAM_TRIAL_BUILD
+	bool "Link for a RAM trial run under the stock U-Boot"
+	depends on !H3C_IPQ5018_COMMON
+	help
+	  Link at 0x49A20000 instead of 0x4A920000 so the image can be wrapped
+	  by release-tools/mkramuimg.py and started with bootm from the stock
+	  U-Boot without touching flash. Set only by ci-build.sh; never ship
+	  this build to flash.
+
 config LIST_FUSE
 	bool "Enable fuse list command"
 	default n
