@@ -332,6 +332,7 @@ class SidebarManager {
             '/firmware-single.html': 'firmware',
             '/art.html': 'art',
             '/cdt.html': 'cdt',
+            '/oemdata.html': 'oemdata',
             '/ptable.html': 'ptable',
             '/simg.html': 'simg',
             '/uboot.html': 'uboot',
@@ -392,7 +393,8 @@ class SidebarManager {
                     { path: "/cdt.html", labelKey: "nav.cdt", id: "cdt" },
                     { path: "/ptable.html", labelKey: "nav.ptable", id: "ptable" },
                     { path: "/simg.html", labelKey: "nav.simg", id: "simg" },
-                    { path: "/uboot.html", labelKey: "nav.uboot", id: "uboot" }
+                    { path: "/uboot.html", labelKey: "nav.uboot", id: "uboot" },
+                    { path: "/oemdata.html", labelKey: "nav.oemdata", id: "oemdata" }
                 ]
             },
             debrick: {
@@ -1074,6 +1076,14 @@ const pageConfigs = {
     cdt: {
         needUpload: true,
         formDataKey: 'cdt',
+        warningItems:  {
+            common: true,
+            custom: 2
+        }
+    },
+    oemdata: {
+        needUpload: true,
+        formDataKey: 'oemdata',
         warningItems:  {
             common: true,
             custom: 2
@@ -7823,6 +7833,7 @@ const I18N = (() => {
             "nav.firmware": "Firmware Update",
             "nav.art": "ART Update",
             "nav.cdt": "CDT Update",
+            "nav.oemdata": "OEM Data Restore",
             "nav.ptable": "PTABLE Update",
             "nav.simg": "SIMG Update",
             "nav.uboot": "U-Boot Update",
@@ -7868,6 +7879,10 @@ const I18N = (() => {
             "art.hint": t.en.updateHint("ART (Atheros Radio Test)"),
             "art.warn.1": "ART has no fixed magic number, so its file type will be recognized as Unknown.",
             "art.warn.2": t.en.warnChoose("ART image"),
+            "oemdata.title": "OEM DATA RESTORE",
+            "oemdata.hint": "Write a backup of an H3C OEM data partition (<strong>pdt_data</strong>, <strong>pdt_data_1</strong>, <strong>exp</strong> or <strong>plugin</strong>) back to flash. The file must be named as the Flash Backup page names it, for example <strong>smem_pdt_data.bin</strong>.",
+            "oemdata.warn.1": "The target is chosen by the file name. In the extra-large layout these partitions are the end of the big rootfs, so the system stored there is overwritten.",
+            "oemdata.warn.2": "Bad blocks are skipped, the data is read back after writing, and nothing is erased when the file does not fit. Do this before restoring the OEM partition table.",
             "cdt.title": "CDT UPDATE",
             "cdt.hint": t.en.updateHint("CDT (Configuration Data Table)"),
             "cdt.warn.1": t.en.warnChoose("CDT image"),
@@ -8199,6 +8214,7 @@ const I18N = (() => {
             "nav.firmware": "固件更新",
             "nav.art": "ART 更新",
             "nav.cdt": "CDT 更新",
+            "nav.oemdata": "原厂数据恢复",
             "nav.ptable": "分区表更新",
             "nav.simg": "闪存镜像更新",
             "nav.uboot": "U-Boot 更新",
@@ -8244,6 +8260,10 @@ const I18N = (() => {
             "art.hint": t["zh-cn"].updateHint("无线芯片频率校准数据 ART (Atheros Radio Test)"),
             "art.warn.1": "ART 无固定魔数，故其文件类型会被识别为 Unknown。",
             "art.warn.2": t["zh-cn"].warnChoose("ART"),
+            "oemdata.title": "原厂数据恢复",
+            "oemdata.hint": "把之前备份的 H3C 原厂数据分区（<strong>pdt_data</strong>、<strong>pdt_data_1</strong>、<strong>exp</strong>、<strong>plugin</strong>）写回闪存。文件名要和“闪存备份”页下载的一致，例如 <strong>smem_pdt_data.bin</strong>。",
+            "oemdata.warn.1": "写到哪个分区由文件名决定。超大分区布局里这四个分区是大 rootfs 的尾部，写入会覆盖存放在那里的系统。",
+            "oemdata.warn.2": "写入会跳过坏块，写完逐页读回校验；文件放不下时不会擦除任何东西。请在恢复原厂分区表之前执行。",
             "cdt.title": "CDT 更新",
             "cdt.hint": t["zh-cn"].updateHint("CDT (Configuration Data Table)"),
             "cdt.warn.1": t["zh-cn"].warnChoose("CDT"),

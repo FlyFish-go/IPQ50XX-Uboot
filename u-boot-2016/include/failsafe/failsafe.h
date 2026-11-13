@@ -45,6 +45,7 @@ typedef enum {
     WEBFAILSAFE_UPGRADE_TYPE_PTABLE,
     WEBFAILSAFE_UPGRADE_TYPE_SIMG,
     WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS,
+    WEBFAILSAFE_UPGRADE_TYPE_OEMDATA,
 } upgrade_type_t;
 
 enum {
@@ -90,5 +91,12 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
         struct httpd_response *response);
 int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
         ulong data_size, struct httpd_response *response);
+
+#ifdef CONFIG_H3C_IPQ5018_COMMON
+/* Restore of an OEM data partition from a flash backup (failsafe.c). */
+int failsafe_validate_oemdata(const char *filename, const void *data, ulong size);
+void failsafe_oemdata_preview(char *out, size_t n, const char *md5, ulong size);
+int failsafe_write_oemdata(ulong data_addr, ulong data_size);
+#endif
 
 #endif /* __FAILSAFE_H__ */

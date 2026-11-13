@@ -47,7 +47,8 @@ static const struct {
 	{ WEBFAILSAFE_UPGRADE_TYPE_CDT, "cdt" },
 	{ WEBFAILSAFE_UPGRADE_TYPE_PTABLE, "ptable" },
 	{ WEBFAILSAFE_UPGRADE_TYPE_SIMG, "simg" },
-	{ WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS, "initramfs" }
+	{ WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS, "initramfs" },
+	{ WEBFAILSAFE_UPGRADE_TYPE_OEMDATA, "oemdata" }
 };
 
 bool auto_action_pending;

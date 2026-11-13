@@ -23,6 +23,7 @@ ROUTES = {
     "/ptable.html": "ptable",
     "/simg.html": "simg",
     "/uboot.html": "uboot",
+    "/oemdata.html": "oemdata",
     "/mibib.html": "mibib",
     "/initramfs.html": "initramfs",
     "/settings.html": "settings",
@@ -35,14 +36,14 @@ ROUTES = {
 }
 NAV_ROUTES = {
     "/", "/syslog.html", "/firmware.html", "/art.html", "/cdt.html",
-    "/ptable.html", "/simg.html", "/uboot.html", "/mibib.html",
+    "/ptable.html", "/simg.html", "/uboot.html", "/oemdata.html", "/mibib.html",
     "/initramfs.html", "/settings.html", "/network.html", "/mac.html",
     "/env.html", "/backup.html", "/webterm.html", "/reboot.html",
 }
 DYNAMIC_UPLOAD = {
     "/firmware.html", "/firmware-dual.html", "/firmware-single.html",
     "/art.html", "/cdt.html", "/ptable.html", "/simg.html",
-    "/uboot.html", "/mibib.html", "/initramfs.html",
+    "/uboot.html", "/oemdata.html", "/mibib.html", "/initramfs.html",
 }
 
 registered = set(re.findall(r'httpd_register_uri_handler\(inst,\s*"([^"]+)"', MISC))

@@ -309,6 +309,7 @@ void html_register_uri_handlers(struct httpd_instance *inst)
 	httpd_register_uri_handler(inst, "/ptable.html", &upload_html_handler, NULL);
 	httpd_register_uri_handler(inst, "/simg.html", &upload_html_handler, NULL);
 	httpd_register_uri_handler(inst, "/uboot.html", &upload_html_handler, NULL);
+	httpd_register_uri_handler(inst, "/oemdata.html", &upload_html_handler, NULL);
 
 	httpd_register_uri_handler(inst, "/backup.html", &html_handler, NULL);
 	httpd_register_uri_handler(inst, "/env.html", &html_handler, NULL);

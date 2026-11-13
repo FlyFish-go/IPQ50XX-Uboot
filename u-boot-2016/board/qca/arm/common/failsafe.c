@@ -1003,6 +1003,9 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 	case WEBFAILSAFE_UPGRADE_TYPE_PTABLE: md_kind=RT3_MD_MIBIB; md_target="0:MIBIB"; break;
 	case WEBFAILSAFE_UPGRADE_TYPE_ART: md_kind=RT3_MD_ART; md_target="0:ART"; break;
 	case WEBFAILSAFE_UPGRADE_TYPE_CDT: md_kind=RT3_MD_CDT; md_target="0:CDT + 0:CDT_1"; break;
+	case WEBFAILSAFE_UPGRADE_TYPE_OEMDATA:
+		ret = failsafe_validate_oemdata(filename, data_addr, data_size);
+		break;
 #ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 	case WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS:
 		rt3_metadata_invalidate();
@@ -1050,6 +1053,9 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 				data_size, md5_str);
 		} else
 #endif
+		if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_OEMDATA)
+			failsafe_oemdata_preview(info, sizeof(info), md5_str, data_size);
+		else
 		{
 			md_name = rt3_metadata_preview_name(md_kind, data_addr, (u32)data_size);
 			if (!md_name)
@@ -1094,8 +1100,13 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
 	memset(resp, 0, sizeof(resp));
 
 #ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
-	strlcpy(info, "{\"type\":\"read_only_stage0\"}", sizeof(info));
-	ret = -EROFS;
+	/* Only the audited OEM data restore writes from the web rescue here. */
+	if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_OEMDATA) {
+		ret = failsafe_write_oemdata(data_addr, data_size);
+	} else {
+		strlcpy(info, "{\"type\":\"read_only_stage0\"}", sizeof(info));
+		ret = -EROFS;
+	}
 #else
 	switch (upgrade_type) {
     case WEBFAILSAFE_UPGRADE_TYPE_FIRMWARE:
@@ -1116,6 +1127,11 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
     case WEBFAILSAFE_UPGRADE_TYPE_SIMG:
         ret = failsafe_write_simg(data_addr, data_size);
         break;
+#ifdef CONFIG_H3C_IPQ5018_COMMON
+    case WEBFAILSAFE_UPGRADE_TYPE_OEMDATA:
+        ret = failsafe_write_oemdata(data_addr, data_size);
+        break;
+#endif
     default:
 		handle_wrong_upgrade_type();
         ret = RET_WRONG_UPGRADE_TYPE;
@@ -1319,5 +1335,247 @@ int failsafe_write_firmware_ubi(ulong data_addr, ulong data_size)
 	if (validate_bootconfig())
 		ADD_CMD_TO_LIST("bootconfig set firmware 0");
 	return failsafe_run_command_list();
+}
+#endif
+
+#ifdef CONFIG_H3C_IPQ5018_COMMON
+#include <linux/mtd/mtd.h>
+#include <u-boot/crc.h>
+#include <rt3000_b_layout.h>
+#include <rt3000_b_fw_write.h>
+#include <ubi_trimffs.h>
+#include <oemdata_restore.h>
+/*
+ * Restore of an OEM data partition (pdt_data, pdt_data_1, exp, plugin) from a
+ * flash backup, chosen by file name. The target must be the exact OEM extent
+ * (named SMEM entry) or, in the extra-large layout, lies inside the exact XL
+ * rootfs. Pages that are all 0xff stay erased, bad blocks are skipped
+ * forward, the image must fit before anything is erased, and every page is
+ * read back. Kept at the end of the file: no ADD_CMD_TO_LIST above moves.
+ */
+static struct {
+	int valid;
+	const struct oemdata_part *part;
+	ulong addr, size;
+	u32 crc;
+} oemdata_pending;
+
+struct oemdata_io {
+	struct mtd_info *mtd;
+	uint64_t base;
+	const uint8_t *img;
+	uint8_t *want, *got;
+	int verify;
+	u32 crc;
+};
+
+static int oemdata_resolve(const struct oemdata_part *p, struct oemdata_window *w)
+{
+	struct rt3_layout lay;
+	struct oemdata_smem named = { 0 }, root = { 0 };
+	u32 off, size;
+
+	if (rt3_layout_read(&lay) || lay.mode == RT3_LAYOUT_UNSUPPORTED)
+		return OEMDATA_EXDEV;
+	if (!getpart_offset_size((char *)p->name, &off, &size)) {
+		named.have = 1;
+		named.off = off;
+		named.size = size;
+	}
+	if (!getpart_offset_size("rootfs", &off, &size)) {
+		root.have = 1;
+		root.off = off;
+		root.size = size;
+	}
+	return oemdata_window(p, &named, &root, lay.mode == RT3_LAYOUT_SINGLE, w);
+}
+
+static void oemdata_fail(const char *what, const char *name, int err)
+{
+	snprintf(info, sizeof(info),
+		"{\"type\":\"run_cmd_failed\",\"cmd\":\"restore OEM data %s\","
+		"\"output\":\"%s (%d)\"}", name, what, err);
+	printf("OEM data %s: %s (%d)\n", name, what, err);
+}
+
+int failsafe_validate_oemdata(const char *filename, const void *data, ulong size)
+{
+	const struct oemdata_part *p = oemdata_find(filename);
+	struct oemdata_window w;
+
+	memset(&oemdata_pending, 0, sizeof(oemdata_pending));
+	RETURN_IF_NAND_FLASH_NOT_FOUND;
+	if (!p) {
+		handle_wrong_fw_type("smem_pdt_data.bin, smem_pdt_data_1.bin, smem_exp.bin or smem_plugin.bin");
+		return RET_WRONG_FW_TYPE;
+	}
+	if (!size || size > p->size) {
+		handle_file_too_big("OEM data", size, p->name, p->size);
+		return RET_FILE_TOO_BIG;
+	}
+	if (rt3_flash_reboot_required()) {
+		oemdata_fail("the partition table changed, reboot first", p->name, -EAGAIN);
+		return RET_FAILURE;
+	}
+	if (oemdata_resolve(p, &w)) {
+		handle_part_not_found(p->name);
+		return RET_PART_NOT_FOUND;
+	}
+	oemdata_pending.part = p;
+	oemdata_pending.addr = (ulong)data;
+	oemdata_pending.size = size;
+	oemdata_pending.crc = crc32(0, data, size);
+	oemdata_pending.valid = 1;
+	return RET_SUCCESS;
+}
+
+void failsafe_oemdata_preview(char *out, size_t n, const char *md5, ulong size)
+{
+	const struct oemdata_part *p = oemdata_pending.part;
+
+	snprintf(out, n,
+		"{\"type\":\"OEM data\",\"size\":\"%lu\",\"md5\":\"%s\",\"name\":\"%s\"}",
+		size, md5, p ? p->name : "");
+}
+
+static int oemdata_isbad(void *c, uint32_t blk)
+{
+	struct oemdata_io *io = c;
+
+	return nand_block_isbad(io->mtd, (loff_t)io->base + (loff_t)blk * io->mtd->erasesize);
+}
+
+static int oemdata_emit(void *c, uint64_t phys, size_t off, uint32_t n, int write)
+{
+	struct oemdata_io *io = c;
+	size_t ws = io->mtd->writesize, rl = 0;
+	loff_t pos = (loff_t)io->base + (loff_t)phys;
+	int ret;
+
+	if (write) {
+		memset(io->want, 0xff, ws);
+		memcpy(io->want, io->img + off, n);
+	}
+	if (!io->verify) {
+		if (!write)
+			return 0;
+		ret = mtd_write(io->mtd, pos, ws, &rl, io->want);
+		return ret ? ret : (rl == ws ? 0 : -EIO);
+	}
+	ret = mtd_read(io->mtd, pos, ws, &rl, io->got);
+	if (ret && ret != -EUCLEAN)
+		return ret;
+	if (rl != ws)
+		return -EIO;
+	if (write) {
+		if (memcmp(io->want, io->got, ws))
+			return -EBADMSG;
+		io->crc = crc32(io->crc, io->got, ws);
+	} else if (!ubi_trimffs_all_ff(io->got, ws)) {
+		return -EBADMSG;
+	}
+	return 0;
+}
+
+static int oemdata_noop(void *c, uint64_t p, size_t o, uint32_t n, int w)
+{
+	return 0;
+}
+
+int failsafe_write_oemdata(ulong data_addr, ulong data_size)
+{
+	struct mtd_info *mtd = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
+	const struct oemdata_part *p = oemdata_pending.part;
+	struct ubi_trimffs_stats st;
+	struct oemdata_window w;
+	struct oemdata_io io;
+	uint64_t pos;
+	int ret, opened = 0;
+
+	if (!oemdata_pending.valid || oemdata_pending.addr != data_addr ||
+	    oemdata_pending.size != data_size ||
+	    crc32(0, (const void *)data_addr, data_size) != oemdata_pending.crc) {
+		oemdata_fail("the file changed after validation", p ? p->name : "", -EINVAL);
+		return RET_UPLOAD_ID_MISMATCH;
+	}
+	oemdata_pending.valid = 0;
+	RETURN_IF_NAND_FLASH_NOT_FOUND;
+	if (rt3_flash_reboot_required() || oemdata_resolve(p, &w)) {
+		handle_part_not_found(p->name);
+		return RET_PART_NOT_FOUND;
+	}
+	memset(&io, 0, sizeof(io));
+	memset(&st, 0, sizeof(st));
+	io.mtd = mtd;
+	io.base = p->off;
+	io.img = (const uint8_t *)data_addr;
+	ret = ubi_trimffs_plan(io.img, data_size, mtd->writesize, mtd->erasesize,
+			       p->size / mtd->erasesize, oemdata_isbad, &io,
+			       oemdata_noop, &io, &st);
+	if (ret == UBI_TRIMFFS_ENOSPC) {
+		handle_file_too_big("OEM data", data_size, p->name,
+				    (unsigned long long)st.blocks_good * mtd->erasesize);
+		return RET_FILE_TOO_BIG;
+	}
+	if (ret)
+		return RET_FAILURE;
+	io.want = malloc(mtd->writesize);
+	io.got = malloc(mtd->writesize);
+	if (!io.want || !io.got) {
+		ret = -ENOMEM;
+		goto out;
+	}
+	printf("OEM data %s: window %s, %u pages written, %u all-0xff pages kept erased\n",
+	       p->name, w.name, st.pages_written, st.pages_skipped);
+	ret = rt3_named_nand_write_window_open(mtd, w.name, w.off, w.size);
+	if (ret) {
+		oemdata_fail("write window refused, nothing was erased", p->name, ret);
+		ret = RET_FAILURE;
+		goto out;
+	}
+	opened = 1;
+	for (pos = p->off; pos < p->off + p->size; pos += mtd->erasesize) {
+		struct erase_info ei;
+
+		if (nand_block_isbad(mtd, (loff_t)pos))
+			continue;
+		memset(&ei, 0, sizeof(ei));
+		ei.mtd = mtd;
+		ei.addr = (loff_t)pos;
+		ei.len = mtd->erasesize;
+		ret = mtd_erase(mtd, &ei);
+		if (ret) {
+			oemdata_fail("erase failed, the partition is incomplete", p->name, ret);
+			ret = RET_FAILURE;
+			goto out;
+		}
+	}
+	ret = ubi_trimffs_plan(io.img, data_size, mtd->writesize, mtd->erasesize,
+			       p->size / mtd->erasesize, oemdata_isbad, &io,
+			       oemdata_emit, &io, &st);
+	if (ret) {
+		oemdata_fail("write failed, the partition is incomplete", p->name, ret);
+		ret = RET_FAILURE;
+		goto out;
+	}
+	io.verify = 1;
+	io.crc = 0;
+	ret = ubi_trimffs_plan(io.img, data_size, mtd->writesize, mtd->erasesize,
+			       p->size / mtd->erasesize, oemdata_isbad, &io,
+			       oemdata_emit, &io, &st);
+	if (ret) {
+		oemdata_fail("read back differs from the file", p->name, ret);
+		ret = RET_FAILURE;
+		goto out;
+	}
+	printf("OEM data %s: written and read back, crc32 of the written pages 0x%08x\n",
+	       p->name, io.crc);
+	ret = RET_SUCCESS;
+out:
+	if (opened)
+		rt3_fw_write_window_close();
+	free(io.want);
+	free(io.got);
+	return ret;
 }
 #endif
