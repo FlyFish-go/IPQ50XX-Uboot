@@ -25,6 +25,8 @@
 #include <command.h>
 #include <errno.h>
 #include <slot_ops.h>
+#include <slot_xiaomi_core.h>
+#include <asm/io.h>
 #include <asm/arch-qca-common/smem.h>
 
 #define XM_ROOTARGS "root=mtd:ubi_rootfs rootfstype=squashfs"
@@ -44,40 +46,57 @@ static void xm_set_flag(const char *name, unsigned int val)
 	setenv(name, buf);
 }
 
+static void xm_read_flags(struct xiaomi_flags *f)
+{
+	const char *bs = getenv("flag_boot_success");
+
+	f->t0 = xm_flag("flag_try_sys1_failed");
+	f->t1 = xm_flag("flag_try_sys2_failed");
+	f->ota = xm_flag("flag_ota_reboot");
+	f->last = xm_flag("flag_last_success");
+	f->success_set = bs != NULL;
+	f->success = bs ? simple_strtoul(bs, NULL, 10) : 0;
+}
+
 unsigned int xiaomi_slot_select(void)
 {
-	unsigned long t0 = xm_flag("flag_try_sys1_failed");
-	unsigned long t1 = xm_flag("flag_try_sys2_failed");
-	unsigned long ota = xm_flag("flag_ota_reboot");
-	unsigned long last = xm_flag("flag_last_success");
-	const char *bs;
+	struct xiaomi_flags f;
+	struct xiaomi_select r;
 
-	if (t0 > 1 || t1 > 1 || ota > 1 || last > 1)
-		return 0;
-	if (ota) {
-		bs = getenv("flag_boot_success");
-		if (bs && simple_strtoul(bs, NULL, 10) == 0) {
-			puts("Xiaomi slots: OTA boot failed, back to the old system\n");
-			setenv("flag_ota_reboot", NULL);
-			setenv("flag_upgrade_push", NULL);
-			return last;
-		}
-		return 1 - last;
+	xm_read_flags(&f);
+	r = xiaomi_select_core(&f);
+	if (r.drop_ota) {
+		puts("Xiaomi slots: OTA boot failed, back to the old system\n");
+		setenv("flag_ota_reboot", NULL);
+		setenv("flag_upgrade_push", NULL);
 	}
-	if (last ? t1 : t0)
-		return 1 - last;
-	return last;
+	return r.slot;
 }
 
 int slot_prepare_boot(void)
 {
 	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
-	unsigned int slot = xiaomi_slot_select();
-	char *name = slot ? "rootfs_1" : "rootfs";
+	unsigned int slot;
+	char *name;
 	const char *v;
 	char args[128];
 	uint32_t start, size;
 
+	/*
+	 * The system that just ran died: like stock, drop a pending OTA so the
+	 * old slot boots. Stock resets here; deciding on the cleared flag
+	 * directly gives the same slot without depending on the register being
+	 * cleared by the reset.
+	 */
+	if (xiaomi_crash_drops_ota(readl(XIAOMI_RESET_REASON_REG),
+				   xm_flag("flag_ota_reboot"))) {
+		puts("Xiaomi slots: previous run crashed, dropping the pending OTA\n");
+		xm_set_flag("flag_ota_reboot", 0);
+		if (saveenv())
+			puts("Xiaomi slots: cannot save flag_ota_reboot\n");
+	}
+	slot = xiaomi_slot_select();
+	name = slot ? "rootfs_1" : "rootfs";
 	if (smem_getpart(name, &start, &size)) {
 		printf("Xiaomi slots: no %s partition\n", name);
 		return -ENOENT;
@@ -111,17 +130,21 @@ int slot_prepare_boot(void)
 
 void slot_boot_failed(void)
 {
+	struct xiaomi_flags f;
+	struct xiaomi_failure fail;
 	unsigned int slot = xiaomi_slot_select();
 	char name[24];
 
-	snprintf(name, sizeof(name), "flag_try_sys%u_failed", slot + 1);
+	xm_read_flags(&f);
+	fail = xiaomi_failure_core(&f, slot);
+	snprintf(name, sizeof(name), "flag_try_sys%u_failed", fail.mark_slot + 1);
 	xm_set_flag(name, 1);
 	xm_set_flag("flag_ota_reboot", 0);
 	if (saveenv()) {
 		puts("Xiaomi slots: cannot save the failure flag\n");
 		return;
 	}
-	if (xm_flag(slot ? "flag_try_sys1_failed" : "flag_try_sys2_failed")) {
+	if (fail.both_failed) {
 		puts("Xiaomi slots: both systems failed to boot, staying in recovery\n");
 		return;
 	}

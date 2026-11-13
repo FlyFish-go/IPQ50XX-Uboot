@@ -26,8 +26,40 @@
 #define U32_DATA_AT_OFFSET(n) (*((const u32 *)(n)))
 #define U64_DATA_AT_OFFSET(n) (*((const u64 *)(n)))
 
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+#include <u-boot/crc.h>
+#include <xqimage.h>
+
+static uint32_t xiaomi_crc32(const uint8_t *p, size_t n)
+{
+	return crc32(0, p, n);
+}
+
+/* Xiaomi official .bin: find the root.ubi section, refuse anything else. */
+int xiaomi_unwrap_firmware(uintptr_t addr, size_t size, uintptr_t *root,
+			   size_t *root_size)
+{
+	struct xq_info in;
+	int ret = xq_parse((const uint8_t *)addr, size, xiaomi_crc32, &in);
+
+	if (ret)
+		return ret;
+	if (root)
+		*root = (uintptr_t)in.root;
+	if (root_size)
+		*root_size = in.root_size;
+	return 0;
+}
+#endif
+
 fw_type_t check_fw_type(uintptr_t addr, size_t size)
 {
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+	/* A valid Xiaomi package is reported as the UBI image it carries. */
+	if (U32_DATA_AT_OFFSET(addr) == XQ_MAGIC)
+		return xiaomi_unwrap_firmware(addr, size, NULL, NULL) ?
+			FW_TYPE_UNKNOWN : FW_TYPE_UBI;
+#endif
 	switch (U32_DATA_AT_OFFSET(addr)) {
 	case HEADER_MAGIC_CDT:
 		return FW_TYPE_CDT;

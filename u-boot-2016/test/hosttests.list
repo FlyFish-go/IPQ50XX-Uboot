@@ -71,3 +71,5 @@ run  test/ubifs_read_block_hosttest.py
 run  test/ubifs_volume_name_hosttest.py
 run  test/upgrade_rt3_callback_hosttest.sh
 run  test/ubi_trimffs_hosttest.sh
+run  test/slot_xiaomi_hosttest.sh
+run  test/xqimage_hosttest.sh

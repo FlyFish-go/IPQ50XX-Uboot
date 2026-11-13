@@ -1261,6 +1261,7 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 
 #ifdef CONFIG_SLOT_BACKEND_XIAOMI
 #include <slot_ops.h>
+#include <xqimage.h>
 /*
  * Xiaomi slots: like stock OTA, write the slot that is not selected now and
  * then select it, so the current system stays as the fallback (a new system
@@ -1273,6 +1274,22 @@ int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 	int ret;
 
 	print_upgrade_hint("FIRMWARE");
+	if (data_size >= 4 && *(const u32 *)data_addr == XQ_MAGIC) {
+		uintptr_t root;
+		size_t root_size;
+
+		/* Official package: only its root.ubi is written. Move it to
+		 * the start of the buffer so the NAND writes stay aligned. */
+		if (xiaomi_unwrap_firmware(data_addr, data_size, &root, &root_size)) {
+			handle_wrong_fw_type("UBI");
+			return RET_WRONG_FW_TYPE;
+		}
+		printf("Xiaomi package: writing root.ubi, %lu bytes\n",
+		       (ulong)root_size);
+		memmove((void *)data_addr, (void *)root, root_size);
+		data_size = root_size;
+		fw_type = FW_TYPE_UBI;
+	}
 	if (fw_type != FW_TYPE_UBI) {
 		handle_wrong_fw_type("UBI");
 		return RET_WRONG_FW_TYPE;
