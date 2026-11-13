@@ -1,0 +1,87 @@
+name: 机型试跑报告
+description: RAM 试跑某块板之后的结果；成功、失败、部分正常都请提交
+title: "[board] <机型>: RAM 试跑结果"
+labels: ["board-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的反馈。这份报告只记录 **RAM 试跑**（不写闪存）的结果，步骤见[参与收录页](https://flyfish-go.github.io/IPQ50XX-Uboot/contribute/#ram-试跑)。
+
+        请**不要上传**整片闪存备份、ART 分区、原厂固件；启动日志里的 MAC 地址、序列号、密码请先打码。
+  - type: input
+    id: model
+    attributes:
+      label: 机型
+      description: 品牌、型号，和 RAM 试跑包的构建名
+      placeholder: 例如：中国移动 PZ-L8，ipq5018_cmcc_pz_l8-untested
+    validations:
+      required: true
+  - type: input
+    id: sticker
+    attributes:
+      label: 机身贴纸上的硬件版本
+      description: 贴纸上的 HW / 版本 / 批次号（不要贴序列号）
+      placeholder: 例如：硬件版本 3.00
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: RAM 试跑结果
+      options:
+        - 一切正常
+        - 部分正常（在下面说明）
+        - 启动后卡住或重启
+        - 串口没有本项目的横幅
+        - 没有试成（在下面说明）
+    validations:
+      required: true
+  - type: textarea
+    id: bootlog
+    attributes:
+      label: 启动日志
+      description: 从原厂 U-Boot 里的 `bootm` 开始，到本项目 U-Boot 起来之后的完整串口输出。MAC、序列号、密码请打码。
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: fdt
+    attributes:
+      label: fdtcontroladdr
+      description: 原厂 U-Boot 里 `printenv fdtcontroladdr`（或 `bdinfo` 的 fdt_blob）的值
+      placeholder: 例如：0x4a9d4004
+  - type: input
+    id: nand
+    attributes:
+      label: 闪存型号和 ID
+      description: 启动日志里 NAND 识别那几行（厂商 ID、设备 ID、型号、ECC 位数）；原厂 U-Boot 里 `nand info` 也可以
+      placeholder: 例如：c8 41，GD5F1GQ5，ECC 8 位
+    validations:
+      required: true
+  - type: textarea
+    id: rescue
+    attributes:
+      label: 救援页结果
+      description: 输入 `httpd` 后，浏览器能不能打开 `http://192.168.1.1`；哪个网口能通、哪个不通；不要点写入
+    validations:
+      required: true
+  - type: textarea
+    id: ledkeys
+    attributes:
+      label: LED 和按键
+      description: 每个 LED 在 U-Boot 阶段的颜色和状态；Reset、WPS / Mesh 键有没有反应
+  - type: textarea
+    id: other
+    attributes:
+      label: 其他
+      description: 原厂 U-Boot 的密码、bootdelay、串口电平、安全启动状态等你知道的信息
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 整个过程没有执行 saveenv、nand write、bootconfig set 或救援页里的写入
+          required: true
+        - label: 日志里的 MAC、序列号、密码已经打码
+          required: true
