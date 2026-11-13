@@ -70,3 +70,4 @@ skip test/ubi_partition_backup_hosttest.py needs --fixture, a 40 MiB RX3000 mtd1
 run  test/ubifs_read_block_hosttest.py
 run  test/ubifs_volume_name_hosttest.py
 run  test/upgrade_rt3_callback_hosttest.sh
+run  test/ubi_trimffs_hosttest.sh

@@ -14,6 +14,7 @@ PRE = r"""
 #define CMD_RET_FAILURE 1
 #define FIT_BOOTARGS_PROP "bootargs"
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#define IS_ENABLED(x) 1 /* H3C build; the SMEM fixup block stays out */
 #define getenv host_getenv
 #define setenv host_setenv
 #define CHECK(x) do { if (!(x)) { fprintf(stderr,"line %d failed: %s\n",__LINE__,#x); exit(1); } } while (0)
