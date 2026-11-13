@@ -309,10 +309,11 @@ static int h3c_hw_c_set_fit_rootfs_bootargs(const void *fit, const char *name,
 	if (root_labels || extent_nodes) {
 		const char *expected;
 		struct rt3_layout native_layout;
-		/* PTABLE single layout: one 80 MiB rootfs at 0x900000 that no
-		 * 40 MiB DT partition node matches; the SMEM table decides. */
+		/* PTABLE single layout: one 80 or 116 MiB rootfs at 0x900000 that
+		 * no 40 MiB DT partition node matches; the SMEM table decides. */
 		int single = sfi->rootfs.offset == 0x00900000 &&
-			sfi->rootfs.size == 0x05000000 &&
+			(sfi->rootfs.size == 0x05000000 ||
+			 sfi->rootfs.size == 0x07400000) &&
 			!rt3_layout_read(&native_layout) &&
 			native_layout.mode == RT3_LAYOUT_SINGLE;
 #ifdef CONFIG_H3C_OEM_FIT_HANDOFF

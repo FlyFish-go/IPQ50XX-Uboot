@@ -23,6 +23,11 @@
 #define RT3_ROOTFS_OFFSET 0x00900000ULL
 #define RT3_DUAL_SIZE 0x02800000ULL
 #define RT3_SINGLE_SIZE 0x05000000ULL
+/* Extra-large single layout: rootfs runs from 0x900000 to the end of the
+ * OEM data partitions (0x7d00000); pdt_data, pdt_data_1, exp and plugin
+ * are gone. The last 3 MiB of the chip stay outside every partition. */
+#define RT3_SINGLE_XL_SIZE 0x07400000ULL
+#define RT3_SINGLE_SIZE_OK(s) ((s) == RT3_SINGLE_SIZE || (s) == RT3_SINGLE_XL_SIZE)
 #define RT3_PREFIX_COUNT 15U
 #define RT3_SUFFIX_COUNT 4U
 
@@ -135,6 +140,7 @@ static int rt3_resolve_table(const struct rt3_smem_table *table,
 	unsigned int expected_count;
 	int seen_prefix[RT3_PREFIX_COUNT] = { 0 };
 	int seen_suffix[RT3_SUFFIX_COUNT] = { 0 };
+	int suffix_needed = 1;
 	const struct rt3_smem_part *part;
 
 	memset(layout, 0, sizeof(*layout));
@@ -216,11 +222,13 @@ static int rt3_resolve_table(const struct rt3_smem_table *table,
 		expected_count = RT3_PREFIX_COUNT + 2 + RT3_SUFFIX_COUNT;
 	} else {
 		if (offsets[rootfs_index] != RT3_ROOTFS_OFFSET ||
-		    sizes[rootfs_index] != RT3_SINGLE_SIZE)
+		    !RT3_SINGLE_SIZE_OK(sizes[rootfs_index]))
 			return -EINVAL;
 		layout->mode = RT3_LAYOUT_SINGLE;
 		layout->count = 1;
-		expected_count = RT3_PREFIX_COUNT + 1 + RT3_SUFFIX_COUNT;
+		suffix_needed = sizes[rootfs_index] == RT3_SINGLE_SIZE;
+		expected_count = RT3_PREFIX_COUNT + 1 +
+				 (suffix_needed ? RT3_SUFFIX_COUNT : 0);
 	}
 	if (table->len != expected_count)
 		return -EINVAL;
@@ -255,7 +263,7 @@ static int rt3_resolve_table(const struct rt3_smem_table *table,
 		if (!seen_prefix[i])
 			return -EINVAL;
 	for (i = 0; i < RT3_SUFFIX_COUNT; i++)
-		if (!seen_suffix[i])
+		if (suffix_needed ? !seen_suffix[i] : seen_suffix[i])
 			return -EINVAL;
 
 	layout->parts[0].display_index = rootfs_index + 1;
@@ -411,7 +419,7 @@ int rt3_layout_default_target(const struct rt3_layout *layout, int selector,
 		if (selector != 0 || layout->count != 1 ||
 		    strcmp(layout->parts[0].name, "rootfs") ||
 		    layout->parts[0].offset != RT3_ROOTFS_OFFSET ||
-		    layout->parts[0].size != RT3_SINGLE_SIZE)
+		    !RT3_SINGLE_SIZE_OK(layout->parts[0].size))
 			return -EINVAL;
 		*partition = &layout->parts[0];
 		return 0;
@@ -451,7 +459,7 @@ int rt3_layout_linux_mtd_alias(const struct rt3_layout *l,u64 selected,
  if(l->mode==RT3_LAYOUT_SINGLE) {
   if(l->count!=1||strcmp(l->parts[0].name,"rootfs")||
      l->parts[0].offset!=RT3_ROOTFS_OFFSET||
-     l->parts[0].size!=RT3_SINGLE_SIZE||selected!=RT3_ROOTFS_OFFSET)
+     !RT3_SINGLE_SIZE_OK(l->parts[0].size)||selected!=RT3_ROOTFS_OFFSET)
    return -EINVAL;
   if(!strcmp(raw,"rootfs")&&offset!=RT3_ROOTFS_OFFSET) return -EINVAL;
  } else if(l->mode==RT3_LAYOUT_DUAL) {

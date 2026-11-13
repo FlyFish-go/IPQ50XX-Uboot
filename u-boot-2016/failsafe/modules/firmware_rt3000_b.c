@@ -22,7 +22,7 @@
 #include "firmware_oem_catalog.h"
 
 #define RT3_FW_MAX_UPLOAD       (80U * SZ_1M)
-#define RT3_FW_MAX_PEB_COUNT    640U
+#define RT3_FW_MAX_PEB_COUNT    928U /* 116 MiB extra-large single rootfs */
 #define RT3_UBI_PEB_SIZE        0x20000U
 #define RT3_UBI_PAGE_SIZE       2048U
 #define RT3_UBI_VID_OFFSET      2048U

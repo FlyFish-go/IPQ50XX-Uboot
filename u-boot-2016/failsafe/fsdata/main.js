@@ -1565,7 +1565,9 @@ class UnifiedUploadManager {
 // The OEM table shared by every RT3000-family unit (both copies, ages 0/1,
 // sha256 0b403b917823b515...). Rows: name, offset, size, then the user-table
 // size and spare in KiB. The big layout merges rootfs and rootfs_1 into one
-// 80 MiB rootfs at 0x900000; every other row stays the same.
+// 80 MiB rootfs at 0x900000; every other row stays the same. The extra-large
+// layout also takes pdt_data, pdt_data_1, exp and plugin: one 116 MiB rootfs
+// from 0x900000 to 0x7d00000.
 const RT3_MIBIB_ROWS = [
     ['0:SBL1', 0x0, 0x80000, 0x100, 0x100],
     ['0:MIBIB', 0x80000, 0x80000, 0x100, 0x100],
@@ -1590,11 +1592,16 @@ const RT3_MIBIB_ROWS = [
     ['plugin', 0x6600000, 0x1700000, 0x5800, 0x400]
 ];
 
+const RT3_MIBIB_XL_DROP = ['rootfs_1', 'pdt_data', 'pdt_data_1', 'exp', 'plugin'];
+
+// single: false = OEM dual, true = 80 MiB big partition, 'xl' = 116 MiB.
 function rt3BuildMibib(single) {
     const BLOCK = 0x20000, PAGE = 0x800;
+    const xl = single === 'xl';
     const rows = RT3_MIBIB_ROWS
-        .filter(r => !(single && r[0] === 'rootfs_1'))
-        .map(r => (single && r[0] === 'rootfs') ? ['rootfs', 0x900000, 0x5000000, 0x13f00, 0x100] : r);
+        .filter(r => !(single && r[0] === 'rootfs_1') && !(xl && RT3_MIBIB_XL_DROP.includes(r[0])))
+        .map(r => (single && r[0] === 'rootfs') ?
+            (xl ? ['rootfs', 0x900000, 0x7400000, 0x1cf00, 0x100] : ['rootfs', 0x900000, 0x5000000, 0x13f00, 0x100]) : r);
     const img = new Uint8Array(4 * BLOCK).fill(0xff);
     const dv = new DataView(img.buffer);
     const table = (at, magic1, magic2, attr, user) => {
@@ -1685,6 +1692,8 @@ class FileUploadComponent {
                                     <p>${APP_STATE.lang === 'zh-cn' ? '可直接生成分区表，无需自备文件：' : 'Generate a partition table here instead of choosing a file:'}</p>
                                     <button type="button" class="button" id="mibibPresetDual">${APP_STATE.lang === 'zh-cn' ? '原厂双系统' : 'OEM dual system'}</button>
                                     <button type="button" class="button" id="mibibPresetSingle">${APP_STATE.lang === 'zh-cn' ? '大分区（单 rootfs 80 MiB）' : 'Big partition (one 80 MiB rootfs)'}</button>
+                                    <button type="button" class="button" id="mibibPresetSingleXl">${APP_STATE.lang === 'zh-cn' ? '超大分区（单 rootfs 116 MiB）' : 'Extra-large partition (one 116 MiB rootfs)'}</button>
+                                    <p>${APP_STATE.lang === 'zh-cn' ? '超大分区还会占用原厂的 pdt_data、pdt_data_1、exp、plugin 分区（原厂配置和插件）。想回原厂固件，请先在“闪存备份”中导出这四个分区。' : 'The extra-large partition also takes the OEM pdt_data, pdt_data_1, exp and plugin partitions (OEM settings and plugins). To return to OEM firmware later, export these four partitions in Flash Backup first.'}</p>
                                     <p>${APP_STATE.lang === 'zh-cn' ? '切换后，rootfs 区域里现有的系统都会失效：请先在“闪存备份”中导出 rootfs / rootfs_1。切换到大分区前，默认启动槽必须是物理第1区（0x900000）。大分区只接受第三方系统，原厂固件请切回原厂双系统分区表后再写。写入分区表后须重启，然后再写入系统。' : 'Switching invalidates every system in the rootfs area: export rootfs / rootfs_1 from Flash Backup first. Before switching to the big partition the default boot slot must be physical slot 1 (0x900000). The big partition accepts third-party systems only; restore the OEM dual table to write OEM firmware. Reboot after writing the table, then write a system.'}</p>
                                 </div>` : ''}
                                 ${pageName === 'uboot' ? `<div class="card-hint-section">
@@ -1957,10 +1966,12 @@ class FileUploadComponent {
         if (now && typeof fetch === 'function') {
             fetch('/firmware/layout').then(r => r.json()).then(layout => {
                 const names = { dual: zh ? '原厂双系统' : 'OEM dual system', single: zh ? '大分区' : 'big partition' };
-                now.textContent = (zh ? '当前分区表：' : 'Current table: ') + (names[layout.mode] || layout.mode || '?');
+                const root = (layout.partitions || []).find(p => p.name === 'rootfs');
+                const mib = layout.mode === 'single' && root ? (zh ? `（${root.size / 1048576} MiB）` : ` (${root.size / 1048576} MiB)`) : '';
+                now.textContent = (zh ? '当前分区表：' : 'Current table: ') + (names[layout.mode] || layout.mode || '?') + mib;
             }).catch(() => {});
         }
-        const presets = { mibibPresetDual: [false, 'mibib-oem-dual.bin'], mibibPresetSingle: [true, 'mibib-big-rootfs.bin'] };
+        const presets = { mibibPresetDual: [false, 'mibib-oem-dual.bin'], mibibPresetSingle: [true, 'mibib-big-rootfs.bin'], mibibPresetSingleXl: ['xl', 'mibib-xl-rootfs.bin'] };
         Object.keys(presets).forEach(id => {
             const button = document.getElementById(id);
             if (!button) return;
