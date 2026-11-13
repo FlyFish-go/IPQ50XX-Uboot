@@ -11,6 +11,14 @@
  * GNU General Public License for more details.
  */
 
+/*
+ * UNTESTED: written from public sources, never run on this hardware. From
+ * the upstream OpenWrt ipq5018-rax3000q.dts: QCA8337 on GMAC2 uses PHYs 0
+ * (WAN), 1, 3 and 4 (LAN1-3), reset GPIO26; RESET GPIO23, WPS GPIO38; LEDs
+ * red 24, green 19, blue 17; console GPIO28/29 function 3. MACs are at the
+ * start of ART (position unconfirmed upstream).
+ */
+
 /dts-v1/;
 #include "ipq5018-soc.dtsi"
 / {
@@ -179,7 +187,7 @@
 			mac_pwr = <0xaa545>;
 			s17c_switch_enable = <1>;
 			switch_port_count = <4>;
-			switch_phy_address = <0 1 2 3>;
+			switch_phy_address = <0 1 3 4>;
 			switch_gpio = <26>;
 		};
 	};

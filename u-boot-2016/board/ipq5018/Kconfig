@@ -134,10 +134,13 @@ config TARGET_IPQ5018_CMCC_PZ_L8
 	  Enable support for CMCC PZ-L8 board
 
 config TARGET_IPQ5018_CMCC_RAX3000Q
-    bool "CMCC RAX3000Q(Y) board support"
+    bool "CMCC RAX3000Q(Y) board support (untested)"
 	default n
+	select BOARD_UNTESTED
     help
-	  Enable support for CMCC RAX3000Q(Y) board
+	  Enable support for CMCC RAX3000Q(Y) board. Built from public
+	  sources only (AP-MP02.1, board ID 0x8040000, QCA8337 on GMAC2);
+	  not verified on hardware.
 
 config TARGET_IPQ5018_CUCC_VS010
     bool "CUCC VS010 board support"
@@ -212,7 +215,8 @@ config ETHADDR_ASCII_OFFSET
 config FAILSAFE_LAN_FIRST
     bool
     default y if H3C_IPQ5018_COMMON || TARGET_IPQ5018_HW3000B1 || \
-		 TARGET_IPQ5018_LINGYAN_LYW_30M || TARGET_IPQ5018_CMCC_MR3000D_CI
+		 TARGET_IPQ5018_LINGYAN_LYW_30M || TARGET_IPQ5018_CMCC_MR3000D_CI || \
+		 TARGET_IPQ5018_CMCC_RAX3000Q
     help
 	  The web failsafe page starts on eth1 (LAN switch) and falls back
 	  to eth0 (WAN GE PHY) after a grace period.
