@@ -29,11 +29,16 @@ def extract_function(text, signature):
 typedef_start = api.index("typedef struct {", api.index("// GPIO 帮助函数"))
 typedef_end = api.index("} button_info_t;", typedef_start) + len("} button_info_t;")
 button_info = api[typedef_start:typedef_end]
-button_functions = "\n\n".join(extract_function(api, signature) for signature in (
-    "static bool is_button_pressed(",
-    "static bool is_any_button_pressed(",
-    "static bool is_any_button_pressed_for_enough_time(",
-))
+# The RESET blink selector: its timing macros and acknowledgement helper
+# sit between is_any_button_pressed() and the hold-time function.
+blink_start = api.index("#define H3C_BLINK_PERIOD_MS")
+blink_end = api.index("static void confirm_blinks(")
+blink_defs = api[blink_start:blink_end]
+button_functions = "\n\n".join(
+    ([extract_function(api, "static bool is_button_pressed("),
+      extract_function(api, "static bool is_any_button_pressed("),
+      blink_defs + extract_function(api, "static void confirm_blinks("),
+      extract_function(api, "static bool is_any_button_pressed_for_enough_time(")]))
 network_start = api.index("#elif defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)", api.index("void do_network_check(void)"))
 network_end = api.index("\n#elif", network_start)
 network_block = api[network_start:network_end].replace(
@@ -88,6 +93,11 @@ static unsigned int fdtdec_get_uint(const void *fdt, int node, const char *prope
     if (!strcmp(property, "active_level")) return keys[node].active_level;
     return default_value;
 }
+static int requested_blinks;
+static void h3c_boot_request_blinks(int n) { requested_blinks = n; }
+static void mock_mdelay(unsigned int ms) { now_ms += ms; }
+#define mdelay mock_mdelay
+#define CONFIG_H3C_RELEASE_SYSTEM_DEFAULT 1
 static void led_all_off(void) {}
 static void led_off(const char *name) { (void)name; }
 static void led_on(const char *name) { (void)name; }
@@ -146,6 +156,19 @@ int main(void) {
     reset_inputs(); pressed_gpio = 34; release_at_ms = 150;
     CHECK(!is_any_button_pressed_for_enough_time());
     CHECK(now_ms < 3000);
+
+    /* Released after the first flash (1 s): slot 1 requested, no web rescue. */
+    reset_inputs(); pressed_gpio = 34; release_at_ms = 1400; requested_blinks = 0;
+    CHECK(!is_any_button_pressed_for_enough_time());
+    CHECK(requested_blinks == 1);
+    /* Released after the second flash: slot 2. */
+    reset_inputs(); pressed_gpio = 34; release_at_ms = 2400; requested_blinks = 0;
+    CHECK(!is_any_button_pressed_for_enough_time());
+    CHECK(requested_blinks == 2);
+    /* A short tap requests nothing. */
+    reset_inputs(); pressed_gpio = 34; release_at_ms = 150; requested_blinks = 0;
+    CHECK(!is_any_button_pressed_for_enough_time());
+    CHECK(requested_blinks == 0);
 
     reset_inputs(); key_count = 2;
     keys[0] = (struct mock_key){"wps", 38, GPIO_ACTIVE_LOW};
@@ -208,6 +231,7 @@ bootconfig_source = r"""
 #include <errno.h>
 typedef unsigned long ulong;
 #define CONFIG_TARGET_IPQ5018_H3C_RT3000_B 1
+#define CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY 1 /* duplicate selector entries are rejected */
 #include <bootconfig.h>
 #define SMEM_BOOT_NAND_FLASH 1
 #define SMEM_BOOT_ONENAND_FLASH 2

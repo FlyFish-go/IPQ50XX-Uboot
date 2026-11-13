@@ -106,12 +106,12 @@ def main():
  classifier=s[s.index('enum h3c_hw_c_fit_profile {'):s.index('\n#endif',s.index('enum h3c_hw_c_fit_profile {'))]
  filters=s[s.index('static int h3c_hw_c_root_token('):s.index('#ifdef CONFIG_H3C_NAND_ECC_COMPAT\nstatic int h3c_normalize_nand_bootargs')]
  # Include the production region's opening conditional to balance its endif.
- filters='#if defined(CONFIG_H3C_HW_C_PRODUCTION_PORT) || defined(CONFIG_H3C_HW_C_RAM_READONLY) || defined(CONFIG_H3C_HW_D_RAM_WEB)\n'+filters
+ filters='#if defined(CONFIG_H3C_FIT_ROOTFS_BOOTARGS)\n'+filters
  update=s[s.index('/* Append the booted physical rootfs offset'):s.index('/*\n * Set the root device',s.index('static int update_bootargs('))]
  a.output_dir.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='cnss-policy-') as d:
   c=Path(d)/'test.c';c.write_text('\n'.join([PRE,classifier,filters,update,MAIN]))
-  for mode,defines in [('enabled',['CONFIG_H3C_HW_C_PRODUCTION_PORT','CONFIG_H3C_HW_C_OEM_CNSS_SKIP4']),('disabled',['CONFIG_H3C_HW_C_PRODUCTION_PORT'])]:
+  for mode,defines in [('enabled',['CONFIG_H3C_FIT_ROOTFS_BOOTARGS','CONFIG_H3C_HW_C_OEM_CNSS_SKIP4']),('disabled',['CONFIG_H3C_FIT_ROOTFS_BOOTARGS'])]:
    exe=Path(d)/mode
    subprocess.run(['gcc','-std=gnu11','-O1','-g','-fsanitize=address,undefined','-fno-sanitize-recover=all',*['-D'+x for x in defines],str(c),'-o',str(exe)],check=True)
    env=dict(os.environ,ASAN_OPTIONS='detect_leaks=0')

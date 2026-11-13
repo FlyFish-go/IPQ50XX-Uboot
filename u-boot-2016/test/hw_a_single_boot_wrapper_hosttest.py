@@ -32,7 +32,8 @@ struct rt3_layout { int mode,count; struct rt3_partition parts[2]; };
 struct flash_info { int flash_type; struct { unsigned long long offset,size; } rootfs; } flash_data,*sfi=&flash_data;
 static int selector_calls,default_calls,env_calls;
 static char saved_args[128];
-static int get_bootconfig(const char *name){selector_calls++;(void)name;return 1;}
+#define RT3_BOOT_BOARD_LABEL "H3C"
+static int slot_default_rootfs(void){selector_calls++;return 1;}
 static int rt3_layout_read(struct rt3_layout *l){
  memset(l,0,sizeof(*l));l->mode=RT3_LAYOUT_SINGLE;l->count=1;
  strcpy(l->parts[0].name,"rootfs");l->parts[0].display_index=16;

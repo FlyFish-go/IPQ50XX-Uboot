@@ -15,9 +15,10 @@ assert "writable" in module and "persistent" in module and "read_only" in module
 assert 'save or verification failed' in module and 'response->info.code=ret?500:200' in module
 assert '"/mac/set"' in gate
 assert "data.writable === true && data.persistent === true" in mainjs
-assert "if (data.read_only === true && data.available === false)" in mainjs
-assert "mac.status.read_only" in mainjs and "mac.status.unavailable" in mainjs
-assert "warningSection.hidden = !!data && data.read_only === true" in mainjs
+# The page derives macWritable from the handler's writable/persistent flags and
+# refuses to enter edit mode (mac.status.read_only) when it is false.
+assert "macWritable = bEnvironment" in mainjs and "data.writable !== false" in mainjs
+assert "if (!macWritable)" in mainjs and "mac.status.read_only" in mainjs
 with tempfile.TemporaryDirectory(prefix="hw-a-mac-") as temp:
  binary=pathlib.Path(temp)/"hw-a-mac-hosttest"
  subprocess.run(["cc","-std=c99","-Wall","-Wextra","-Werror",str(source),"-o",str(binary)],check=True)

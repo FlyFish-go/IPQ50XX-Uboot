@@ -20,7 +20,8 @@ def main() -> None:
     # The exact D production profile does not select keyed-autoboot; therefore
     # abortboot(3) reaches U-Boot's standard any-key UART polling implementation.
     assert "CONFIG_AUTOBOOT_KEYED=y" not in defconfig
-    assert "if (abortboot(3))" in release_branch
+    # A held RESET skips the stop window; otherwise the window is abortboot(3).
+    assert "!h3c_release_reset_held() && abortboot(3)" in release_branch
     assert release_branch.index("abortboot(3)") < release_branch.index("h3c_release_autoboot()")
     assert "getenv(" not in release_branch and "run_command_list" not in release_branch
 
@@ -30,7 +31,8 @@ def main() -> None:
 
     harness = r'''#include <assert.h>
 #include <stdio.h>
-static int abort_result, abort_calls, abort_delay, release_calls;
+static int abort_result, abort_calls, abort_delay, release_calls, reset_held;
+static int h3c_release_reset_held(void) { return reset_held; }
 static int abortboot(int seconds) { abort_calls++; abort_delay = seconds; return abort_result; }
 static void h3c_release_autoboot(void) { release_calls++; }
 static void autoboot_command(const char *s) {
@@ -42,7 +44,10 @@ int main(void) {
  abort_calls=abort_delay=release_calls=0; abort_result=0;
  autoboot_command("imported-altbootcmd-must-not-run");
  assert(abort_calls==1 && abort_delay==3 && release_calls==1);
- puts("release UART abort window PASS: fixed 3s, stop returns to caller, no-input dispatch unchanged");
+ abort_calls=abort_delay=release_calls=0; abort_result=1; reset_held=1;
+ autoboot_command("held-reset-skips-the-window");
+ assert(abort_calls==0 && release_calls==1);
+ puts("release UART abort window PASS: fixed 3s, stop returns to caller, no-input dispatch unchanged, held RESET skips the window");
  return 0;
 }
 '''

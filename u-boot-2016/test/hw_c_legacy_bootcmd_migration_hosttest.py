@@ -6,15 +6,16 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 api=(root/'lib/ipq_api.c').read_text()
 network=api[api.index('void do_network_check(void)'):api.index('// =============================================================================\n// 闪存设备检测')]
-start=network.index('#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B')
+# do_network_check() keeps the HW-C legacy bootcmd normalisation in an #elif arm.
+start=network.index('#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)')
 end=network.index('\n#endif',start)+len('\n#endif')
-block=network[start:end]
+block='#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)'+network[start+len('#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)'):end]
 legacy='setenv mtdids nand0=nand0 && setenv mtdparts mtdparts=nand0:0x02800000@0x03100000(c-native) && ubi part c-native && ubi read 0x44000000 kernel && bootm 0x44000000#config@mp03.1-c2'
 near_miss=legacy.replace('mp03.1-c2','mp03.1-c3')
 prefix=r'''#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define CONFIG_H3C_HW_C_PRODUCTION_PORT 1
+#define CONFIG_TARGET_IPQ5018_H3C_HW_C 1
 static char command[512], delay[32], ethact[32];
 static int have_command, have_delay, have_ethact;
 static const char *mock_getenv(const char *key) {

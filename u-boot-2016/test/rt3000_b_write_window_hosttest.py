@@ -5,9 +5,18 @@ import tempfile
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 s=(root/"drivers/mtd/nand/qpic_nand.c").read_text()
-a=s.index("static struct {\n\tstruct mtd_info *mtd;",s.index("rt3000_b_fw_write.h"))
-b=s.index("\n#endif\nstruct bam_desc qpic_cmd_desc_fifo",a)+len("\n#endif")
-window="#if defined(CONFIG_TARGET_IPQ5018_H3C_RT3000_B)\n"+s[a:b]
+# The aperture lives in the CONFIG_H3C_IPQ5018_COMMON block that opens right
+# before rt3_fw_window; take everything up to its matching #endif.
+a=s.index("#ifdef CONFIG_H3C_IPQ5018_COMMON\n/* Closed by default",s.index("rt3000_b_fw_write.h"))
+depth=0;pos=a
+while True:
+    eol=s.index("\n",pos);line=s[pos:eol].lstrip()
+    if line.startswith(("#if","#ifdef","#ifndef")):depth+=1
+    elif line.startswith("#endif"):
+        depth-=1
+        if depth==0:b=eol;break
+    pos=eol+1
+window="static int rt3_flash_reboot_lock;\n#define CONFIG_H3C_IPQ5018_COMMON 1\n"+s[a:b]+"\n"
 c=r"""
 #define main layout_fixture_main
 #include "rt3000_b_layout_hosttest.c"

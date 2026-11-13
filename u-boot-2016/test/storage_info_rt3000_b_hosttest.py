@@ -39,7 +39,7 @@ static block_dev_desc_t *mmc_get_dev(int n) { static block_dev_desc_t d; (void)n
 static size_t strlcpy(char *d, const char *s, size_t n)
 { size_t l = strlen(s); if (n) { size_t c = l < n-1 ? l : n-1; memcpy(d,s,c); d[c]=0; } return l; }
 ''' + api_chunk + r'''
-struct qpic_serial_nand_params { unsigned char id[4]; const char *name; };
+struct qpic_serial_nand_params { unsigned char id[4]; const char *name; unsigned int spare_size; };
 struct qpic_nand_model_info { const char *name; unsigned char id[3]; };
 static struct qpic_serial_nand_params *serial_params;
 ''' + qpic_chunk + r'''
@@ -54,7 +54,7 @@ int main(void)
  for (i=0; i<100; i++) if (get_detected_spi_flash() != &flash_ok || !has_spi()) return 2;
  if (probe_calls != 1 || strcmp(nand_info[0].name, "nand0")) return 3;
  if (!qpic_nand_get_model_info(&mi)) return 4;
- static struct qpic_serial_nand_params model = {{0xc8,0xc2,0,0}, "GD5F1GQ5REYIG"};
+ static struct qpic_serial_nand_params model = {{0xc8,0xc2,0,0}, "GD5F1GQ5REYIG", 128};
  serial_params = &model; qpic_serial_model_identified = true;
  if (qpic_nand_get_model_info(&mi) || strcmp(mi.name, "GD5F1GQ5REYIG") || mi.id[0] != 0xc8 || mi.id[1] != 0xc2) return 5;
  qpic_serial_model_identified = false;
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="rt3-storage-hosttest-") as td:
     subprocess.run(["gcc", "-std=c99", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 
-spi_start = sysinfo.index("#ifdef CONFIG_TARGET_IPQ5018_H3C_RT3000_B", sysinfo.index("/* SPI info */"))
+spi_start = sysinfo.index("#if defined(CONFIG_H3C_SYSINFO_SPI_INFO)", sysinfo.index("/* SPI info */"))
 spi_end = sysinfo.index("#else", spi_start)
 b_spi = sysinfo[spi_start:spi_end]
 assert "get_detected_spi_flash()" in b_spi and "spi_flash_probe(" not in b_spi

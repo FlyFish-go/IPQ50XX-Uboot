@@ -25,6 +25,7 @@ pre=r"""
 typedef uint32_t u32; typedef uint64_t u64; typedef long long loff_t;
 struct mtd_info {u64 size;u32 erasesize,writesize,flags;};
 static struct mtd_info nand_info[1];
+static int rt3_flash_reboot_lock; /* set once a flash write window has been used */
 static struct {u32 flash_block_size;} qca_smem_flash_info;
 static loff_t board_env_offset=0x480000, board_env_size=0x80000;
 static struct {struct mtd_info*mtd;u64 start,end;u32 old_flags;int open;} rt3_fw_window;

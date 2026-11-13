@@ -273,11 +273,8 @@ int main(int argc, char **argv)
 	/* Other build profiles and dirty fixed-width padding must reject even
 	 * after recomputing the executable digest. Never match a string prefix. */
 	memset(image + 0x3000 + 32, 0, 32);
-#ifdef CONFIG_H3C_RELEASE_SYSTEM_DEFAULT
-	memcpy(image + 0x3000 + 32, "BOOTBRIDGE-HW-D", sizeof("BOOTBRIDGE-HW-D"));
-#else
-	memcpy(image + 0x3000 + 32, "BOOTBRIDGE-HW-D", sizeof("BOOTBRIDGE-HW-D"));
-#endif
+	/* All D profiles share one label now; a different label must reject. */
+	memcpy(image + 0x3000 + 32, "BOOTBRIDGE-HW-X", sizeof("BOOTBRIDGE-HW-X"));
 	test_digest(image + 0x3000, 0x200, image + 0x1000 + 104, NULL);
 	assert(nx30_d_uboot_parse_mbn(image, sizeof(image), test_digest, NULL, &info) != 0);
 	make_image();

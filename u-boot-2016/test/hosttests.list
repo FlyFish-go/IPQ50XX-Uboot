@@ -1,0 +1,72 @@
+# Host tests run by test/run_hosttests.sh (and the host-tests CI job).
+# run <test> [args]  : @SRC@ = u-boot-2016 dir, @OUT@ = scratch dir
+# skip <test> <why>  : needs private evidence that is not in the public tree
+
+run  test/boot_default_transaction_hosttest.py
+run  test/bootargs_hosttest.py --source @SRC@/board/qca/arm/common/cmd_bootqca.c --output-dir @OUT@
+run  test/env_common_d_transaction_hosttest.py
+run  test/env_rt3000_b_storage_hosttest.py
+run  test/env_rt3000_b_transaction_hosttest.py
+run  test/fdtedit_hosttest.py --source @SRC@/board/qca/arm/common/fdt_fixup.c --output-dir @OUT@
+run  test/firmware_fit_ubi_hosttest.py
+skip test/firmware_openwrt_ubi_hosttest.py needs OPENWRT_UBI, an OpenWrt UBI image (not in the tree)
+run  test/firmware_platform_hosttest.py
+skip test/firmware_rt3000_b_handler_hosttest.py needs the private doc/RT3000-B-OEM-CATALOG-20261008.json (or RT3000_OEM_CATALOG)
+skip test/firmware_rt3000_b_ubi_hosttest.py needs the private doc/RT3000-B-OEM-CATALOG-20261008.json
+run  test/firmware_vendor_squashfs_hosttest.py
+run  test/h3c_boot_policy_runtime_hosttest.py
+run  test/h3c_fem_hosttest.sh
+run  test/h3c_mainline_fdt_hosttest.sh
+run  test/h3c_nand_auto_hosttest.sh
+run  test/h3c_nand_ecc_qpic_gate_hosttest.py --output-dir @OUT@
+run  test/h3c_nand_source_profile_hosttest.py
+run  test/h3c_release_uart_abort_hosttest.py
+run  test/html_routes_config_hosttest.py
+run  test/httpd_upload_limit_hosttest.sh
+run  test/hw_a_buttons_hosttest.py
+run  test/hw_a_mac_readonly_hosttest.py
+skip test/hw_a_metadata_identity_hosttest.sh needs a private HW-A metadata fixture and stage image as arguments
+run  test/hw_a_mibib_alias_c_hosttest.py
+run  test/hw_a_mibib_reload_source_hosttest.py
+run  test/hw_a_qpic_metadata_window_hosttest.py
+run  test/hw_a_single_boot_wrapper_hosttest.py
+run  test/hw_a_single_layout_hosttest.sh
+run  test/hw_b_default_web_hosttest.py
+run  test/hw_b_reset_boot_hosttest.py
+skip test/hw_b_swapped_firmware_hosttest.py needs the private doc/RT3000-B-OEM-CATALOG-20261008.json
+run  test/hw_c_autoboot_override_hosttest.py
+run  test/hw_c_bootconfig_write_window_hosttest.py
+run  test/hw_c_legacy_bootcmd_migration_hosttest.py
+run  test/hw_c_metadata_identity_hosttest.sh
+run  test/mac_rt3000_b_hosttest.py
+run  test/metadata_upload_range_hosttest.py
+skip test/metadata_writer_hosttest.sh needs a private metadata FIXTURE argument
+run  test/mibib_preset_hosttest.sh
+run  test/named_nand_flash_hosttest.py
+run  test/network_rt3000_b_hosttest.sh
+run  test/nor_nand_autoecc_format_hosttest.py
+run  test/nor_rescue_ui_hosttest.py
+run  test/nx30_d_bc_retained_hosttest.py
+run  test/nx30_d_firmware_ecc_scope_hosttest.py
+run  test/nx30_d_uboot_role_mutation_hosttest.py
+run  test/oem_cnss_policy_hosttest.py --source @SRC@/board/qca/arm/common/cmd_bootqca.c --output-dir @OUT@
+run  test/public_web_routes_hosttest.py
+run  test/qpic_ecc_probe_hosttest.sh
+run  test/qpic_ecc_switch_hosttest.py --source @SRC@/drivers/mtd/nand/qpic_nand.c --output-dir @OUT@
+run  test/qpic_rt3000_b_nand_profiles_hosttest.py
+run  test/rt3000_b_bootargs_hosttest.sh
+run  test/rt3000_b_layout_hosttest.sh
+skip test/rt3000_b_metadata_core_hosttest.sh needs private FIXTURE and OEM_IMAGE arguments
+run  test/rt3000_b_named_boot_hosttest.py
+run  test/rt3000_b_write_window_hosttest.py
+skip test/rt3000_mibib_hosttest.sh needs a private MIBIB backup argument
+skip test/slots_oem_catalog_hosttest.py needs the private doc/RT3000-B-OEM-CATALOG-20261008.json
+run  test/slots_oem_overlay_hosttest.py
+run  test/slots_rt3000_b_get_hosttest.py
+run  test/slots_rt3000_b_hosttest.py
+run  test/storage_info_rt3000_b_hosttest.py
+run  test/ubi_mtd_aligned_hosttest.py
+skip test/ubi_partition_backup_hosttest.py needs --fixture, a 40 MiB RX3000 mtd15 dump (private evidence)
+run  test/ubifs_read_block_hosttest.py
+run  test/ubifs_volume_name_hosttest.py
+run  test/upgrade_rt3_callback_hosttest.sh
