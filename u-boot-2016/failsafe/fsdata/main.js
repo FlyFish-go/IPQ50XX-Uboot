@@ -8835,7 +8835,9 @@ const firmwareModeManager = (() => {
         const errno = result && Number.isInteger(result.errno) ? result.errno : null;
         const suffix = errno === null ? '' : (isZh() ? '（错误码 ' + errno + '）' : ' (error code ' + errno + ')');
         const message = isZh() ? zh[key] : en[key];
-        if (message) return message + suffix;
+        const sha = key === 'unknown_oem_package' && result && typeof result.sha256 === 'string' && /^[0-9a-f]{64}$/.test(result.sha256)
+            ? (isZh() ? ' 文件 SHA256：' : ' File SHA256: ') + result.sha256 : '';
+        if (message) return message + sha + suffix;
         if (raw) return isZh() ? '操作失败：' + raw : 'Operation failed: ' + raw;
         return isWrite ? (isZh() ? '写入失败或结果未验证。请检查设备，不要自动重试。' : 'Write failed or remains unverified. Inspect the device; do not retry automatically.')
             : (isZh() ? '固件验证失败，请检查文件。' : 'Firmware validation failed. Check the file.');

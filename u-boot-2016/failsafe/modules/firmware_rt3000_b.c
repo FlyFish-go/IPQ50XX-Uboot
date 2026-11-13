@@ -675,9 +675,15 @@ static void fw_validate_handler(enum httpd_uri_handler_status status,
 		/* Neither UBI, a listed OEM package nor a QSDK FIT. Say whether
 		 * it looked like an H3C package so the page does not blame the
 		 * UBI structure of a file whose release is simply not listed. */
-		if (file->size >= 4 && !memcmp(file->data, "H3C_", 4))
-			fw_reply_json(response, 422, "{\"status\":\"fail\",\"error\":\"unknown H3C OEM package\"}");
-		else
+		if (file->size >= 4 && !memcmp(file->data, "H3C_", 4)) {
+			/* The page shows the hash so a user can report the file. */
+			static char unlisted[160];
+			fw_hex(digest, SHA256_SUM_LEN, digest_hex);
+			snprintf(unlisted, sizeof(unlisted),
+				 "{\"status\":\"fail\",\"error\":\"unknown H3C OEM package\",\"sha256\":\"%s\"}",
+				 digest_hex);
+			fw_reply_json(response, 422, unlisted);
+		} else
 			fw_reply_json(response, 422, "{\"status\":\"fail\",\"error\":\"unsupported firmware format\"}");
 		return;
 	}

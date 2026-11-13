@@ -324,6 +324,7 @@ def run():
         tampered[-1] ^= 0xff
         code, body, _ = dispatch(lib,"/firmware/validate",2,[("firmware",bytes(tampered)),("target","rootfs_1"),("mode","dual")])
         assert code == 422 and json.loads(body)["error"] == "unknown H3C OEM package", (code, body)
+        assert json.loads(body)["sha256"] == hashlib.sha256(bytes(tampered)).hexdigest(), body
         assert lib.host_erase_count_get() == 0
         evidence["negative_callback_cases"].append({"case": "unlisted_h3c_package", "http_status": code})
 

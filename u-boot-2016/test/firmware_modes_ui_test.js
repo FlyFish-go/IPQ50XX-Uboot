@@ -285,6 +285,23 @@ const baseLayout = (mode = 'dual', write = true) => ({ status: 'ok', mode, write
         assert(!c.elements().bFirmwareContent.textContent.includes('UBI 系统镜像结构无效'), error);
     }
 
+    // An unlisted H3C package reports the file hash so the user can send it to us.
+    const sha = '0123456789abcdef'.repeat(4);
+    for (const [lang, label] of [['zh-cn', '文件 SHA256：'], ['en', 'File SHA256: ']]) {
+        c = await bootContext({ lang, layout: baseLayout('dual'), replies: [
+            { status: 'fail', error: 'unknown H3C OEM package', sha256: sha, httpStatus: 422 }
+        ] });
+        await c.context.testFirmwareModes.initMode('dual');
+        inputs = c.elements().bFirmwareContent.find('input');
+        inputs.find(x => x.type === 'radio').checked = true;
+        await inputs.find(x => x.type === 'radio').dispatch('change');
+        inputs.find(x => x.type === 'file').files = [{ name: 'RC3000V100R013L01.bin' }];
+        await inputs.find(x => x.type === 'file').dispatch('change');
+        buttons = c.elements().bFirmwareContent.find('button');
+        await buttons[0].click();
+        assert(c.elements().bFirmwareContent.textContent.includes(label + sha), lang);
+    }
+
     c = await bootContext({ legacy: true, pathName: '/firmware.html' });
     await c.context.testFirmwareModes.initLanding();
     assert.strictEqual(c.legacyCalls.length, 1);
