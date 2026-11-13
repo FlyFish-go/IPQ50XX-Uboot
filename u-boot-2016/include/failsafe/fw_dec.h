@@ -93,6 +93,16 @@ char *fw_type_to_string(fw_type_t fw_type);
 int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size);
 #define FAILSAFE_FIRMWARE_SLOT_HOOK(addr, size) \
 	return failsafe_write_firmware_xiaomi(addr, size)
+#elif !defined(CONFIG_H3C_IPQ5018_COMMON)
+/* Other non-H3C boards: UBI images go through the trimffs writer. */
+#define FAILSAFE_NOT_HANDLED 0x7fff
+int failsafe_write_firmware_ubi(ulong data_addr, ulong data_size);
+#define FAILSAFE_FIRMWARE_SLOT_HOOK(addr, size) \
+	do { \
+		int _r = failsafe_write_firmware_ubi(addr, size); \
+		if (_r != FAILSAFE_NOT_HANDLED) \
+			return _r; \
+	} while (0)
 #else
 #define FAILSAFE_FIRMWARE_SLOT_HOOK(addr, size) do { } while (0)
 #endif

@@ -1131,20 +1131,146 @@ int failsafe_write_image(upgrade_type_t upgrade_type, ulong data_addr,
     return ret;
 }
 
+#if defined(CONFIG_SLOT_BACKEND_XIAOMI) || !defined(CONFIG_H3C_IPQ5018_COMMON)
+#include <ubi_trimffs.h>
+/*
+ * UBI images on boards that do not use the H3C named writer. Pages that are
+ * all 0xff in the image stay erased (programming them makes UBI hit ECC
+ * errors on its first real write), bad blocks are skipped forward, and the
+ * image must fit the good blocks of the partition before anything is erased.
+ * The page decision is ubi_trimffs_plan() (host tested). Kept at the end of
+ * the file so no ADD_CMD_TO_LIST above changes its __LINE__.
+ */
+struct ubi_wr {
+	nand_info_t *nand;
+	uint32_t base;
+	const uint8_t *img;
+	uint64_t run_phys;
+	size_t run_img, run_len;
+	uint8_t *pad;
+};
+
+static int ubi_wr_isbad(void *c, uint32_t blk)
+{
+	struct ubi_wr *w = c;
+
+	return nand_block_isbad(w->nand, (loff_t)w->base +
+				(loff_t)blk * w->nand->erasesize);
+}
+
+static int ubi_wr_noop(void *c, uint64_t p, size_t o, uint32_t n, int w)
+{
+	return 0;
+}
+
+static int ubi_wr_flush(struct ubi_wr *w)
+{
+	size_t len = w->run_len;
+	int ret;
+
+	if (!len)
+		return 0;
+	w->run_len = 0;
+	ret = nand_write(w->nand, (loff_t)w->base + w->run_phys, &len,
+			 (u_char *)w->img + w->run_img);
+	if (ret)
+		printf("NAND write failed at 0x%llx (%d)\n",
+		       (unsigned long long)(w->base + w->run_phys), ret);
+	return ret;
+}
+
+static int ubi_wr_emit(void *c, uint64_t phys, size_t off, uint32_t n, int write)
+{
+	struct ubi_wr *w = c;
+	size_t len = w->nand->writesize;
+	int ret;
+
+	if (!write)
+		return ubi_wr_flush(w);
+	if (n < len) {		/* last partial page: pad with 0xff */
+		ret = ubi_wr_flush(w);
+		if (ret)
+			return ret;
+		memset(w->pad, 0xff, len);
+		memcpy(w->pad, w->img + off, n);
+		return nand_write(w->nand, (loff_t)w->base + phys, &len, w->pad);
+	}
+	if (w->run_len && phys == w->run_phys + w->run_len &&
+	    off == w->run_img + w->run_len) {
+		w->run_len += n;
+		return 0;
+	}
+	ret = ubi_wr_flush(w);
+	w->run_phys = phys;
+	w->run_img = off;
+	w->run_len = n;
+	return ret;
+}
+
+/* Erase the partition and write the image into it; the caller appends its
+ * own commands (bootconfig / slot select) to the list afterwards. */
+static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_size)
+{
+	nand_info_t *nand = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
+	struct ubi_trimffs_stats st;
+	struct ubi_wr w;
+	uint32_t offset, size;
+	int ret;
+
+	if (getpart_offset_size((char *)part, &offset, &size)) {
+		handle_part_not_found(part);
+		return RET_PART_NOT_FOUND;
+	}
+	memset(&w, 0, sizeof(w));
+	memset(&st, 0, sizeof(st));
+	w.nand = nand;
+	w.base = offset;
+	w.img = (const uint8_t *)data_addr;
+	ret = ubi_trimffs_plan(w.img, data_size, nand->writesize, nand->erasesize,
+			       size / nand->erasesize, ubi_wr_isbad, &w,
+			       ubi_wr_noop, &w, &st);
+	if (ret == UBI_TRIMFFS_ENOSPC) {
+		handle_file_too_big("firmware", data_size, part,
+				    (unsigned long long)st.blocks_good * nand->erasesize);
+		return RET_FILE_TOO_BIG;
+	}
+	if (ret)
+		return RET_FAILURE;
+	w.pad = malloc(nand->writesize);
+	if (!w.pad)
+		return RET_FAILURE;
+	printf("UBI install into %s: %u pages written, %u all-0xff pages kept erased\n",
+	       part, st.pages_written, st.pages_skipped);
+	ADD_CMD_TO_LIST("nand device %d", CONFIG_NAND_FLASH_INFO_IDX);
+	ADD_CMD_TO_LIST("nand erase 0x%x 0x%x", offset, size);
+	ret = failsafe_run_command_list();
+	runcmd->count = 0;
+	if (!ret) {
+		ret = ubi_trimffs_plan(w.img, data_size, nand->writesize,
+				       nand->erasesize, size / nand->erasesize,
+				       ubi_wr_isbad, &w, ubi_wr_emit, &w, &st);
+		if (!ret)
+			ret = ubi_wr_flush(&w);
+		if (ret)
+			ret = RET_FAILURE;
+	}
+	free(w.pad);
+	return ret;
+}
+#endif
+
 #ifdef CONFIG_SLOT_BACKEND_XIAOMI
 #include <slot_ops.h>
 /*
  * Xiaomi slots: like stock OTA, write the slot that is not selected now and
  * then select it, so the current system stays as the fallback (a new system
- * that fails to boot gets marked failed and U-Boot goes back). Kept at the end
- * of the file so no ADD_CMD_TO_LIST above changes its __LINE__.
+ * that fails to boot gets marked failed and U-Boot goes back).
  */
 int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 {
 	unsigned int slot = 1 - xiaomi_slot_select();
 	char *part = slot ? "rootfs_1" : "rootfs";
-	nand_info_t *nand = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
-	uint32_t offset, size, pos, room = 0;
+	int ret;
 
 	print_upgrade_hint("FIRMWARE");
 	if (fw_type != FW_TYPE_UBI) {
@@ -1152,25 +1278,29 @@ int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 		return RET_WRONG_FW_TYPE;
 	}
 	RETURN_IF_NAND_FLASH_NOT_FOUND;
-	if (getpart_offset_size(part, &offset, &size)) {
-		handle_part_not_found(part);
-		return RET_PART_NOT_FOUND;
-	}
-	/* nand write skips bad blocks: never let it run into overlay. */
-	for (pos = offset; pos < offset + size; pos += nand->erasesize)
-		if (!nand_block_isbad(nand, pos))
-			room += nand->erasesize;
-	if (data_size > room) {
-		handle_file_too_big("firmware", data_size, part, room);
-		return RET_FILE_TOO_BIG;
-	}
 	printf("Xiaomi slots: installing into %s (slot %u)\n", part, slot);
-	ADD_CMD_TO_LIST("nand device %d", CONFIG_NAND_FLASH_INFO_IDX);
-	ADD_CMD_TO_LIST("nand erase 0x%x 0x%x", offset, size);
-	/* trimffs: erased 0xff pages stay erased for UBI to write later. */
-	ADD_CMD_TO_LIST("nand write.trimffs 0x%lx 0x%x 0x%lx",
-			data_addr, offset, data_size);
+	ret = failsafe_ubi_install(part, data_addr, data_size);
+	if (ret)
+		return ret;
 	ADD_CMD_TO_LIST("xiaomi_slot select %u", slot);
+	return failsafe_run_command_list();
+}
+#endif
+
+#if !defined(CONFIG_SLOT_BACKEND_XIAOMI) && !defined(CONFIG_H3C_IPQ5018_COMMON)
+/* Other non-H3C boards: UBI image into "rootfs" (BOOTCONFIG picks the slot). */
+int failsafe_write_firmware_ubi(ulong data_addr, ulong data_size)
+{
+	int ret;
+
+	if (fw_type != FW_TYPE_UBI || !has_nand())
+		return FAILSAFE_NOT_HANDLED;
+	print_upgrade_hint("FIRMWARE");
+	ret = failsafe_ubi_install("rootfs", data_addr, data_size);
+	if (ret)
+		return ret;
+	if (validate_bootconfig())
+		ADD_CMD_TO_LIST("bootconfig set firmware 0");
 	return failsafe_run_command_list();
 }
 #endif
