@@ -11,6 +11,14 @@
  * GNU General Public License for more details.
  */
 
+/*
+ * UNTESTED: written from public sources, never run on this hardware. From
+ * the upstream OpenWrt ipq5018-pz-l8.dts: internal GE PHY 7 on GMAC1 is
+ * wired PHY-to-PHY to QCA8337 PHY4; QCA8337 (5 PHYs, reset GPIO26) on
+ * GMAC2; RESET GPIO33, WPS GPIO34; LEDs GPIO30 and GPIO35 (active low);
+ * console GPIO28/29 function 3. MACs are at the start of ART.
+ */
+
 /dts-v1/;
 #include "ipq5018-soc.dtsi"
 / {

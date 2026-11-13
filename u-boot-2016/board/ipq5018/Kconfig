@@ -128,10 +128,13 @@ config H3C_HW_C_OEM_CNSS_SKIP4
       Native FITs and other board profiles are not affected.
 
 config TARGET_IPQ5018_CMCC_PZ_L8
-    bool "CMCC PZ-L8 board support"
+    bool "CMCC PZ-L8 board support (untested)"
 	default n
+	select BOARD_UNTESTED
     help
-	  Enable support for CMCC PZ-L8 board
+	  Enable support for CMCC PZ-L8 board. Built from public sources
+	  only (AP-MP02.1, board ID 0x8040000, QCA8337 on GMAC2, BOOTCONFIG
+	  dual system); not verified on hardware.
 
 config TARGET_IPQ5018_CMCC_RAX3000Q
     bool "CMCC RAX3000Q(Y) board support (untested)"
@@ -216,7 +219,7 @@ config FAILSAFE_LAN_FIRST
     bool
     default y if H3C_IPQ5018_COMMON || TARGET_IPQ5018_HW3000B1 || \
 		 TARGET_IPQ5018_LINGYAN_LYW_30M || TARGET_IPQ5018_CMCC_MR3000D_CI || \
-		 TARGET_IPQ5018_CMCC_RAX3000Q
+		 TARGET_IPQ5018_CMCC_RAX3000Q || TARGET_IPQ5018_CMCC_PZ_L8
     help
 	  The web failsafe page starts on eth1 (LAN switch) and falls back
 	  to eth0 (WAN GE PHY) after a grace period.
