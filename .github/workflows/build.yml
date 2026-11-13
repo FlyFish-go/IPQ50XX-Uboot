@@ -48,6 +48,7 @@ jobs:
           - { kind: defconfig, name: ipq5018_xiaomi_cr8806 }
           - { kind: defconfig, name: ipq5018_ruijie_rg_ma3063 }
           - { kind: defconfig, name: ipq5018_hw3000b1 }
+          - { kind: defconfig, name: ipq5018_cmcc_mr3000d_ci }
           - { kind: defconfig, name: ipq5018_cucc_vs010 }
     name: ${{ matrix.kind }} ${{ matrix.name }}
     steps:
