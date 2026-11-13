@@ -620,14 +620,15 @@ static int h3c_normalize_nand_bootargs(char *cmd_line)
 
 /* Append the booted physical rootfs offset and size; Linux names the
  * partitions from the offset and tells the single big rootfs layout from the
- * dual one by the size. Both are added together or not at all.
+ * dual one by the size. Both are added together or not at all. H3C only:
+ * the stock kernels of the other boards do not read it.
  */
 static int h3c_append_boot_slot(char *cmd_line, size_t size)
 {
 	size_t used = strlen(cmd_line);
 	int added;
 
-	if (!sfi->rootfs.size)
+	if (!IS_ENABLED(CONFIG_H3C_IPQ5018_COMMON) || !sfi->rootfs.size)
 		return 0;
 	added = snprintf(cmd_line + used, size - used,
 			 "%sh3c.boot_slot=0x%llx h3c.boot_size=0x%llx",

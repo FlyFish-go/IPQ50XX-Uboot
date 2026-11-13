@@ -18,6 +18,8 @@ HARNESS = r"""
 #define CMD_RET_FAILURE 1
 #define FIT_BOOTARGS_PROP "bootargs"
 #define abort() do { fprintf(stderr, "assertion failed at %s:%d\n", __FILE__, __LINE__); exit(1); } while (0)
+static int h3c_common = 1;
+#define IS_ENABLED(x) h3c_common /* only CONFIG_H3C_IPQ5018_COMMON is asked */
 #define getenv host_getenv
 #define setenv host_setenv
 static char old_args[128] = "old-base=1";
@@ -94,6 +96,14 @@ int main(void) {
     setenv_calls = 0;
     if (update_bootargs(NULL, 0, 0) != CMD_RET_FAILURE || setenv_calls != 0 ||
         strcmp(old_args, original)) abort();
+
+    /* Other boards' stock kernels do not read h3c.boot_slot: never appended. */
+    strcpy(old_args, original); strcpy(fs_args, "root=/dev/test");
+    sfi->rootfs.offset = 0x3100000; sfi->rootfs.size = 0x2800000;
+    h3c_common = 0; setenv_calls = 0;
+    if (update_bootargs(NULL, 0, 0) != CMD_RET_SUCCESS || setenv_calls != 1 ||
+        strcmp(old_args, "old-base=1 root=/dev/test rootwait")) abort();
+    h3c_common = 1;
     puts("BOOTARGS_HOSTTEST_PASS");
     return 0;
 }
