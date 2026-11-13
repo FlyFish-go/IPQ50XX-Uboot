@@ -72,6 +72,7 @@ DEVICE_LIST=(
     "ipq50xx:lingyan_lyw-30m:ipq5018_lingyan_lyw_30m:Lingyan LYW-30M / CUCC VS010 / VS010 MAX"
     "ipq50xx:tcl_t30-pro:ipq5018_tcl_t30_pro:TCL T30 Pro (CMCC)"
     "ipq50xx:xiaomi_cr8806:ipq5018_xiaomi_cr8806:Xiaomi CR8806 (CMCC)"
+    "ipq50xx:ruijie_rg-ma3063:ipq5018_ruijie_rg_ma3063:Ruijie RG-MA3063 (CMCC, hw 1.00)"
     "ipq50xx:hw3000b1:ipq5018_hw3000b1:HW3000B1"
     "ipq53xx:jdcloud_re-cs-06:ipq5332_jdcloud_re_cs_06:JDCloud BE6500"
     "ipq53xx:jdcloud_re-cs-08:ipq5332_jdcloud_re_cs_08:JDCloud ER2"

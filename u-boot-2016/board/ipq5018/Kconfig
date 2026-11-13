@@ -164,6 +164,14 @@ config TARGET_IPQ5018_XIAOMI_CR8806
 	  the stock CDT (AP-MP02.1, board ID 0x8040000) and the stock
 	  dual-system layout selected by U-Boot environment flags.
 
+config TARGET_IPQ5018_RUIJIE_RG_MA3063
+    bool "Ruijie RG-MA3063 board support"
+	default n
+    help
+	  Enable support for the Ruijie RG-MA3063 (China Mobile, hardware
+	  1.00) with the stock CDT (AP-MP02.1, board ID 0x8040000) and the
+	  stock BOOTCONFIG dual-system layout.
+
 config ETHADDR_ASCII
     bool "Fall back to a text base MAC in a vendor NAND partition"
     default n
