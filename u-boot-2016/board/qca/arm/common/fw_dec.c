@@ -50,11 +50,29 @@ int xiaomi_unwrap_firmware(uintptr_t addr, size_t size, uintptr_t *root,
 		       in.model, CONFIG_XIAOMI_FW_MODEL_ID);
 		return ret;
 	}
+	ret = xq_check_root(&in);
+	if (ret) {
+		puts("Xiaomi package: root.ubi is not a UBI image\n");
+		return ret;
+	}
 	if (root)
 		*root = (uintptr_t)in.root;
 	if (root_size)
 		*root_size = in.root_size;
 	return 0;
+}
+#endif
+
+#ifdef CONFIG_SLOT_BACKEND_XIAOMI
+/* Bytes that go to the rootfs: the root.ubi of a Xiaomi package, else all. */
+size_t fw_ubi_payload_size(uintptr_t addr, size_t size)
+{
+	size_t root_size;
+
+	if (size >= 4 && U32_DATA_AT_OFFSET(addr) == XQ_MAGIC &&
+	    !xiaomi_unwrap_firmware(addr, size, NULL, &root_size))
+		return root_size;
+	return size;
 }
 #endif
 

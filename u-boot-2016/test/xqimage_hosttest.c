@@ -167,5 +167,16 @@ int main(int argc, char **argv)
 		free(d);
 	}
 	puts("XQIMAGE_HOSTTEST_PASS");
+	/* root.ubi must hold a UBI image */
+	len = build(b, 0, good, 2, 1);
+	CHECK(xq_parse(b, len, crc32z, &in) == XQ_OK);
+	CHECK(xq_check_root(&in) == XQ_ENOTUBI);	/* synthetic bytes */
+	memcpy((uint8_t *)in.root, "UBI#", 4);
+	CHECK(xq_check_root(&in) == XQ_OK);
+	in.root_size = 3;
+	CHECK(xq_check_root(&in) == XQ_ENOTUBI);
+	in.root = NULL;
+	in.root_size = 0x100;
+	CHECK(xq_check_root(&in) == XQ_ENOTUBI);
 	return 0;
 }

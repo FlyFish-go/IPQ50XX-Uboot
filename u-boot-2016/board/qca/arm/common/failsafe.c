@@ -584,7 +584,7 @@ static int __maybe_unused failsafe_validate_firmware(const void *data_addr, ulon
         break;
     case FW_TYPE_UBI:
         RETURN_IF_NAND_FLASH_NOT_FOUND;
-        ret = validate_file_size("firmware", "rootfs", data_size);
+        ret = validate_file_size("firmware", "rootfs", FW_UBI_PAYLOAD_SIZE(data_addr, data_size));
         break;
     default:
         handle_wrong_fw_type("FIRMWARE");
@@ -1162,9 +1162,32 @@ struct ubi_wr {
 	uint32_t base;
 	const uint8_t *img;
 	uint64_t run_phys;
-	size_t run_img, run_len;
+	size_t run_img, run_len, run_len_req;
 	uint8_t *pad;
 };
+
+/* Read back one page of the plan: written pages must hold the image (0xff
+ * padded), skipped pages must still be erased. */
+static int ubi_wr_check(void *c, uint64_t phys, size_t off, uint32_t n, int write)
+{
+	struct ubi_wr *w = c;
+	size_t ws = w->nand->writesize, len = ws;
+	loff_t pos = (loff_t)w->base + (loff_t)phys;
+	int ret = nand_read(w->nand, pos, &len, w->pad);
+
+	if ((ret && ret != -EUCLEAN) || len != ws) {
+		printf("NAND read back failed at 0x%llx (%d)\n",
+		       (unsigned long long)pos, ret);
+		return ret && ret != -EUCLEAN ? ret : -EIO;
+	}
+	if (write ? memcmp(w->pad, w->img + off, n) ||
+		    !ubi_trimffs_all_ff(w->pad + n, ws - n) :
+		    !ubi_trimffs_all_ff(w->pad, ws)) {
+		printf("NAND read back differs at 0x%llx\n", (unsigned long long)pos);
+		return -EBADMSG;
+	}
+	return 0;
+}
 
 static int ubi_wr_isbad(void *c, uint32_t blk)
 {
@@ -1186,9 +1209,12 @@ static int ubi_wr_flush(struct ubi_wr *w)
 
 	if (!len)
 		return 0;
+	w->run_len_req = len;
 	w->run_len = 0;
 	ret = nand_write(w->nand, (loff_t)w->base + w->run_phys, &len,
 			 (u_char *)w->img + w->run_img);
+	if (!ret && len != w->run_len_req)
+		ret = -EIO;
 	if (ret)
 		printf("NAND write failed at 0x%llx (%d)\n",
 		       (unsigned long long)(w->base + w->run_phys), ret);
@@ -1267,6 +1293,14 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 				       ubi_wr_isbad, &w, ubi_wr_emit, &w, &st);
 		if (!ret)
 			ret = ubi_wr_flush(&w);
+		/* as "nand write" did (WITH_WR_VERIFY): read everything back
+		 * before the caller switches the slot to this image */
+		if (!ret)
+			ret = ubi_trimffs_plan(w.img, data_size, nand->writesize,
+					       nand->erasesize, size / nand->erasesize,
+					       ubi_wr_isbad, &w, ubi_wr_check, &w, &st);
+		if (!ret)
+			printf("UBI install into %s: read back OK\n", part);
 		if (ret)
 			ret = RET_FAILURE;
 	}
@@ -1280,8 +1314,9 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 #include <xqimage.h>
 /*
  * Xiaomi slots: like stock OTA, write the slot that is not selected now and
- * then select it, so the current system stays as the fallback (a new system
- * that fails to boot gets marked failed and U-Boot goes back).
+ * boot it as a pending OTA, so the current system stays as the fallback: a
+ * new system that fails to load is marked failed, one that loads but crashes
+ * is dropped by the crash rule, and U-Boot goes back either way.
  */
 int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 {
@@ -1315,7 +1350,7 @@ int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 	ret = failsafe_ubi_install(part, data_addr, data_size);
 	if (ret)
 		return ret;
-	ADD_CMD_TO_LIST("xiaomi_slot select %u", slot);
+	ADD_CMD_TO_LIST("xiaomi_slot ota %u", slot);
 	return failsafe_run_command_list();
 }
 #endif

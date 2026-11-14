@@ -41,6 +41,7 @@
 #define XQ_ENOROOT	(-5)	/* no root.ubi, or more than one */
 #define XQ_ETYPE	(-6)	/* not a plain firmware package */
 #define XQ_EMODEL	(-7)	/* package is for another model */
+#define XQ_ENOTUBI	(-8)	/* root.ubi does not start with a UBI EC header */
 
 struct xq_info {
 	const uint8_t *root;	/* the root.ubi section data */
@@ -111,6 +112,14 @@ static inline int xq_parse(const uint8_t *buf, size_t len,
 	/* the crc is checked last so that a wrong kind of file is named as such */
 	if (0xffffffffu - crc32(buf + 12, len - 12) != xq_le32(buf + 8))
 		return XQ_ECRC;
+	return XQ_OK;
+}
+
+/* The root.ubi section must be a UBI image: it starts with "UBI#". */
+static inline int xq_check_root(const struct xq_info *in)
+{
+	if (!in->root || in->root_size < 4 || memcmp(in->root, "UBI#", 4))
+		return XQ_ENOTUBI;
 	return XQ_OK;
 }
 
