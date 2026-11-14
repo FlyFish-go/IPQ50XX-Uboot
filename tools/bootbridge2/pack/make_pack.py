@@ -20,6 +20,10 @@ import struct
 import sys
 import tarfile
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "..", "..", "..", "release-tools"))
+import appsbl_packager  # noqa: E402
+
 LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "preset": 9 | lzma.PRESET_EXTREME,
                  "dict_size": 2 << 20}]	# runtime decoder budget: 2 MiB dictionary
 
@@ -65,6 +69,11 @@ def main():
             else:
                 path = os.path.join(a.dist, folders[cid], "appsbl.mbn")
             data = open(path, "rb").read()
+            if a.auto:
+                try:
+                    appsbl_packager.verify_mbn(data)
+                except appsbl_packager.PackError as e:
+                    sys.exit(f"{cid}: {name}: {e}")
             if len(data) != int(kv["bytes"]) or hashlib.sha256(data).hexdigest() != kv["sha256"]:
                 sys.exit(f"{cid}: payload differs from the rule file")
             stored[kv["file"]] = (kv["bytes"], kv["sha256"])

@@ -24,6 +24,10 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "..", "..", "..", "release-tools"))
+import appsbl_packager  # noqa: E402  (MBN contract shared with the U-Boot release)
+
 # Board groups. A and C have their own OEM boot routes. HW-B and HW-D share
 # mp02.1 / machid 0x08040000; only HW-D boards carry a 5 GHz FEM, which shows
 # in the factory calibration block (ART + 0x26800): +0x3a 0x60/0x50 and
@@ -59,9 +63,21 @@ def main():
     ap.add_argument("--dist", help="extracted release folders HW-<board>/<model>-ECC<n>/")
     ap.add_argument("--auto", help="folder with the per-board NAND-auto images h3c-hw-<x>.mbn")
     ap.add_argument("--release", default="", help="U-Boot release of the --auto images, for the header")
+    ap.add_argument("--hold", action="append", default=[], metavar="PROFILE=REASON",
+                    help="--auto only: write no candidate for this NAND profile, so the bridge "
+                         "refuses it before writing (its nand rule stays, so it cannot be "
+                         "mistaken for another profile)")
     a = ap.parse_args()
     if a.auto and a.dist:
         sys.exit("--auto and --dist exclude each other")
+    if a.hold and not a.auto:
+        sys.exit("--hold needs --auto")
+    held = {}
+    for h in a.hold:
+        pid, _, why = h.partition("=")
+        if not why or not re.fullmatch(r"h3c-oem-[a-z0-9-]+", pid) or "\n" in why:
+            sys.exit(f"--hold wants PROFILE=REASON, got {h!r}")
+        held[pid] = why
 
     cands = json.load(open(a.candidates))
     profiles = {p["profile_id"]: p for p in json.load(open(a.nand_profiles))["profiles"]}
@@ -77,6 +93,12 @@ def main():
     if missing:
         sys.exit(f"candidates use unknown NAND profiles: {missing}")
     out += [nand_rule(profiles[u]) for u in used] + [""]
+    unknown = [h for h in held if h not in used]
+    if unknown:
+        sys.exit(f"--hold names profiles no candidate uses: {unknown}")
+    out += [f"# held, no candidate: {pid} ({why})" for pid, why in sorted(held.items())]
+    if held:
+        out.append("")
 
     auto = {}	# board -> (bytes, sha256, part_sha256, file)
     seen = set()
@@ -90,11 +112,22 @@ def main():
         seen.add(key)
         if a.auto:
             b = c["board"]
+            if c["nand_profile_id"] in held:
+                continue
             if b not in auto:
                 name = f"h3c-hw-{b.lower()}.mbn"
                 data = open(os.path.join(a.auto, name), "rb").read()
-                if b"H3C-UBOOT-ID:v1;board=" + b.encode() + b";profile=auto;" not in data:
-                    sys.exit(f"{name}: not a NAND-auto build for HW-{b}")
+                # The whole MBN must be the normalized APPSBL container for the
+                # flash link address: a RAM rescue ELF, a truncated file or a
+                # stale hash is refused here, before any hash is trusted.
+                try:
+                    appsbl_packager.verify_mbn(data)
+                except appsbl_packager.PackError as e:
+                    sys.exit(f"{name}: {e}")
+                ident = b"H3C-UBOOT-ID:v1;board=" + b.encode() + \
+                    b";profile=auto;mask=none;ecc=none;\0"
+                if data.count(b"H3C-UBOOT-ID:v1;") != 1 or data.count(ident) != 1:
+                    sys.exit(f"{name}: not exactly one NAND-auto identity for HW-{b}")
                 if len(data) > c["appsbl_partition_bytes"]:
                     sys.exit(f"{name}: larger than the APPSBL partition")
                 part = data + b"\xff" * (c["appsbl_partition_bytes"] - len(data))

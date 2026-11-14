@@ -96,13 +96,36 @@ def _parse_stripped_elf(data: bytes) -> tuple[bytes, int]:
 def package_elf(data: bytes) -> bytes:
     """Return normalized MBN bytes, preserving the ELF LOAD payload verbatim."""
     load, entry = _parse_stripped_elf(data)
+    return _package_load(data[:ELF32_HEADER_SIZE], load, entry)
+
+
+def verify_mbn(mbn: bytes) -> None:
+    """Raise PackError unless mbn is exactly what package_elf() makes.
+
+    The MBN is rebuilt from its own ELF header and LOAD payload; any other
+    load address, layout, truncation or stale hash gives different bytes. A
+    RAM build (linked elsewhere) or a plain ELF never passes."""
+    if len(mbn) <= LOAD_OFFSET or len(mbn) > PARTITION_SIZE:
+        raise PackError("MBN size is outside the APPSBL contract")
+    if mbn[:7] != b"\x7fELF\x01\x01\x01":
+        raise PackError("MBN does not start with a little-endian ELF32 header")
+    fields = ELF_HEADER.unpack_from(mbn)
+    if fields[1] not in (ET_EXEC, ET_DYN) or fields[2] != EM_ARM or fields[3] != 1:
+        raise PackError("MBN header is not ARM ELF32")
+    if fields[4] != LOAD_ADDRESS:
+        raise PackError(f"MBN entry point 0x{fields[4]:08x} is not 0x{LOAD_ADDRESS:08x}")
+    if _package_load(mbn[:ELF32_HEADER_SIZE], mbn[LOAD_OFFSET:], LOAD_ADDRESS) != mbn:
+        raise PackError("MBN differs from the normalized APPSBL container")
+
+
+def _package_load(header: bytes, load: bytes, entry: int) -> bytes:
     size = LOAD_OFFSET + len(load)
     hash_address = (LOAD_ADDRESS + len(load) + 0xFFF) & ~0xFFF
     if size > PARTITION_SIZE:
         raise PackError("normalized MBN exceeds APPSBL partition size")
 
     out = bytearray(size)  # MBN header/hash area padding is zero-filled by contract.
-    out[:ELF32_HEADER_SIZE] = data[:ELF32_HEADER_SIZE]
+    out[:ELF32_HEADER_SIZE] = header
     struct.pack_into("<I", out, 24, entry)
     struct.pack_into("<I", out, 28, ELF32_HEADER_SIZE)
     struct.pack_into("<I", out, 32, 0)

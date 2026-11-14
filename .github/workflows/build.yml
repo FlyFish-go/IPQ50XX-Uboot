@@ -42,6 +42,7 @@ jobs:
         run: |
           python3 -I release-tools/test_dtbtools.py
           python3 -I release-tools/test_mkramuimg.py
+          python3 -I tools/bootbridge2/pack/test_make_rules.py
       - name: U-Boot host tests
         run: u-boot-2016/test/run_hosttests.sh
 
