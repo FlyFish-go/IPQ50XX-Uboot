@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the IPQ50XX-Uboot install guide as plain static HTML.
+"""Build the IPQ50XX-Uboot install guide as static HTML.
 
     pip install -r site/requirements.txt
     python3 site/build.py                    # writes site/dist/
@@ -14,10 +14,15 @@ Inputs, all under site/:
                        generated block, {{n_xxx}} inside text by a count.
     static/            copied as is (style.css, site.js, logo.svg, img/)
 
+Every page gets the same frame: top bar, the section list (SIDE) on the left,
+and on the right the list of its own <h2> headings. The drawings (install
+flow, flash layout, TTL wiring) are the fig_* functions below; pages place
+them with {{fig_flow}}, {{fig_flash}}, {{fig_wiring}}.
+
 Links inside the site are written as /path (no .html, no base) in pages and in
 the YAML; the build turns them into relative links and fails on any link or
 #anchor that does not exist. Pages work without JavaScript: static/site.js
-only adds the model filter and the copy buttons.
+only adds the model filter, the copy buttons and the current-heading mark.
 
 devices/<id>.yaml fields
     id, vendor, name           required; id = file name
@@ -35,6 +40,9 @@ devices/<id>.yaml fields
     hardware                   list of {label, value}
     slots.mechanism/note, slot_select, rescue.how/address, shell.access
     links                      list of {text, url}
+    photos                     list of {file, caption, credit}; file is under static/img/.
+                               Only our own photos or freely licensed ones, with the
+                               author and licence in credit.
 Short texts may use `code`, **bold**, [text](url) and, in longer ones,
 blank-line paragraphs and "- " lists. Install steps are not written in the
 YAML: ttl_steps() / web_steps() below generate them from these fields.
@@ -67,12 +75,20 @@ LINKS = {
 }
 QQ = '1131957442'
 
-NAV = [  # (link, text, page prefixes that light it up)
-    ('/devices/', '机型', ('devices/',)),
-    ('/install/', '安装', ('install/',)),
-    ('/use/', '装好以后', ('use/',)),
-    ('/help/', '出问题', ('help/',)),
-    ('/about', '关于', ('about.html', 'learn/', 'contribute/')),
+SIDE = [  # (group title or None, [(link, text)])
+    (None, [('/', '首页'), ('/devices/', '机型列表')]),
+    ('安装', [('/install/', '选哪种方式'),
+              ('/install/bootbridge', 'BootBridge 网页安装'),
+              ('/install/ttl', 'TTL 串口安装'),
+              ('/install/ram-trial', 'RAM 试跑'),
+              ('/install/shell', '系统内安装')]),
+    ('装好以后', [('/use/rescue', '进入救援页'),
+                  ('/use/firmware', '刷固件与切换系统'),
+                  ('/use/upgrade', '升级 U-Boot、回原厂')]),
+    ('帮助', [('/help/', '出问题怎么办'),
+              ('/learn/slots', '双系统怎么切换'),
+              ('/learn/glossary', '名词解释')]),
+    ('项目', [('/contribute/', '参与收录'), ('/about', '关于')]),
 ]
 
 # Old URLs that must keep working.
@@ -98,7 +114,8 @@ STEP_IDS = ('prepare', 'wire', 'network', 'interrupt', 'fdt', 'ramboot', 'rescue
             'model', 'oem', 'bridge', 'upload', 'install', 'upgrade')
 DEVICE_KEYS = {'id', 'order', 'vendor', 'name', 'aliases', 'soc', 'status', 'family', 'summary',
                'brief', 'hardware', 'tested', 'not_tested', 'differences', 'warnings', 'artifact',
-               'slots', 'install', 'ttl', 'notes', 'shell', 'rescue', 'slot_select', 'recovery', 'links'}
+               'slots', 'install', 'ttl', 'notes', 'shell', 'rescue', 'slot_select', 'recovery', 'links',
+               'photos'}
 
 
 class BuildError(Exception):
@@ -254,6 +271,74 @@ def aliases_of(d):
     return [a for a in d.get('aliases') or [] if a != d['name']]
 
 
+# ---------------------------------------------------------------- drawings
+
+def fig_flow():
+    """The TTL install in five stages; only the fourth writes flash."""
+    stages = [
+        ('', '接串口', '进入原厂 U-Boot 的命令行'),
+        ('', '内存里运行', 'TFTP 传入新 U-Boot，不写闪存'),
+        ('', '备份', '在救援页下载整片闪存'),
+        (' class="w"', '写入', '两份 APPSBL，写完读回核对'),
+        ('', '重启确认', '新 U-Boot 照常启动原厂系统'),
+    ]
+    items = ''.join(f'<li{c}><b>{esc(t)}</b>{esc(x)}</li>' for c, t, x in stages)
+    return (f'<ol class="flow">{items}</ol>\n'
+            '<p class="figcap">前三步不写闪存，断电就回到原样。只有第 4 步改动闪存。</p>')
+
+
+def fig_flash():
+    """Which partitions an install rewrites."""
+    segs = [
+        ('', 'SBL1 等', '更前面的启动程序，不动'),
+        (' new', 'APPSBL', '换成本项目的 U-Boot'),
+        (' new', 'APPSBL_1', '备用的一份，一起换'),
+        ('', 'ART', '无线校准数据，不动'),
+        (' big', 'rootfs', '系统一，不动'),
+        (' big', 'rootfs_1', '系统二，不动'),
+    ]
+    items = ''.join(f'<div class="seg{c}"><b>{esc(t)}</b>{esc(x)}</div>' for c, t, x in segs)
+    return (f'<div class="flash" role="img" aria-label="闪存分区示意：只有 APPSBL 和 APPSBL_1 被替换">{items}</div>\n'
+            '<p class="figcap">闪存分区示意，不按比例。各机型的分区名称、数量和顺序不一样；单系统机型没有 rootfs_1。</p>')
+
+
+def fig_wiring():
+    """Three wires between the router pads and the USB-TTL board."""
+    rows = [  # y, router pin, adapter pin, kind
+        (66, 'GND', 'GND', 'gnd'),
+        (104, 'TX', 'RX', 'out'),
+        (142, 'RX', 'TX', 'in'),
+        (180, 'VCC', 'VCC', 'no'),
+    ]
+    out = ['<svg class="wiring" viewBox="0 0 560 214" role="img" '
+           'aria-label="接线：GND 接 GND，路由器 TX 接串口板 RX，路由器 RX 接串口板 TX，VCC 不接">',
+           '<rect class="board" x="16" y="34" width="176" height="170" rx="6"/>',
+           '<rect class="board" x="368" y="34" width="176" height="170" rx="6"/>',
+           '<text class="cap" x="16" y="22">路由器主板</text>',
+           '<text class="cap" x="368" y="22">USB 转 TTL 串口板</text>']
+    for y, a, b, kind in rows:
+        out.append(f'<text class="pin" x="150" y="{y + 5}" text-anchor="end">{a}</text>')
+        out.append(f'<text class="pin" x="410" y="{y + 5}">{b}</text>')
+        if kind == 'no':
+            out.append(f'<text class="no" x="280" y="{y + 5}" text-anchor="middle">不接</text>')
+        elif kind == 'gnd':
+            out.append(f'<path class="wire gnd" d="M176 {y}H384"/>')
+        elif kind == 'out':
+            out.append(f'<path class="wire" d="M176 {y}H372"/>')
+            out.append(f'<path class="head" d="M384 {y}l-13 -6v12z"/>')
+        else:
+            out.append(f'<path class="wire" d="M188 {y}H384"/>')
+            out.append(f'<path class="head" d="M176 {y}l13 -6v12z"/>')
+        out.append(f'<circle class="pad" cx="170" cy="{y}" r="6"/>')
+        out.append(f'<circle class="pad" cx="390" cy="{y}" r="6"/>')
+    out.append('</svg>')
+    return ('\n'.join(out) + '\n<p class="figcap">箭头是数据方向：一边的 TX（发）接另一边的 RX（收）。'
+            '串口板上的 VCC、3V3、5V 都不接。</p>')
+
+
+FIGS = {'flow': fig_flow, 'flash': fig_flash, 'wiring': fig_wiring}
+
+
 # ---------------------------------------------------------------- install steps
 
 def ttl_steps(d, trial):
@@ -285,7 +370,7 @@ def ttl_steps(d, trial):
         '',
         '**VCC 不要接**，路由器用自己的电源。串口终端设成 115200、8N1、无流控。'
         '找焊盘的方法见 [TTL 串口安装](/install/ttl#接线)。',
-    ]), warn='电平接错可能烧坏主芯片的串口脚。没把握时，先用万用表量路由器 TX 对 GND 的电压：'
+    ]), fig='wiring', warn='电平接错可能烧坏主芯片的串口脚。没把握时，先用万用表量路由器 TX 对 GND 的电压：'
              '通电后在 1.8 V 左右，就必须用 1.8 V 电平。'))
 
     steps.append(dict(id='network', title='电脑接网线，设好地址', note=n.get('network'), body='\n'.join([
@@ -448,28 +533,37 @@ def web_steps(d):
     ]
 
 
+def term(label, text, out=False):
+    cls = 'term out' if out else 'term'
+    return (f'<div class="{cls}"><div class="term-h"><span>{esc(label)}</span></div>'
+            f'<pre><code>{esc(text)}</code></pre></div>')
+
+
 def render_steps(steps):
-    out = []
-    for i, s in enumerate(steps, 1):
-        out.append(f'<h3 id="step-{s["id"]}">{i}. {esc(s["title"])}</h3>')
+    out = ['<ol class="steps">']
+    for s in steps:
+        out.append(f'<li><h3 id="step-{s["id"]}">{esc(s["title"])}</h3>')
         out.append(text_block(s['body']))
+        if s.get('fig'):
+            out.append(FIGS[s['fig']]())
         if s.get('note'):
-            out.append(f'<p><strong>本机型：</strong>{inline(s["note"])}</p>')
+            out.append(f'<p class="thisdev"><strong>本机型：</strong>{inline(s["note"])}</p>')
         if s.get('cmd'):
-            out.append(f'<pre class="cmd"><code>{esc(s["cmd"])}</code></pre>')
+            out.append(term('在串口里输入', s['cmd']))
         if s.get('expect'):
-            out.append('<p class="label">应该看到：</p>')
-            out.append(f'<pre class="out"><code>{esc(s["expect"])}</code></pre>')
+            out.append(term('应该看到', s['expect'], out=True))
             if s.get('expect_note'):
                 out.append(f'<p class="hint">{inline(s["expect_note"])}</p>')
         if s.get('check'):
             out.append(f'<p><span class="label">应该看到：</span>{inline(s["check"])}</p>')
         if s.get('warn'):
-            out.append(f'<p><strong class="red">注意：</strong>{inline(s["warn"])}</p>')
+            out.append(f'<p class="warn"><strong>注意：</strong>{inline(s["warn"])}</p>')
         if s.get('stop'):
             out.append(f'<p><strong>{inline(s["stop"])}</strong></p>')
         if s.get('fail'):
             out.append(f'<details><summary>不对的话</summary>\n{text_block(s["fail"])}\n</details>')
+        out.append('</li>')
+    out.append('</ol>')
     return '\n'.join(out)
 
 
@@ -494,8 +588,6 @@ def download_cell(d, route, releases):
 def facts_of(d, route, releases):
     t = d.get('ttl') or {}
     rows = []
-    rows.append(('状态', '已验证' if route in ('web', 'ttl') and d['status'] == 'verified'
-                 else DEVICE_STATUS[d['status']] + ('，只能 RAM 试跑' if route == 'trial' else '')))
     if route == 'web':
         rows.append(('安装方式', inline('[BootBridge 网页安装](/install/bootbridge)，不用拆机')))
         rows.append(('需要的原厂版本', f'<code>{esc(d["install"]["oem_firmware"])}</code>'))
@@ -512,12 +604,21 @@ def facts_of(d, route, releases):
     for h in d.get('hardware') or []:
         if h['label'] == '硬件组':
             rows.append(('硬件组', inline(h['value'])))
-    if d.get('slots'):
-        rows.append(('双系统', esc(MECHANISM[d['slots']['mechanism']])))
-    if d.get('soc'):
-        rows.append(('芯片', esc(d['soc'])))
     rows.append(('下载', download_cell(d, route, releases)))
     return rows
+
+
+def status_line(d, route):
+    if route == 'trial':
+        parts = ['<span class="dot untested"></span><b>未验证</b>', '只能 RAM 试跑，不写闪存']
+    else:
+        parts = [f'<span class="dot"></span><b>{DEVICE_STATUS[d["status"]]}</b>',
+                 'BootBridge 网页安装，不用拆机' if route == 'web' else 'TTL 串口安装，要拆机']
+    if d.get('soc'):
+        parts.append(esc(d['soc']))
+    if d.get('slots'):
+        parts.append(esc(MECHANISM[d['slots']['mechanism']]))
+    return '<p class="meta">' + '<span class="sep">|</span>'.join(parts) + '</p>'
 
 
 def device_page(d, releases):
@@ -531,9 +632,16 @@ def device_page(d, releases):
     if route == 'trial':
         out.append('<p class="caution"><strong>未验证，不要写进闪存。</strong>这块板有构建，但还没有人在真机上跑过。'
                    '下面的步骤只把 U-Boot 放进内存里运行一次，断电就回到原样。</p>')
+    out.append(status_line(d, route))
     if d.get('summary'):
         out.append(f'<p>{inline(d["summary"])}</p>')
-    out.append(kv_table(facts_of(d, route, releases)))
+    for ph in d.get('photos') or []:
+        cap = inline(ph.get('caption', ''))
+        if ph.get('credit'):
+            cap += f' <span class="credit">照片：{inline(ph["credit"])}</span>'
+        out.append(f'<figure class="photo"><img src="/img/{esc(ph["file"])}" alt="{esc(full_name(d))}" loading="lazy">'
+                   f'<figcaption>{cap}</figcaption></figure>')
+    out.append(f'<div class="facts">{kv_table(facts_of(d, route, releases))}</div>')
 
     toc = [('install', '试跑步骤' if route == 'trial' else '安装步骤')]
     if route != 'trial':
@@ -544,7 +652,7 @@ def device_page(d, releases):
         toc.append(('hardware', '硬件资料'))
     if d.get('recovery'):
         toc.append(('recovery', '出问题怎么办'))
-    out.append('<p class="toc">本页：' + ' · '.join(f'<a href="#{i}">{esc(t)}</a>' for i, t in toc) + '</p>')
+    out.append('<p class="toc-inline">本页：' + ' · '.join(f'<a href="#{i}">{esc(t)}</a>' for i, t in toc) + '</p>')
 
     if d.get('warnings'):
         out.append('<h2 id="warnings">动手前先看</h2>')
@@ -557,6 +665,7 @@ def device_page(d, releases):
     if route == 'ttl':
         out.append(text_block('大致流程：接好串口，在原厂 U-Boot 里把新 U-Boot 加载到内存运行（这一步不写闪存），'
                               '在它的救援页里备份整片闪存，最后写入。第一次做，建议先读一遍 [TTL 串口安装](/install/ttl)。'))
+        out.append(fig_flow())
     elif route == 'trial':
         out.append(text_block('下面只把 U-Boot 加载到内存里跑一次，断电就恢复原样。为什么要试跑、要记录什么，'
                               '见 [RAM 试跑](/install/ram-trial)。'))
@@ -645,16 +754,16 @@ def device_list(devices, others):
         return esc(m['name'])
 
     out = []
-    out.append(f'<section data-group><h2 id="ok">可以装 <span class="n">{len(ok)}</span></h2>')
+    out.append(f'<section data-group><h2 id="ok"><span class="dot"></span>可以装 <span class="n">{len(ok)}</span></h2>')
     out.append('<p>点机型名进入它的安装步骤。</p>')
     out.append(verified_table(devices) + '</section>')
 
-    out.append(f'<section data-group><h2 id="untested">有构建，未验证 <span class="n">{len(trial)}</span></h2>')
+    out.append(f'<section data-group><h2 id="untested"><span class="dot untested"></span>有构建，未验证 <span class="n">{len(trial)}</span></h2>')
     out.append(text_block('还没有人在真机上跑过。只给能接 TTL 的人做 [RAM 试跑](/install/ram-trial)，不要写进闪存。'))
     out.append(table(['机型', '说明'], [([name_cell(d), inline(d.get('brief', ''))], f' data-k="{esc(keys_of(d))}"')
                                        for d in trial], 'devs') + '</section>')
 
-    out.append(f'<section data-group><h2 id="planned">规划中 <span class="n">{len(planned)}</span></h2>')
+    out.append(f'<section data-group><h2 id="planned"><span class="dot planned"></span>规划中 <span class="n">{len(planned)}</span></h2>')
     out.append(text_block('还没有构建，请不要刷。打算以后支持，下面写了现在卡在哪里。手里有这些机器、能接 TTL 的，'
                           '欢迎[参与收录](/contribute/)。'))
     out.append(table(['机型', '已知情况', '还缺什么'],
@@ -662,7 +771,7 @@ def device_list(devices, others):
                       for m in planned], 'devs others') + '</section>')
 
     if wontdo:
-        out.append(f'<section data-group><h2 id="wontdo">不打算做 <span class="n">{len(wontdo)}</span></h2>')
+        out.append(f'<section data-group><h2 id="wontdo"><span class="dot wontdo"></span>不打算做 <span class="n">{len(wontdo)}</span></h2>')
         out.append(table(['机型', '原因'], [([other_name(m), inline(m['reason'])], f' data-k="{esc(keys_of(m))}"')
                                           for m in wontdo], 'devs') + '</section>')
     out.append('<p id="none" hidden>没有匹配的机型。可能还没收录，换个写法试试（只输型号，不带品牌）。</p>')
@@ -670,8 +779,17 @@ def device_list(devices, others):
 
 
 def device_filter():
-    return ('<p class="filter" hidden><label for="q">筛选</label> '
+    return ('<p class="filter" hidden><label for="q">按型号筛选</label>'
             '<input id="q" type="search" placeholder="输入型号，例如 VS010、AX6000" autocomplete="off"></p>')
+
+
+def home_finder():
+    """On the front page: a plain form that opens the model list with ?q= filled in."""
+    return ('<form class="finder" action="/devices/" method="get" role="search">'
+            '<label for="hq">先找你的机型</label>'
+            '<div><input id="hq" name="q" type="search" autocomplete="off" '
+            'placeholder="路由器底部铭牌上的型号，例如 CR8806、VS010、RT3000">'
+            '<button type="submit">查找</button></div></form>')
 
 
 def oem_table(devices):
@@ -746,12 +864,38 @@ def render_markdown(text):
     return out.replace('<table>', '<div class="tw"><table>').replace('</table>', '</table></div>')
 
 
+def side_nav(page):
+    here = page[:-len('index.html')] if page.endswith('index.html') else page
+    if here.startswith('devices/'):
+        here = 'devices/'
+    out = []
+    for title, items in SIDE:
+        if title:
+            out.append(f'<p class="g">{esc(title)}</p>')
+        out.append('<ul>')
+        for href, text in items:
+            cls = ' class="on"' if target_of(href)[0] == here else ''
+            out.append(f'<li><a href="{href}"{cls}>{esc(text)}</a></li>')
+        out.append('</ul>')
+    out.append(f'<p class="contact">QQ 群 {QQ}<br><a href="{LINKS["issues"]}">GitHub Issues</a><br>'
+               f'<a href="{LINKS["sponsor"]}">爱发电</a></p>')
+    return '\n'.join(out)
+
+
+def page_toc(body):
+    """The page's own <h2> headings, for the right-hand column."""
+    heads = re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', body, re.S)
+    if len(heads) < 2:
+        return ''
+
+    def clean(h):
+        return re.sub(r'<[^>]+>', '', re.sub(r'<span class="n">.*?</span>', '', h)).strip()
+
+    items = ''.join(f'<li><a href="#{i}">{clean(h)}</a></li>' for i, h in heads)
+    return f'<aside class="toc" aria-label="本页内容"><p>本页</p><ul>{items}</ul></aside>'
+
+
 def layout(page, title, body, description='', full_title=None):
-    nav = []
-    for href, text, prefixes in NAV:
-        cls = ' class="on"' if any(page.startswith(p) for p in prefixes) else ''
-        nav.append(f'<a href="{href}"{cls}>{esc(text)}</a>')
-    nav.append(f'<a href="{LINKS["repo"]}">GitHub</a>')
     desc = f'\n<meta name="description" content="{esc(description)}">' if description else ''
     return f'''<!doctype html>
 <html lang="zh-CN">
@@ -763,16 +907,22 @@ def layout(page, title, body, description='', full_title=None):
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header class="top"><div class="wrap">
-<a class="name" href="/">{NAME}</a>
-<nav>{" ".join(nav)}</nav>
-</div></header>
-<main class="wrap">
+<input type="checkbox" id="nav-open" class="nav-open" aria-label="打开目录">
+<header class="top">
+<a class="brand" href="/"><img src="/logo.svg" alt="" width="24" height="24">{NAME}<small>安装指南</small></a>
+<a class="ext" href="{LINKS["repo"]}">GitHub</a>
+<label class="menu" for="nav-open">目录</label>
+</header>
+<div class="shell">
+<nav class="side" aria-label="目录">
+{side_nav(page)}
+</nav>
+<main class="doc">
 {body}
+<footer class="foot">U-Boot 遵循 GPL-2.0。本项目与各路由器厂商无关。</footer>
 </main>
-<footer class="foot"><div class="wrap">
-U-Boot 遵循 GPL-2.0。本项目与各路由器厂商无关。QQ 群 {QQ} · <a href="{LINKS["issues"]}">Issues</a> · <a href="{LINKS["sponsor"]}">爱发电</a>
-</div></footer>
+{page_toc(body)}
+</div>
 <script src="/site.js" defer></script>
 </body>
 </html>
@@ -803,7 +953,7 @@ def fix_links(page, text):
         url = BASE + path if page == '404.html' else rel(page, path)
         return f'{attr}="{url}{rest}"'
 
-    text = re.sub(r'\b(href|src)="(/(?!/)[^"]*)"', internal, text)
+    text = re.sub(r'\b(href|src|action)="(/(?!/)[^"]*)"', internal, text)
     return re.sub(r'<a href="(https?://[^"]+)"', r'<a href="\1" target="_blank" rel="noreferrer"', text)
 
 
@@ -862,6 +1012,10 @@ def build(out):
     blocks = {
         'verified_table': lambda: verified_table(devices),
         'device_filter': device_filter,
+        'home_finder': home_finder,
+        'fig_flow': fig_flow,
+        'fig_flash': fig_flash,
+        'fig_wiring': fig_wiring,
         'device_list': lambda: device_list(devices, others),
         'oem_table': lambda: oem_table(devices),
         'rescue_table': lambda: rescue_table(devices),
