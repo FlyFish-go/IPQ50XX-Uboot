@@ -29,6 +29,7 @@ EM_ARM = 40
 PT_LOAD = 1
 PT_GNU_STACK = 0x6474E551
 LOAD_ADDRESS = 0x4A920000
+SDRAM_END = 0x4AA00000  # end of the audited APPSBL SDRAM window (LOAD <= 0xe0000 bytes)
 HASH_OFFSET = 0x1000
 HASH_SIZE = 0xA8
 LOAD_OFFSET = 0x3000
@@ -86,7 +87,7 @@ def _parse_stripped_elf(data: bytes) -> tuple[bytes, int]:
     stack = stack_rows[0]
     if stack != (PT_GNU_STACK, 0, 0, 0, 0, 0, 7, 0x10):
         raise PackError("GNU_STACK row differs from supported empty executable-stack record")
-    if LOAD_ADDRESS + filesz > 0x4AA00000:
+    if LOAD_ADDRESS + filesz > SDRAM_END:
         raise PackError("LOAD segment exceeds the audited APPSBL SDRAM window")
     if filesz > PARTITION_SIZE - LOAD_OFFSET:
         raise PackError("LOAD segment cannot fit without truncation in APPSBL partition")
@@ -119,6 +120,12 @@ def verify_mbn(mbn: bytes) -> None:
 
 
 def _package_load(header: bytes, load: bytes, entry: int) -> bytes:
+    # Every payload limit lives here, so package_elf() and verify_mbn()
+    # cannot drift apart.
+    if not load:
+        raise PackError("LOAD segment is empty")
+    if LOAD_ADDRESS + len(load) > SDRAM_END:
+        raise PackError("LOAD segment exceeds the audited APPSBL SDRAM window")
     size = LOAD_OFFSET + len(load)
     hash_address = (LOAD_ADDRESS + len(load) + 0xFFF) & ~0xFFF
     if size > PARTITION_SIZE:

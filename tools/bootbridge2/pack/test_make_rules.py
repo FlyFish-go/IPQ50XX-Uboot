@@ -95,6 +95,33 @@ def main():
         except ap.PackError:
             check(True, f"verify_mbn refuses {name}")
 
+    # SDRAM window: a LOAD of exactly 0xe0000 bytes ends at 0x4aa00000 and fits;
+    # one byte more must be refused by both the packager and the verifier.
+    limit = ap.SDRAM_END - FLASH
+    edge = ap.package_elf(elf(FLASH, ident("A") + b"\x03" * (limit - len(ident("A")))))
+    try:
+        ap.verify_mbn(edge)
+        check(True, "LOAD of 0xe0000 bytes accepted")
+    except ap.PackError as e:
+        check(False, f"LOAD of 0xe0000 bytes accepted ({e})")
+    over_elf = elf(FLASH, ident("A") + b"\x03" * (limit + 1 - len(ident("A"))))
+    try:
+        ap.package_elf(over_elf)
+        check(False, "package_elf refuses a LOAD of 0xe0001 bytes")
+    except ap.PackError:
+        check(True, "package_elf refuses a LOAD of 0xe0001 bytes")
+    saved = ap.SDRAM_END
+    ap.SDRAM_END = saved + 0x1000	# build the oversize MBN the packager would refuse
+    try:
+        over = ap.package_elf(over_elf)
+    finally:
+        ap.SDRAM_END = saved
+    try:
+        ap.verify_mbn(over)
+        check(False, "verify_mbn refuses a LOAD of 0xe0001 bytes")
+    except ap.PackError:
+        check(True, "verify_mbn refuses a LOAD of 0xe0001 bytes")
+
     with tempfile.TemporaryDirectory() as d:
         args = setup(d, {})
         rc, out, err = run("make_rules.py", *args)
