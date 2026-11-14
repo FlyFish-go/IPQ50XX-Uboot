@@ -766,6 +766,10 @@ bool is_memory_region_available(uintptr_t load_addr, size_t size)
 	if (!is_load_addr_valid(load_addr))
 		return false;
 
+	/* A huge size (an HTTP Content-Length) must not wrap end_addr. */
+	if (size > (uintptr_t)-1 - load_addr)
+		return false;
+
 	end_addr = load_addr + size;
 
 	/*

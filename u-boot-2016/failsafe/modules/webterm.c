@@ -28,6 +28,7 @@
 #include <part.h>
 #include <u-boot/md5.h>
 #include <failsafe/fw_dec.h>
+#include <failsafe/failsafe.h>
 #include <capture.h>
 
 #include "modules.h"
@@ -181,6 +182,12 @@ static void webterm_exec_handler(enum httpd_uri_handler_status status,
 
 		printf("\nIPQ# %s\n", echo_str);
 
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+		/* A command may rewrite the shared upload RAM (cp, mw, flashread
+		 * ...): a validated /upload, or an INITRAMFS waiting to boot,
+		 * is no longer trusted and must be uploaded again. */
+		failsafe_upload_invalidate();
+#endif
 		ret = call_func_capture(webterm_run_command, command.data,
 				output_buf, output_buf_size, &out_len);
 
