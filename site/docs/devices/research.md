@@ -37,6 +37,7 @@ outline: [2, 3]
 | TP-Link Archer AX55 v1、EAP650、RE700X，Mercusys MR80X v2 | 要用 `tp_boot_idx` 环境变量切换系统，这个后端还没写 |
 | Linksys MR / MX / SPNMX56 系列 | 要用 `boot_part` 环境变量，后端还没写；MX6200 还开了安全启动 |
 | Netgear WAX630E | 需要 `boot_count` 后端 |
+| GL.iNet GL-B3000 | 原厂 U-Boot 自带网页救援，收录价值低（不收） |
 | Lite-On WPX8324 | 从 SPI NOR 启动，和本项目的 NAND 流程不同 |
 | UniFi 6 Pro、AVM 4050 | 用厂商自己的引导程序，不是 QSDK U-Boot |
 
