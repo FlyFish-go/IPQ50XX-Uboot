@@ -3,10 +3,12 @@
 """Build a BootBridge v2 rule pack (format: runtime/pack.h).
 
     make_pack.py --rules rules.txt --dist DIR --candidates CANDIDATES.json -o rules.bbpack
+    make_pack.py --rules rules.txt --auto DIR -o rules.bbpack
 
-Every `candidate` line of the rule file must have its file in DIR (the
-extracted U-Boot release, HW-<board>/<model>-ECC<n>/appsbl.mbn). Output is
-deterministic: same inputs, same bytes.
+Every `candidate` line of the rule file must have its file in DIR: the
+extracted per-NAND U-Boot release (HW-<board>/<model>-ECC<n>/appsbl.mbn), or
+with --auto the folder of h3c-hw-<x>.mbn. Candidates that share a file are
+stored once. Output is deterministic: same inputs, same bytes.
 """
 import argparse
 import hashlib
@@ -32,23 +34,40 @@ def candidate_lines(rules):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rules", required=True)
-    ap.add_argument("--dist", required=True)
-    ap.add_argument("--candidates", required=True, help="CANDIDATES.json of the release")
+    ap.add_argument("--dist")
+    ap.add_argument("--candidates", help="CANDIDATES.json of the release (with --dist)")
+    ap.add_argument("--auto", help="folder with h3c-hw-<x>.mbn")
     ap.add_argument("-o", "--output", required=True)
     a = ap.parse_args()
+    if bool(a.auto) == bool(a.dist) or (a.dist and not a.candidates):
+        sys.exit("give either --auto DIR, or --dist DIR with --candidates")
 
     rules = open(a.rules, "rb").read()
     folders = {}
-    for c in json.load(open(a.candidates))["candidates"]:
-        cid = f"{c['board']}-{c['nand_profile_id']}-ecc{c['storage_ecc_bits']}"
-        folders[cid] = c["folder"]
+    if a.dist:
+        for c in json.load(open(a.candidates))["candidates"]:
+            cid = f"{c['board']}-{c['nand_profile_id']}-ecc{c['storage_ecc_bits']}"
+            folders[cid] = c["folder"]
 
+    stored = {}	# file -> (bytes, sha256) already in the archive
     tar_buf = io.BytesIO()
     with tarfile.open(fileobj=tar_buf, mode="w", format=tarfile.USTAR_FORMAT) as tar:
         for cid, kv in sorted(candidate_lines(rules.decode())):
-            data = open(os.path.join(a.dist, folders[cid], "appsbl.mbn"), "rb").read()
+            if kv["file"] in stored:
+                if stored[kv["file"]] != (kv["bytes"], kv["sha256"]):
+                    sys.exit(f"{cid}: {kv['file']} listed with two different payloads")
+                continue
+            if a.auto:
+                name = os.path.basename(kv["file"])
+                if not (name.startswith("h3c-hw-") and name.endswith(".mbn")):
+                    sys.exit(f"{cid}: {kv['file']} is not an h3c-hw-<x>.mbn")
+                path = os.path.join(a.auto, name)
+            else:
+                path = os.path.join(a.dist, folders[cid], "appsbl.mbn")
+            data = open(path, "rb").read()
             if len(data) != int(kv["bytes"]) or hashlib.sha256(data).hexdigest() != kv["sha256"]:
                 sys.exit(f"{cid}: payload differs from the rule file")
+            stored[kv["file"]] = (kv["bytes"], kv["sha256"])
             info = tarfile.TarInfo(kv["file"])
             info.size = len(data)
             info.mode = 0o644

@@ -4,10 +4,18 @@
 
     make_rules.py --candidates CANDIDATES.json --nand-profiles nand_profiles.json \
                   --set BB2-R1 [--dist DIR] > rules.txt
+    make_rules.py --candidates CANDIDATES.json --nand-profiles nand_profiles.json \
+                  --set BB2-R4 --auto DIR [--release v0.2.0] > rules.txt
 
 CANDIDATES.json comes from the U-Boot release (uboot-v0.1.0-pre.3 and later).
 The NAND profile list is the U-Boot NAND catalog in JSON form. With --dist,
 every candidate's appsbl.mbn is checked against the recorded size and hash.
+
+With --auto (U-Boot v0.2.0 and later) DIR holds one NAND-auto image per board,
+h3c-hw-<x>.mbn, which finds the NAND profile and ECC itself at boot. The
+CANDIDATES.json of the last per-NAND release still decides which board, NAND
+and ECC combinations are accepted (a chip outside it is refused as before);
+every accepted combination of a board installs that board's one image.
 """
 import argparse
 import hashlib
@@ -49,19 +57,28 @@ def main():
     ap.add_argument("--nand-profiles", required=True)
     ap.add_argument("--set", required=True)
     ap.add_argument("--dist", help="extracted release folders HW-<board>/<model>-ECC<n>/")
+    ap.add_argument("--auto", help="folder with the per-board NAND-auto images h3c-hw-<x>.mbn")
+    ap.add_argument("--release", default="", help="U-Boot release of the --auto images, for the header")
     a = ap.parse_args()
+    if a.auto and a.dist:
+        sys.exit("--auto and --dist exclude each other")
 
     cands = json.load(open(a.candidates))
     profiles = {p["profile_id"]: p for p in json.load(open(a.nand_profiles))["profiles"]}
 
-    out = ["bbrules 1", f"set {a.set}", f"# from {cands.get('release', '?')} "
-           f"source {cands.get('source_commit', '?')}", "", BOARD_RULES]
+    if a.auto:
+        origin = f"# U-Boot {a.release or '?'}: one NAND-auto image per board; " \
+                 f"accepted NAND/ECC from {cands.get('release', '?')}"
+    else:
+        origin = f"# from {cands.get('release', '?')} source {cands.get('source_commit', '?')}"
+    out = ["bbrules 1", f"set {a.set}", origin, "", BOARD_RULES]
     used = sorted({c["nand_profile_id"] for c in cands["candidates"]})
     missing = [u for u in used if u not in profiles]
     if missing:
         sys.exit(f"candidates use unknown NAND profiles: {missing}")
     out += [nand_rule(profiles[u]) for u in used] + [""]
 
+    auto = {}	# board -> (bytes, sha256, part_sha256, file)
     seen = set()
     for c in sorted(cands["candidates"], key=lambda c: (c["board"], c["nand_profile_id"],
                                                          c["storage_ecc_bits"])):
@@ -71,6 +88,25 @@ def main():
         if key in seen:
             sys.exit(f"duplicate candidate {key}")
         seen.add(key)
+        if a.auto:
+            b = c["board"]
+            if b not in auto:
+                name = f"h3c-hw-{b.lower()}.mbn"
+                data = open(os.path.join(a.auto, name), "rb").read()
+                if b"H3C-UBOOT-ID:v1;board=" + b.encode() + b";profile=auto;" not in data:
+                    sys.exit(f"{name}: not a NAND-auto build for HW-{b}")
+                if len(data) > c["appsbl_partition_bytes"]:
+                    sys.exit(f"{name}: larger than the APPSBL partition")
+                part = data + b"\xff" * (c["appsbl_partition_bytes"] - len(data))
+                auto[b] = (len(data), hashlib.sha256(data).hexdigest(),
+                           hashlib.sha256(part).hexdigest(), f"candidates/{name}")
+            size, sha, part_sha, path = auto[b]
+            cid = f"HW-{b}-auto-{c['nand_profile_id']}-ecc{c['storage_ecc_bits']}"
+            out.append(f"candidate {cid} board={b} nand={c['nand_profile_id']} "
+                       f"ecc={c['storage_ecc_bits']} bytes={size} sha256={sha} "
+                       f"part_bytes={c['appsbl_partition_bytes']} part_sha256={part_sha} "
+                       f"file={path}")
+            continue
         cid = f"{c['board']}-{c['nand_profile_id']}-ecc{c['storage_ecc_bits']}"
         if a.dist:
             path = os.path.join(a.dist, c["folder"], "appsbl.mbn")

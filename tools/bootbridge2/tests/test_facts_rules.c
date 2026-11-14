@@ -138,8 +138,15 @@ static void test_samples(const struct bb_rules *r)
 		CHECK(d.code == BB_DEC_OK, "%s: %s (%s)", s->name, bb_decide_str(d.code), d.detail);
 		CHECK(!strcmp(d.board, s->want_board), "%s: board %s want %s", s->name, d.board,
 		      s->want_board);
-		CHECK(d.cand && !strcmp(d.cand->id, s->want_cand), "%s: candidate %s want %s", s->name,
-		      d.cand ? d.cand->id : "-", s->want_cand);
+		/* Compare what gets installed (board, NAND profile, ECC), not the
+		 * id: a per-NAND pack names it "B-<nand>-ecc8", a NAND-auto pack
+		 * "HW-B-auto-<nand>-ecc8". want_cand is "<board>-<nand>-ecc<n>". */
+		char got[160] = "-";
+		if (d.cand)
+			snprintf(got, sizeof(got), "%s-%s-ecc%u", d.cand->board, d.cand->nand,
+				 d.cand->ecc);
+		CHECK(d.cand && !strcmp(got, s->want_cand), "%s: candidate %s (%s) want %s", s->name,
+		      d.cand ? d.cand->id : "-", got, s->want_cand);
 	}
 }
 

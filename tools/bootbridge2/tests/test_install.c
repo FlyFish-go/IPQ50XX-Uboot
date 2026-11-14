@@ -140,7 +140,8 @@ int main(void)
 	text = strndup(pack.rules, pack.rules_len);
 	CHECK(!bb_rules_load(&rules, text, NULL), "pack rules load");
 	for (unsigned i = 0; i < rules.ncand; i++)
-		if (!strcmp(rules.cand[i].id, "B-h3c-oem-c841-128m-2k-sp128-ecc8"))
+		if (!strcmp(rules.cand[i].board, "B") &&
+		    !strcmp(rules.cand[i].nand, "h3c-oem-c841-128m-2k-sp128") && rules.cand[i].ecc == 8)
 			cand = &rules.cand[i];
 	CHECK(cand, "candidate present");
 	if (!cand)
