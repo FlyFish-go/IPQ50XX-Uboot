@@ -59,5 +59,9 @@ int print_bootconfig(void);
 int get_bootconfig(const char *part_name);
 int set_bootconfig(const char *part_name, uint32_t value);
 bool validate_bootconfig(void);
+/* The value SBL booted @entry with this time (SMEM), 0 without dual-boot
+ * info. SBL names that copy plainly and the other one with "_1", so flag
+ * value v is the partition "<entry>" when v equals this, else "<entry>_1". */
+unsigned int bootconfig_booted_flag(const char *entry);
 
 #endif /* __BOOTCONFIG_H__ */

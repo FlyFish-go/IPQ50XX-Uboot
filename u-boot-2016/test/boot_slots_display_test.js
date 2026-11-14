@@ -142,11 +142,13 @@ function findLine(root, prefix) {
           version: 'OpenWrt 24.10.0', kernel: '6.6.73', boot_command: '' },
         { name: 'rootfs_1', slot: 1, physical_index: 2, offset: '0x4600000', size: '0x1e00000', known: false, type: 'unknown',
           version: 'unknown', kernel: '', boot_command: '' }
-    ], 'zh-cn', { boot_supported: false, read_only: false });
+    ], 'zh-cn', { boot_supported: false, default_supported: true, read_only: false });
     assert(generic.inner.textContent.includes('设为默认后，重启路由器即启动该系统。'));
     assert(generic.inner.textContent.includes('系统：OpenWrt 24.10.0 · Linux 6.6.73'));
     const genericBoot = generic.inner.findAll('button').filter(button => button.textContent.startsWith('启动 '));
     assert(genericBoot.length === 2 && genericBoot.every(b => b.hidden === true && b.disabled === true));
+    const genericDefaults = generic.inner.findAll('input').filter(input => input.type === 'checkbox');
+    assert(genericDefaults.length === 2 && genericDefaults.every(c => c.disabled !== true), 'set-as-default must stay usable');
 
     console.log('PASS: plain partition names, capacities, release-text + kernel identity rows, unread slots, release-file version display, safe text rendering, name-derived bootipq commands, generic boards without boot-once');
 })().catch(error => { console.error(error); process.exitCode = 1; });

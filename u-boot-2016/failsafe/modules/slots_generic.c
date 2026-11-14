@@ -66,7 +66,7 @@ static void format(void)
 	int len, n;
 
 	len = snprintf(gjson, sizeof(gjson),
-		       "{\"read_only\":false,\"boot_supported\":false,\"mode\":\"%s\",\"count\":%u,\"slots\":[",
+		       "{\"read_only\":false,\"boot_supported\":false,\"default_supported\":true,\"mode\":\"%s\",\"count\":%u,\"slots\":[",
 		       gslot_n == 2 ? "dual" : "single", gslot_n);
 	for (i = 0; i < gslot_n && len > 0 && (size_t)len < sizeof(gjson); i++) {
 		const struct gslot *g = &gslots[i];
@@ -77,7 +77,7 @@ static void format(void)
 			phys = 2;
 		json_escape(s, sys, sizeof(sys));
 		json_escape(g->probe.kernel, ker, sizeof(ker));
-		json_escape(g->ret ? g->probe.error : "", err, sizeof(err));
+		json_escape(g->probe.error, err, sizeof(err));
 		n = snprintf(gjson + len, sizeof(gjson) - len,
 			     "%s{\"name\":\"%s\",\"part_name\":\"%s\",\"slot\":%u,\"display_index\":%u,\"physical_index\":%u,"
 			     "\"offset\":\"0x%x\",\"physical_end\":\"0x%x\",\"size\":\"0x%x\",\"boot_command\":\"\","
@@ -86,7 +86,8 @@ static void format(void)
 			     i ? "," : "", g->part, g->part, g->slot, i, phys,
 			     g->offset, g->offset + g->size - 1, g->size,
 			     s[0] ? sys : "Unknown system", s[0] ? "true" : "false",
-			     g->ret ? "unreadable" : s[0] ? "rootfs_release_file" : "no_release_file",
+			     g->ret ? "unreadable" : g->probe.error[0] ? "rootfs_unreadable" :
+			     s[0] ? "rootfs_release_file" : "no_release_file",
 			     !s[0] ? "unknown" : !strncmp(s, "OpenWrt ", 8) ? "OpenWrt" :
 			     !strncmp(s, "ImmortalWrt ", 12) ? "ImmortalWrt" : "Other",
 			     s[0] ? sys : "unknown", ker, err);
@@ -140,7 +141,7 @@ static void default_handler(enum httpd_uri_handler_status status,
 	struct httpd_form_value *v = NULL;
 	const char *cur;
 	unsigned int i, want = SLOT_N, found = 0;
-	int ret;
+	int ret, before;
 
 	if (status != HTTP_CB_NEW)
 		return;
@@ -177,10 +178,17 @@ static void default_handler(enum httpd_uri_handler_status status,
 		answer(response, 400, "{\"status\":\"fail\",\"error\":\"invalid_target\"}");
 		return;
 	}
+	before = slot_default_rootfs();
 	ret = slot_set_default(want);
 	if (ret) {
+		/* Refused before writing only if the stored choice is unchanged
+		 * and readable; otherwise a copy may already differ. */
+		int after = slot_default_rootfs();
+
 		snprintf(reply, sizeof(reply),
-			 "{\"status\":\"fail\",\"error\":\"default_not_saved\",\"errno\":%d}", ret);
+			 "{\"status\":\"%s\",\"error\":\"default_not_saved\",\"errno\":%d}",
+			 after >= 0 && after == before && (unsigned int)after != want ?
+			 "fail" : "partial", ret);
 		answer(response, 409, reply);
 		return;
 	}

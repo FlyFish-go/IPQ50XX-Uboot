@@ -4,9 +4,20 @@
 #include <environment.h>
 #include <linux/crc32.h>
 #include <asm/errno.h>
-#include <ubi_uboot.h>
 #include <squashfs_release.h>
 #include <slot_probe.h>
+
+#ifndef CONFIG_CMD_UBI
+/* No UBI in this build: nothing can be read from a slot. */
+int slot_probe_read(const char *part_name, unsigned long long offset,
+		    unsigned long long size, struct slot_probe *p)
+{
+	memset(p, 0, sizeof(*p));
+	strlcpy(p->error, "no_ubi_support", sizeof(p->error));
+	return -ENOSYS;
+}
+#else
+#include <ubi_uboot.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -15,6 +26,9 @@ extern long long ubi_get_volume_size(char *volume);
 #define PROBE_ADDR	0x42000000UL
 #define PROBE_MAX	0x02000000U	/* 32 MiB: below the 0x44000000 upload buffer */
 #define PROBE_END	(PROBE_ADDR + PROBE_MAX)
+/* The top 1 MiB is the SquashFS decode area; the heap is too small on some boards. */
+#define PROBE_WORK	(PROBE_END - RT3_SQUASHFS_WORK_MAX)
+#define PROBE_IMAGE_MAX	(PROBE_MAX - RT3_SQUASHFS_WORK_MAX)
 #define KERNEL_HEAD	0x10000U	/* the kernel image name sits in the first bytes */
 #define SB_SIZE		96U
 #define SQUASH_MAGIC	0x73717368U
@@ -95,7 +109,7 @@ static int squashfs_used(const u8 *sb, u64 volume_size, u64 *used)
 	*used = le32(sb + 40) | ((u64)le32(sb + 44) << 32);
 	if (le32(sb + 12) < 4096 || le32(sb + 12) > 1048576 ||
 	    sb[28] != 4 || sb[30] != 0 || *used < SB_SIZE ||
-	    *used > PROBE_MAX || *used > volume_size)
+	    *used > PROBE_IMAGE_MAX || *used > volume_size)
 		return -EFBIG;
 	return 0;
 }
@@ -115,21 +129,42 @@ static void probe_kernel(struct ubi_volume *v, struct slot_probe *p)
 }
 
 /* rootfs (OpenWrt) or ubi_rootfs (QSDK); other volumes such as wifi_fw may
- * also hold SquashFS and are not the system. */
+ * also hold SquashFS and are not the system. A read or format problem is
+ * reported in p->error; a SquashFS without a release file is not an error. */
 static void probe_rootfs(struct ubi_volume *v, struct slot_probe *p)
 {
 	long long vsize = ubi_get_volume_size(v->name);
+	const char *err = NULL;
 	u64 used;
+	int r;
 
-	if (p->system[0] || vsize < SB_SIZE)
+	if (p->system[0] || p->error[0] || vsize <= 0)
 		return;
-	if (ubi_volume_read(v->name, (char *)PROBE_ADDR, SB_SIZE) ||
-	    squashfs_used((const u8 *)PROBE_ADDR, (u64)vsize, &used) ||
-	    ubi_volume_read(v->name, (char *)PROBE_ADDR, (size_t)used))
-		return;
-	if (rt3_squashfs_read_release((const void *)PROBE_ADDR, (size_t)used,
-				      p->system, sizeof(p->system)))
-		p->system[0] = 0;
+	if (vsize < SB_SIZE || ubi_volume_read(v->name, (char *)PROBE_ADDR, SB_SIZE)) {
+		err = "rootfs_read_failed";
+	} else {
+		r = squashfs_used((const u8 *)PROBE_ADDR, (u64)vsize, &used);
+		if (r == -EINVAL)
+			return;		/* not SquashFS */
+		if (r)
+			err = "rootfs_too_large_or_invalid";
+		else if (ubi_volume_read(v->name, (char *)PROBE_ADDR, (size_t)used))
+			err = "rootfs_read_failed";
+		else {
+			r = rt3_squashfs_read_release_ws((const void *)PROBE_ADDR,
+							 (size_t)used, p->system,
+							 sizeof(p->system),
+							 (void *)PROBE_WORK,
+							 RT3_SQUASHFS_WORK_MAX);
+			if (r) {
+				p->system[0] = 0;
+				if (r != -ENOENT)
+					err = "release_file_unreadable";
+			}
+		}
+	}
+	if (err)
+		strlcpy(p->error, err, sizeof(p->error));
 }
 
 int slot_probe_read(const char *part_name, unsigned long long offset,
@@ -181,3 +216,4 @@ int slot_probe_read(const char *part_name, unsigned long long offset,
 	}
 	return ret;
 }
+#endif /* CONFIG_CMD_UBI */

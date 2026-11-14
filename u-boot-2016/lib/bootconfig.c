@@ -325,10 +325,26 @@ done:
     return ret ? false : true;
 }
 
+unsigned int bootconfig_booted_flag(const char *entry)
+{
+	unsigned int i, n;
+
+	if (smem_bootconfig_info())
+		return 0;
+	n = qca_smem_bootconfig_info.numaltpart;
+	if (n > ARRAY_SIZE(qca_smem_bootconfig_info.per_part_entry))
+		n = ARRAY_SIZE(qca_smem_bootconfig_info.per_part_entry);
+	for (i = 0; i < n; i++)
+		if (!strncmp(entry, qca_smem_bootconfig_info.per_part_entry[i].name,
+			     ALT_PART_NAME_LENGTH))
+			return qca_smem_bootconfig_info.per_part_entry[i].primaryboot ? 1 : 0;
+	return 0;
+}
+
 #if !defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 #define BOOTCONFIG_PROBE_BYTES	2048
 
-/* Partition that the reader of @entry uses when its flag is @value. */
+/* Partition named "<entry>" (@suffixed 0) or "<entry>_1" (@suffixed 1). */
 static int bootconfig_target_name(const char *entry, uint32_t value,
 				  char *out, size_t out_len)
 {
@@ -377,7 +393,9 @@ static int bootconfig_target_ready(const char *entry, uint32_t value)
 		return -EINVAL;
 	if (get_bootconfig_part_offset(name) == -ENOENT)
 		return 0;
-	if (bootconfig_target_name(entry, value, name, sizeof(name)))
+	/* The partition names follow the copy SBL booted, not flash order. */
+	if (bootconfig_target_name(entry, value != bootconfig_booted_flag(entry),
+				   name, sizeof(name)))
 		return -EINVAL;
 	offset = get_bootconfig_part_offset(name);
 	if (offset < 0) {

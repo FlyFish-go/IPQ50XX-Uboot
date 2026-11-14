@@ -60,6 +60,11 @@ static void read_slot(struct slot_info *s)
   set_error(s, p.error[0] ? p.error : "ubi_read_failed");
   return;
  }
+ if (p.error[0]) {
+  strlcpy(s->detection, "rootfs_unreadable", sizeof(s->detection));
+  strlcpy(s->error, p.error, sizeof(s->error));
+  return;
+ }
  if (!p.system[0])
   return;
  strlcpy(s->status, "known", sizeof(s->status));

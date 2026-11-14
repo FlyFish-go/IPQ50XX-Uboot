@@ -19,7 +19,7 @@
 #ifndef ENOTSUP
 #define ENOTSUP EOPNOTSUPP
 #endif
-struct sqfs { const u8 *img; size_t len; u64 used, inode_start, dir_start, frag_start; u32 inodes, block_size, fragments; u16 flags, comp; };
+struct sqfs { const u8 *img; size_t len; u64 used, inode_start, dir_start, frag_start; u32 inodes, block_size, fragments; u16 flags, comp; u8 *work; };
 struct meta { const struct sqfs *s; u64 pos; u16 off; u8 data[SQFS_META]; u16 size; };
 struct dirent_ref { char name[256]; u64 ref; u16 type; };
 static u16 rd16(const u8 *p) { return (u16)p[0] | ((u16)p[1] << 8); }
@@ -84,8 +84,10 @@ static int fragment_read(const struct sqfs *s,u32 idx,u32 off,u8 *dst,size_t n)
  ti=(u64)(idx/(SQFS_META/16))*8;if(!span(s,s->frag_start+ti,8))return -EBADMSG;ptr=rd64(s->img+s->frag_start+ti);
  if(ptr>0xffffffffU||meta_at(&m,s,0,(u32)ptr,(u16)((idx%(SQFS_META/16))*16))||meta_read(&m,ent,16))return -EBADMSG;
  pos=rd64(ent);enc=rd32(ent+8);if(off>s->block_size||n>s->block_size-off)return -EBADMSG;
- buf=malloc(s->block_size);if(!buf)return -ENOMEM;{int r=data_block(s,&pos,enc,buf,s->block_size,&outn);if(r){free(buf);return r;}}
- if(off>outn||n>outn-off){free(buf);return -EBADMSG;}memcpy(dst,buf+off,n);free(buf);return 0;
+ buf=s->work;{int r=data_block(s,&pos,enc,buf,s->block_size,&outn);if(r)return r;}
+ if(off>outn||n>outn-off)return -EBADMSG;
+ memcpy(dst,buf+off,n);
+ return 0;
 }
 static int read_regular(const struct sqfs *s,u64 ref,u8 *out,size_t *outlen)
 {
@@ -98,7 +100,7 @@ static int read_regular(const struct sqfs *s,u64 ref,u8 *out,size_t *outlen)
  nb=(u32)(fsize/s->block_size);if(frag==SQFS_INVALID_FRAG&&fsize%s->block_size)nb++;if(nb>128)return -EFBIG;
  if(meta_read(&m,sizes,nb*4))return -EBADMSG;
  pos=start;
- for(i=0;i<nb;i++){u32 want=s->block_size;size_t got=0;u8 *buf;if(want>fsize-copied)want=fsize-copied;buf=malloc(s->block_size);if(!buf)return -ENOMEM;{int r=data_block(s,&pos,rd32((u8*)sizes+i*4),buf,s->block_size,&got);if(r||got<want){free(buf);return r?r:-EBADMSG;}}if(copied+want>SQFS_MAX_FILE){free(buf);return -EFBIG;}memcpy(out+copied,buf,want);copied+=want;free(buf);}
+ for(i=0;i<nb;i++){u32 want=s->block_size;size_t got=0;u8 *buf;if(want>fsize-copied)want=fsize-copied;buf=s->work;{int r=data_block(s,&pos,rd32((u8*)sizes+i*4),buf,s->block_size,&got);if(r||got<want)return r?r:-EBADMSG;}if(copied+want>SQFS_MAX_FILE)return -EFBIG;memcpy(out+copied,buf,want);copied+=want;}
  if(copied<fsize){size_t rem=fsize-copied;if(frag==SQFS_INVALID_FRAG||rem>s->block_size||fragment_read(s,frag,offset,out+copied,rem))return -EBADMSG;copied+=rem;}
  *outlen=copied;return 0;
 }
@@ -128,7 +130,8 @@ static int parse_release(const u8 *buf,size_t n,const char *kind,char out[97])
  else return -ENOENT;
  return safe_value(out,strlen(out))?0:-EBADMSG;
 }
-int rt3_squashfs_read_release(const void *image,size_t image_len,char *out,size_t out_len)
+/* One data block is decoded at a time into @work, which must hold block_size. */
+int rt3_squashfs_read_release_ws(const void *image,size_t image_len,char *out,size_t out_len,void *work,size_t work_len)
 {
  const u8 *im=image;struct sqfs s;struct dirent_ref etc,f;u64 root;u8 file[SQFS_MAX_FILE];u8 sb[96];size_t flen;const char *names[]={"openwrt_release","openwrt_version","os-release"};unsigned i;int r=-ENOENT;char parsed[97];
  if(!image||!out||out_len<2)return -EINVAL;
@@ -137,7 +140,16 @@ int rt3_squashfs_read_release(const void *image,size_t image_len,char *out,size_
  s.inodes=rd32(sb+4);s.block_size=rd32(sb+12);s.fragments=rd32(sb+16);s.comp=rd16(sb+20);s.flags=rd16(sb+24);root=rd64(sb+32);s.used=rd64(sb+40);s.inode_start=rd64(sb+64);s.dir_start=rd64(sb+72);s.frag_start=rd64(sb+80);
  if(rd16(sb+28)!=4||rd16(sb+30)!=0||s.comp!=SQFS_XZ)return -ENOTSUP;
  if(!s.used||s.used>image_len||s.used>SQFS_MAX_IMAGE||!s.inodes||s.inodes>100000||s.block_size<4096||s.block_size>SQFS_MAX_BLOCK||!valid_block_log(s.block_size,rd16(sb+22))||s.inode_start>=s.used||s.dir_start>=s.used)return -EBADMSG;
+ if(!work||work_len<s.block_size)return -ENOMEM;
+ s.work=work;
  r=find_entry(&s,root,"etc",&etc);if(r||(etc.type!=1&&etc.type!=8))return -ENOENT;
  for(i=0;i<3;i++){r=find_entry(&s,etc.ref,names[i],&f);if(r)continue;if(f.type!=2&&f.type!=9)continue;flen=0;r=read_regular(&s,f.ref,file,&flen);if(r)continue;r=parse_release(file,flen,names[i],parsed);if(!r){size_t n=strlen(parsed);if(n+1>out_len)return -ENOSPC;memcpy(out,parsed,n+1);return 0;}}
  out[0]=0;return r<0?r:-ENOENT;
+}
+int rt3_squashfs_read_release(const void *image,size_t image_len,char *out,size_t out_len)
+{
+ void *work=malloc(SQFS_MAX_BLOCK);int r;
+ if(!work)return -ENOMEM;
+ r=rt3_squashfs_read_release_ws(image,image_len,out,out_len,work,SQFS_MAX_BLOCK);
+ free(work);return r;
 }

@@ -9293,7 +9293,8 @@ const bootSlotsManager = (() => {
             const defaultChecks = {};
             let currentDefault = saved && (saved.default === 'rootfs' || saved.default === 'rootfs_1')
                 ? saved.default : null;
-            let defaultsLocked = !saved || saved.can_change !== true || saved.locked === true || data.read_only === true || data.boot_supported === false;
+            let defaultsLocked = !saved || saved.can_change !== true || saved.locked === true || data.read_only === true ||
+                (data.boot_supported === false && data.default_supported !== true);
             for (const slot of data.slots) {
                 if (slot.name !== 'rootfs' && slot.name !== 'rootfs_1') continue;
                 const row = document.createElement('tr');
