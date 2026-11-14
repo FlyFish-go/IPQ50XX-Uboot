@@ -6,7 +6,7 @@ aliases: [T30 Pro 1A, T30 Pro 1.5A, QAX3000GE]
 soc: IPQ5018
 status: verified
 family: TCL T30 Pro
-summary: "TCL 为运营商定制的 T30 Pro（1A 版）已实机刷入并通过测试。1.5A 版同一主板，没有单独刷过。"
+summary: "TCL 为运营商定制的 T30 Pro，1A 版和 1.5A 版都已用旧构建（3bc92a2f）实机刷入。最新构建还没有重新刷过，需要复测。"
 artifact: ipq5018_tcl_t30_pro
 hardware:
   - { label: 闪存, value: "128 MiB NAND" }
@@ -15,15 +15,15 @@ hardware:
   - { label: MAC, value: "原厂把 MAC 以文本形式放在 `factory` 分区，U-Boot 不读写 ART 里的 MAC" }
   - { label: 串口, value: "1.8 V，GPIO20/21" }
 tested:
-  - "T30 Pro 1A：写入两份 APPSBL，冷启动通过"
+  - "T30 Pro 1A 和 1.5A：都已刷入旧构建（3bc92a2f），两份 APPSBL 写入，冷启动通过"
   - "与原厂 U-Boot 的设备树逐项对照：串口、交换芯片、复位脚一致（只多出本项目自己的 LED、按键节点）"
 not_tested:
-  - "T30 Pro 1.5A：同主板、原厂 U-Boot 和 1A 有差异，没有单独刷过"
+  - "最新构建（LED 初始化及之后的版本）：1A 和 1.5A 都还没有重新刷过，需要重刷并冷启动复测"
   - "Reset、WPS 按键和 LED"
   - "从原厂 SSH 一键安装"
   - "原厂 `factory` 分区里的 MAC 在救援页的显示"
 warnings:
-  - "这是运营商定制机，启动链和通用 IPQ5018 不同，并且多一个 `factory` 分区。请确认你的机器背面铭牌是 T30 Pro，再对照 1A / 1.5A 版本。"
+  - "这是运营商定制机，启动链和通用 IPQ5018 不同，并且多一个 `factory` 分区。请确认你的机器背面铭牌是 T30 Pro，再对照 1A / 1.5A 版本（两个版本的原厂 U-Boot 有差异）。"
   - "串口是 1.8 V。接 3.3 V 的 TTL 适配器会损坏串口脚甚至主芯片，一定要用 1.8 V 电平，或加电平转换。"
 slots:
   mechanism: bootconfig
