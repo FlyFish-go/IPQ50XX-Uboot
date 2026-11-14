@@ -89,11 +89,12 @@ static inline const char *slot_part_name(unsigned int slot)
 		return "rootfs";
 	return slot == slot_active_rootfs() ? "rootfs" : "rootfs_1";
 }
-/* Boot slot from now on: the firmware group (rootfs, HLOS, WIFIFW, BTFW) as
- * stock sysupgrade switches it; refuses an erased target, syncs both copies. */
+/* Boot slot from now on. Only the rootfs entry: on NAND the kernel and
+ * Wi-Fi firmware live inside it, and other entries keep the copy they use
+ * now. Refuses an erased target; syncs both copies. */
 static inline int slot_set_default(unsigned int slot)
 {
-	return set_bootconfig("firmware", slot);
+	return set_bootconfig("rootfs", slot);
 }
 
 #endif

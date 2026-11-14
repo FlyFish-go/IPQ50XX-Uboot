@@ -27,6 +27,9 @@ struct gslot {
 static struct gslot gslots[SLOT_N];
 static unsigned int gslot_n;
 static int gslots_ready;
+/* Set after a write that may have left the two BOOTCONFIG copies different;
+ * cleared only by a reboot, so the page cannot write again on top of it. */
+static int gdefault_locked;
 static char gjson[3072];
 
 static void answer(struct httpd_response *r, int code, const char *json)
@@ -141,7 +144,7 @@ static void default_handler(enum httpd_uri_handler_status status,
 	struct httpd_form_value *v = NULL;
 	const char *cur;
 	unsigned int i, want = SLOT_N, found = 0;
-	int ret, before;
+	int ret, ready = 0;
 
 	if (status != HTTP_CB_NEW)
 		return;
@@ -152,10 +155,11 @@ static void default_handler(enum httpd_uri_handler_status status,
 	if (request->method == HTTP_GET) {
 		cur = default_name();
 		snprintf(reply, sizeof(reply),
-			 "{\"default\":%s%s%s,\"can_change\":%s,\"locked\":false,"
+			 "{\"default\":%s%s%s,\"can_change\":%s,\"locked\":%s,"
 			 "\"default_applies_to\":\"next_boot\",\"auto_web\":false}",
 			 cur ? "\"" : "", cur ? cur : "null", cur ? "\"" : "",
-			 slot_count() == 2 && cur ? "true" : "false");
+			 slot_count() == 2 && cur && !gdefault_locked ? "true" : "false",
+			 gdefault_locked ? "true" : "false");
 		answer(response, 200, reply);
 		return;
 	}
@@ -178,23 +182,31 @@ static void default_handler(enum httpd_uri_handler_status status,
 		answer(response, 400, "{\"status\":\"fail\",\"error\":\"invalid_target\"}");
 		return;
 	}
-	before = slot_default_rootfs();
-	ret = slot_set_default(want);
-	if (ret) {
-		/* Refused before writing only if the stored choice is unchanged
-		 * and readable; otherwise a copy may already differ. */
-		int after = slot_default_rootfs();
-
-		snprintf(reply, sizeof(reply),
-			 "{\"status\":\"%s\",\"error\":\"default_not_saved\",\"errno\":%d}",
-			 after >= 0 && after == before && (unsigned int)after != want ?
-			 "fail" : "partial", ret);
-		answer(response, 409, reply);
+	if (gdefault_locked) {
+		answer(response, 409, "{\"status\":\"fail\",\"error\":\"locked_after_partial_write\"}");
 		return;
 	}
-	cur = default_name();
-	if (!cur || strcmp(cur, slot_part_name(want))) {
-		answer(response, 409, "{\"status\":\"partial\",\"error\":\"default_not_confirmed\"}");
+	/* Refuse a slot that holds no UBI system before touching BOOTCONFIG. */
+	if (!gslots_ready) {
+		scan();
+		format();
+	}
+	for (i = 0; i < gslot_n; i++)
+		if (gslots[i].slot == want && gslots[i].probed && !gslots[i].ret)
+			ready = 1;
+	if (!ready) {
+		answer(response, 409, "{\"status\":\"fail\",\"error\":\"target_slot_has_no_system\"}");
+		return;
+	}
+	/* From here a failure may have written one copy: lock until reboot. */
+	ret = slot_set_default(want);
+	cur = ret ? NULL : default_name();
+	if (ret || !cur || strcmp(cur, slot_part_name(want))) {
+		gdefault_locked = 1;
+		snprintf(reply, sizeof(reply),
+			 "{\"status\":\"partial\",\"error\":\"%s\",\"errno\":%d}",
+			 ret ? "default_not_saved" : "default_not_confirmed", ret);
+		answer(response, 409, reply);
 		return;
 	}
 	snprintf(reply, sizeof(reply), "{\"status\":\"ok\",\"default\":\"%s\"}", cur);

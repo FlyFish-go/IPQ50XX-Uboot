@@ -142,9 +142,12 @@ int rt3_squashfs_read_release_ws(const void *image,size_t image_len,char *out,si
  if(!s.used||s.used>image_len||s.used>SQFS_MAX_IMAGE||!s.inodes||s.inodes>100000||s.block_size<4096||s.block_size>SQFS_MAX_BLOCK||!valid_block_log(s.block_size,rd16(sb+22))||s.inode_start>=s.used||s.dir_start>=s.used)return -EBADMSG;
  if(!work||work_len<s.block_size)return -ENOMEM;
  s.work=work;
- r=find_entry(&s,root,"etc",&etc);if(r||(etc.type!=1&&etc.type!=8))return -ENOENT;
- for(i=0;i<3;i++){r=find_entry(&s,etc.ref,names[i],&f);if(r)continue;if(f.type!=2&&f.type!=9)continue;flen=0;r=read_regular(&s,f.ref,file,&flen);if(r)continue;r=parse_release(file,flen,names[i],parsed);if(!r){size_t n=strlen(parsed);if(n+1>out_len)return -ENOSPC;memcpy(out,parsed,n+1);return 0;}}
- out[0]=0;return r<0?r:-ENOENT;
+ /* -ENOENT only when there is really no release file; damage is reported. */
+ r=find_entry(&s,root,"etc",&etc);if(r)return r;
+ if(etc.type!=1&&etc.type!=8)return -ENOENT;
+ {int first=0;
+ for(i=0;i<3;i++){r=find_entry(&s,etc.ref,names[i],&f);if(r){if(r!=-ENOENT&&!first)first=r;continue;}if(f.type!=2&&f.type!=9)continue;flen=0;r=read_regular(&s,f.ref,file,&flen);if(r){if(!first)first=r;continue;}r=parse_release(file,flen,names[i],parsed);if(!r){size_t n=strlen(parsed);if(n+1>out_len)return -ENOSPC;memcpy(out,parsed,n+1);return 0;}if(r!=-ENOENT&&!first)first=r;}
+ out[0]=0;return first?first:-ENOENT;}
 }
 int rt3_squashfs_read_release(const void *image,size_t image_len,char *out,size_t out_len)
 {

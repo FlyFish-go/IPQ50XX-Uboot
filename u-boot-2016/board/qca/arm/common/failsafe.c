@@ -580,8 +580,9 @@ static int failsafe_write_firmware(ulong data_addr, ulong data_size)
 	ADD_CMD_TO_LIST("flash rootfs 0x%lx 0x%lx", data_addr, data_size);
 
 	if (validate_bootconfig())
-		/* "rootfs" is the slot SBL booted: keep booting the one just written. */
-		ADD_CMD_TO_LIST("bootconfig set firmware %u", bootconfig_booted_flag("rootfs"));
+		/* "rootfs" is the slot SBL booted: keep booting the one just
+		 * written. Only that entry: the others were not rewritten. */
+		ADD_CMD_TO_LIST("bootconfig set rootfs %u", bootconfig_booted_flag("rootfs"));
 
 	return failsafe_run_command_list();
 }
@@ -1156,8 +1157,9 @@ int failsafe_write_firmware_ubi(ulong data_addr, ulong data_size)
 	if (ret)
 		return ret;
 	if (validate_bootconfig())
-		/* "rootfs" is the slot SBL booted: keep booting the one just written. */
-		ADD_CMD_TO_LIST("bootconfig set firmware %u", bootconfig_booted_flag("rootfs"));
+		/* "rootfs" is the slot SBL booted: keep booting the one just
+		 * written. Only that entry: the others were not rewritten. */
+		ADD_CMD_TO_LIST("bootconfig set rootfs %u", bootconfig_booted_flag("rootfs"));
 	return failsafe_run_command_list();
 }
 #endif
