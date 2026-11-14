@@ -889,6 +889,9 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 #endif
 	if (pdata->body_dropped)
 		return 0;
+	/* not multipart (no boundary): no form values */
+	if (!pdata->boundary || !*pdata->boundary)
+		return 0;
 
 	boundarylen = strlen(pdata->boundary);
 	boundary = malloc(boundarylen + 3);
@@ -922,10 +925,12 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 		if (!p)
 			break;
 
-		if (!strncmp(p - 2, "\r\n", 2))
-			p[-2] = 0;
-		else
-			*p = 0;
+		/* a part ends with CR LF before the next boundary; anything
+		 * else is malformed and ends the scan (its end would lie before
+		 * its start) */
+		if (p - formdata[numformdata] < 2 || strncmp(p - 2, "\r\n", 2))
+			break;
+		p[-2] = 0;
 
 		formdata_end[numformdata] = p - 2;
 		numformdata++;
@@ -936,12 +941,16 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 	/* process each formdata */
 	for (i = 0; i < numformdata; i++) {
 		val = &req->form.values[req->form.count];
+		val->name = val->filename = NULL;
 		p = strstr(formdata[i], "\r\n\r\n");
 		if (!p)
 			continue;
 
 		*p = 0;
 		p += 4;
+		/* headers and data must lie inside this part */
+		if (p > formdata_end[i])
+			continue;
 
 		/*
 		 * make the data aligned by 4.
@@ -955,6 +964,11 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 		if (name_ptr) {
 			name_ptr += sizeof(name_str) - 1;
 			val->name = name_extract(name_ptr);
+		}
+		/* a part without a name cannot be looked up: drop it */
+		if (!val->name) {
+			val->filename = NULL;
+			continue;
 		}
 
 		if (filename_ptr) {
@@ -1224,7 +1238,8 @@ struct httpd_form_value *httpd_request_find_value(
 		return NULL;
 
 	for (i = 0; i < request->form.count; i++) {
-		if (!strcmp(request->form.values[i].name, name))
+		if (request->form.values[i].name &&
+		    !strcmp(request->form.values[i].name, name))
 			return &request->form.values[i];
 	}
 
