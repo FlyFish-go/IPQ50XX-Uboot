@@ -78,6 +78,7 @@ struct httpd_tcp_pdata {
 	char *boundary;
 
 	int is_uploading;
+	int body_dropped;	/* rest of the body dropped: never parse it */
 	char *upload_ptr;
 	u32 payload_size;
 	u32 upload_size;
@@ -669,8 +670,8 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 				 * must not overwrite it (nor be overwritten by it later). */
 				if (is_uploading) {
 					printf("Only one upload can be performed\n");
-					tcp_close_conn(cbd->conn, 1);
-					return 1;
+					err_code = 503;
+					goto bad_request;
 				}
 #endif
 				pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);
@@ -692,8 +693,8 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			/* upload payload must be put into unused ram region */
 			if (is_uploading) {
 				printf("Only one upload can be performed\n");
-				tcp_close_conn(cbd->conn, 1);
-				return 1;
+				err_code = 503;	/* a normal close frees this connection */
+				goto bad_request;
 			}
 
 			/* generate new upload identifier */
@@ -763,7 +764,9 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 	 * drop the rest instead of writing over the newer owner. The handler
 	 * reports upload_interrupted for the generation mismatch. */
 	stale = pdata->request.upload_gen != upload_buffer_gen;
-	if (!stale)
+	if (stale)
+		pdata->body_dropped = 1;
+	else
 #endif
 	memcpy(pdata->upload_ptr + pdata->upload_size, cbd->data, size_recv);
 	pdata->upload_size += size_recv;
@@ -851,6 +854,10 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 
 	if (req->method != HTTP_POST || pdata->payload_size <= 0)
 		return 0;
+	/* Partly dropped body (the RAM went to a newer owner): no form values;
+	 * the handler reports the interrupted upload. */
+	if (pdata->body_dropped)
+		return 0;
 
 	boundarylen = strlen(pdata->boundary);
 	boundary = malloc(boundarylen + 3);
@@ -869,6 +876,9 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 	p = pdata->upload_ptr;
 	payload_end = pdata->upload_ptr + pdata->payload_size;
 	do {
+		/* room for the boundary and its CR LF inside the body */
+		if (p > payload_end || (size_t)(payload_end - p) < boundarylen + 2)
+			break;
 		p += boundarylen;
 		if (strncmp(p, "\r\n", 2))
 			break;
