@@ -57,7 +57,7 @@ static int xm_boot_saveenv(void)
 	puts("Xiaomi slots: RAM trial, environment not saved\n");
 	return 0;
 #else
-	return saveenv();
+	return env_save_blocked() ? -EIO : saveenv();
 #endif
 }
 
@@ -203,7 +203,7 @@ static int xiaomi_slot_set_next(unsigned int slot)
 	xm_set_flag("flag_try_sys2_failed", 0);
 	xm_set_flag("flag_ota_reboot", 0);
 	xm_set_flag("flag_boot_success", 1);
-	return saveenv();
+	return env_save_blocked() ? -EIO : saveenv();
 }
 
 /*
@@ -229,7 +229,7 @@ static int xiaomi_slot_set_ota(unsigned int slot)
 	xm_set_flag("flag_boot_success", f.success);
 	/* the first boot of slot writes R = slot; a clean boot after that confirms */
 	xm_set_flag("flag_boot_rootfs", 1 - slot);
-	return saveenv();
+	return env_save_blocked() ? -EIO : saveenv();
 }
 
 static int do_xiaomi_slot(cmd_tbl_t *cmdtp, int flag, int argc,

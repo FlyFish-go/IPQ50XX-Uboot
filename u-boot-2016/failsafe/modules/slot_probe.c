@@ -233,4 +233,11 @@ int slot_probe_env_broken(void)
 {
 	return env_broken;
 }
+
+/* Overrides the weak hook in cmd_nvedit.c: blocks "saveenv" from the web
+ * terminal and the Xiaomi slot commands too. */
+int env_save_blocked(void)
+{
+	return env_broken;
+}
 #endif /* CONFIG_CMD_UBI */

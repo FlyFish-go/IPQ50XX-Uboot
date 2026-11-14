@@ -648,6 +648,10 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			goto bad_request;
 		}
 
+		/* Generation of the shared upload RAM when this body starts
+		 * arriving, for the small (one packet) and the large path alike. */
+		pdata->request.upload_gen = upload_buffer_gen;
+
 		if (hdr_size + pdata->payload_size < sizeof(pdata->buf)) {
 			pdata->upload_size = pdata->bufsize - hdr_size;
 			if (!strcmp(pdata->uri, "/upload") ||
@@ -677,7 +681,6 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 
 			/* generate new upload identifier */
 			upload_id = rand();
-			pdata->request.upload_gen = upload_buffer_gen;
 
 			/* calculate new cache address */
 			pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);

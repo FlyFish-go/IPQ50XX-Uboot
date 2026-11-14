@@ -371,9 +371,13 @@ bool bootconfig_copies_identical(void)
 	a.size = sizeof(struct bootconfig_info);
 	b.part_name = BOOTCONFIG_BACKUP_PART_NAME;
 	b.size = sizeof(struct bootconfig_info);
-	if (read_bootconfig(&a, false, true) || read_bootconfig(&b, false, true))
+	/* Raw records: validation would truncate an oversized numaltpart. */
+	if (read_bootconfig(&a, true, true) || read_bootconfig(&b, true, true))
 		return false;
-	return !memcmp(&a.info, &b.info, sizeof(a.info));
+	if (memcmp(&a.info, &b.info, sizeof(a.info)) ||
+	    a.info.numaltpart > NUM_ALT_PARTITION)
+		return false;
+	return !read_bootconfig(&a, false, true);
 }
 
 #if !defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)

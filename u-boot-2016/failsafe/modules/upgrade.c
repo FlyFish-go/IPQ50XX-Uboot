@@ -179,6 +179,8 @@ static void upload_handler(enum httpd_uri_handler_status status,
 
 		/* The buffer was reused (slot probe) while this upload was in it. */
 		if (request->upload_gen != httpd_upload_buffer_gen()) {
+			/* This upload already overwrote the RAM of the previous one. */
+			upload_data_id = fs_upload_id + 1;
 			response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
 			response->size = strlen(response->data);
 			sess->body_sent = 1;

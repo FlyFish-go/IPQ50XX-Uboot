@@ -427,6 +427,9 @@ extern int (*saveenv)(void);
 #else
 int	saveenv	     (void);
 #endif
+/* Nonzero while the in-RAM environment must not be stored (the rescue
+ * page's slot probe could not restore it). Weak default: never. */
+int env_save_blocked(void);
 int	setenv	     (const char *, const char *);
 int setenv_ulong(const char *varname, ulong value);
 int setenv_hex(const char *varname, ulong value);

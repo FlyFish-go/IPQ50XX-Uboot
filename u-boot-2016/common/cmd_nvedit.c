@@ -707,11 +707,20 @@ ulong getenv_ulong(const char *name, int base, ulong default_val)
 
 #ifndef CONFIG_SPL_BUILD
 #if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
+int __weak env_save_blocked(void)
+{
+	return 0;
+}
+
 static int do_env_save(cmd_tbl_t *cmdtp, int flag, int argc,
 		       char * const argv[])
 {
 	printf("Saving Environment to %s...\n", env_name_spec);
 
+	if (env_save_blocked()) {
+		puts("Environment was not restored after a slot probe; not saving. Reboot first.\n");
+		return 1;
+	}
 	return saveenv() ? 1 : 0;
 }
 
