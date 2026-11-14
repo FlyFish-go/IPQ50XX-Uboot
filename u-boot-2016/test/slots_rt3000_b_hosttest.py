@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host tests for the exact RT3000-B environment and JSON helpers."""
+"""Host tests for the slot probe environment helpers and the H3C slot JSON."""
 import json
 import subprocess
 import tempfile
@@ -7,25 +7,29 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "u-boot-2016/failsafe/modules/slots_rt3000_b.c"
+PROBE = ROOT / "u-boot-2016/failsafe/modules/slot_probe.c"
 
 
 def main():
     source = SOURCE.read_text()
-    save = source.index("static int env_save(")
-    restore = source.index("static int env_restore(", save)
-    helper_end = source.index("static int read_rootfs(", restore)
-    helpers = source[save:helper_end]
+    probe = PROBE.read_text()
+    save = probe.index("static int env_save(")
+    restore = probe.index("static int env_restore(", save)
+    helper_end = probe.index("static u32 le32(", restore)
+    helpers = probe[save:helper_end]
     format_begin = source.index("static void format_slots(")
     format_end = source.index("static int same_layout(", format_begin)
     formatter = source[format_begin:format_end]
-    assert source.index("ret = env_save();") < source.index("ret = set_scan_mtd(s);") < source.index("ret = ubi_part_readonly(s->part_name, NULL);")
-    assert source.index("ubi_exit_readonly();") < source.index("if (env_restore())")
-    assert 'setenv("mtdids", "nand0=nand0")' in source
+    assert probe.index("ret = env_save();") < probe.index("ret = set_scan_mtd(part_name, offset, size);") < probe.index("ubi_part_readonly((char *)part_name, NULL)")
+    assert probe.index("ubi_exit_readonly();") < probe.index("if (env_restore())")
+    assert 'setenv("mtdids", "nand0=nand0")' in probe
     assert "static char slots_json[4096];" in source
-    assert "hexport_r(&env_htab" in source and "himport_r(&env_htab" in source
-    assert "env_t *" not in source and "env_export(" not in source and "env_import(" not in source
+    assert "hexport_r(&env_htab" in probe and "himport_r(&env_htab" in probe
+    for text in (source, probe):
+        assert "env_t *" not in text and "env_export(" not in text and "env_import(" not in text
+        assert "ubi_write" not in text and "nand_write" not in text
+        assert "sha256" not in text and "known_oem" not in text
     assert '"mtd"' not in formatter and "mtd_display_only" not in formatter
-    assert "ubi_write" not in source and "nand_write" not in source
 
     harness = r'''
 #include <stdint.h>
@@ -81,7 +85,7 @@ static int strlcpy(char *d,const char *s,size_t n) {
 }
 struct slot_info {
  u64 offset,size; unsigned int display_index;
- char label[96],part_name[64],status[16],type[16],version[97],detection[40],error[48];
+ char label[96],part_name[64],status[16],type[16],version[97],kernel[33],detection[40],error[48];
 };
 struct rt3_layout { int mode; unsigned int count; unsigned int fingerprint; };
 #define RT3_LAYOUT_DUAL 1
@@ -97,7 +101,7 @@ static int mock_ubi_part(const struct slot_info *s) {
  ubi_calls++;return 0;
 }
 static struct slot_info slots[SLOT_N];
-static char slots_json[4096],escaped_part[SLOT_N][128],escaped_label[SLOT_N][128],escaped_version[SLOT_N][256];
+static char slots_json[4096],escaped_part[SLOT_N][128],escaped_label[SLOT_N][128],escaped_version[SLOT_N][256],escaped_kernel[SLOT_N][72];
 #define SLOT_ACCESS_JSON "\"read_only\":false,\"boot_supported\":true,"
 static int environment_restored=1;
 static void json_escape(const char *s,char *d,size_t n) { strlcpy(d,s,n); }
@@ -109,7 +113,7 @@ static int run_ubi_case(const char *name,u64 off,u64 size,int failure) {
  memset(&slot,0,sizeof(slot));strcpy(slot.part_name,name);slot.offset=off;slot.size=size;
  for(i=0;i<sizeof(env_state);i++)env_state[i]=(unsigned char)(i*17+3);
  memcpy(before,env_state,sizeof(before));
- if(env_save()||set_scan_mtd(&slot)||mock_ubi_part(&slot))return 1;
+ if(env_save()||set_scan_mtd(slot.part_name,slot.offset,slot.size)||mock_ubi_part(&slot))return 1;
  for(i=0;i<sizeof(env_state);i++)env_state[i]^=(unsigned char)(failure?0x5a:0xa5);
  for(i=0;i<sizeof(env_state);i+=3)env_state[i]^=0x33;
  if(env_restore()||memcmp(before,env_state,sizeof(before)))return 2;
@@ -122,7 +126,7 @@ static int run_setenv_failure(void) {
  for(i=0;i<sizeof(env_state);i++)env_state[i]=(unsigned char)(i*7+1);
  memcpy(before,env_state,sizeof(before));if(env_save())return 1;
  fail_mtdparts=1;
- if(!set_scan_mtd(&slot)&&!ubi_calls)return 2;
+ if(!set_scan_mtd(slot.part_name,slot.offset,slot.size)&&!ubi_calls)return 2;
  fail_mtdparts=0;
  if(env_restore()||memcmp(before,env_state,sizeof(before)))return 3;
  return 0;
@@ -130,7 +134,6 @@ static int run_setenv_failure(void) {
 int main(void) {
  struct rt3_layout l={.mode=RT3_LAYOUT_DUAL,.count=2,.fingerprint=0x1234};
  int i;
- (void)set_error;
  if(run_ubi_case("rootfs",0x900000,0x2800000,0) ||
     run_ubi_case("rootfs_1",0x3100000,0x2800000,1) ||
     run_setenv_failure() || ubi_calls!=2) return 10;
@@ -143,14 +146,14 @@ int main(void) {
  memset(slots,0,sizeof(slots));
  strcpy(slots[0].part_name,"rootfs"); slots[0].display_index=16;
  slots[0].offset=0x900000; slots[0].size=0x2800000;
- strcpy(slots[0].status,"known"); strcpy(slots[0].type,"OEM");
- strcpy(slots[0].version,"RT3000 R007"); strcpy(slots[0].label,"OEM RT3000 R007");
- strcpy(slots[0].detection,"known_rootfs_sha256");
+ strcpy(slots[0].status,"known"); strcpy(slots[0].type,"OpenWrt");
+ strcpy(slots[0].version,"OpenWrt Chaos Calmer 15.05.1"); strcpy(slots[0].label,"OpenWrt Chaos Calmer 15.05.1");
+ strcpy(slots[0].kernel,"4.4.60"); strcpy(slots[0].detection,"rootfs_release_file");
  strcpy(slots[1].part_name,"rootfs_1"); slots[1].display_index=17;
  slots[1].offset=0x3100000; slots[1].size=0x2800000;
  strcpy(slots[1].status,"unknown"); strcpy(slots[1].type,"unknown");
  strcpy(slots[1].version,"unknown"); strcpy(slots[1].label,"Unknown system");
- strcpy(slots[1].detection,"unknown_rootfs_sha256"); strcpy(slots[1].error,"squashfs_not_found");
+ strcpy(slots[1].detection,"unreadable"); strcpy(slots[1].error,"no_ubi");
  environment_restored=1; format_slots(&l); puts(slots_json);
  environment_restored=0; format_slots(&l); puts(slots_json);
  slots[0].offset=0x3100000; slots[1].offset=0x900000;
@@ -177,6 +180,9 @@ int main(void) {
         assert obj["read_only"] is False and obj["boot_supported"] is True
         assert [x["boot_command"] for x in obj["slots"]] == ["bootipq rootfs", "bootipq rootfs_1"]
         assert all(not any(key.startswith("dashboard_") for key in x) for x in obj["slots"])
+        assert [x["kernel"] for x in obj["slots"]] == ["4.4.60", ""]
+        assert [x["version"] for x in obj["slots"]] == ["OpenWrt Chaos Calmer 15.05.1", "unknown"]
+        assert all(x["firmware_version"] is None for x in obj["slots"])
     swapped = json.loads(rows[2])
     assert [x["physical_index"] for x in swapped["slots"]] == [2, 1]
     assert [x["offset"] for x in swapped["slots"]] == ["0x3100000", "0x900000"]

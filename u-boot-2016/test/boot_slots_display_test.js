@@ -42,7 +42,7 @@ class FormDataMock {
     append(key, value) { this.values[key] = value; }
 }
 
-async function render(slots, language) {
+async function render(slots, language, extra = {}) {
     const section = new Element('section');
     const inner = new Element('div');
     section.inner = inner;
@@ -57,7 +57,7 @@ async function render(slots, language) {
         },
         fetch: async (url, options) => {
             if (url === '/boot/slots') {
-                return { status: 200, ok: true, json: async () => ({ slots }) };
+                return { status: 200, ok: true, json: async () => ({ slots, ...extra }) };
             }
             if (url === '/boot/default') { return { status: 200, ok: true, json: async () => ({ status: 'ok', default: 'rootfs', can_change: true, locked: false }) }; }
             if (url === '/webterm/exec') {
@@ -82,11 +82,11 @@ function findLine(root, prefix) {
 
 (async () => {
     const dual = await render([
-        { name: 'rootfs', display_index: 16, physical_index: 1, offset: '0x900000', mtd: 'mtd16', size: '0x2800000', known: true, type: 'OEM', label: 'OEM RT3000 R007', version: 'RT3000 R007',
-          firmware_version: 'RT3000 R007', boot_command: 'bootipq mtd99' },
-        { name: 'rootfs_1', display_index: 17, physical_index: 2, offset: '0x3100000', mtd: 'mtd17', size: 41943040, known: true, type: 'OEM', label: 'OEM RT3000 R005', version: 'RT3000 R005',
-          firmware_version: 'RT3000 R005', boot_command: 'bootipq mtd88' },
-        { name: 'untrusted-rootfs', display_index: 18, mtd: 'mtd15', size: '0x2800000', known: true, type: 'OEM', label: 'MUST NOT DISPLAY', firmware_version: 'BAD' }
+        { name: 'rootfs', display_index: 16, physical_index: 1, offset: '0x900000', mtd: 'mtd16', size: '0x2800000', known: true, type: 'OpenWrt', label: 'OpenWrt Chaos Calmer 15.05.1', version: 'OpenWrt Chaos Calmer 15.05.1',
+          kernel: '4.4.60', firmware_version: null, boot_command: 'bootipq mtd99' },
+        { name: 'rootfs_1', display_index: 17, physical_index: 2, offset: '0x3100000', mtd: 'mtd17', size: 41943040, known: true, type: 'OpenWrt', label: 'OpenWrt 24.10.0', version: 'OpenWrt 24.10.0',
+          kernel: '6.6.73', firmware_version: null, boot_command: 'bootipq mtd88' },
+        { name: 'untrusted-rootfs', display_index: 18, mtd: 'mtd15', size: '0x2800000', known: true, type: 'OpenWrt', label: 'MUST NOT DISPLAY', version: 'MUST NOT DISPLAY' }
     ], 'zh-cn');
     const text = dual.inner.textContent;
     const nameCells = dual.inner.findAll('td').filter(cell => cell.className === 'td left');
@@ -98,8 +98,8 @@ function findLine(root, prefix) {
     assert(text.includes('\u5bb9\u91cf\uff1a41,943,040 \u5b57\u8282'));
     assert(!text.includes('MUST NOT DISPLAY'));
     assert(!text.includes('untrusted-rootfs'));
-    assert(text.includes('\u56fa\u4ef6\uff1aRT3000 R007'));
-    assert(text.includes('\u56fa\u4ef6\uff1aRT3000 R005'));
+    assert(text.includes('系统：OpenWrt Chaos Calmer 15.05.1 · Linux 4.4.60'));
+    assert(text.includes('系统：OpenWrt 24.10.0 · Linux 6.6.73'));
     assert(!text.includes('\u539f\u56fa\u4ef6'));
     assert.strictEqual(dual.inner.findAll('div').reduce((n, el) => n + el.innerHTMLWrites, 0), 0,
         'version strings must be inserted with textContent, never innerHTML');
@@ -113,26 +113,40 @@ function findLine(root, prefix) {
     assert(text.includes('物理第 2 区 · 地址范围：0x3100000 – 0x58fffff'));
 
     const notRead = await render([
-        { name: 'rootfs', display_index: 16, mtd: 'mtd16', size: '0x2800000', known: true, type: 'OEM', label: 'OEM RT3000 R007',
-          firmware_version: 'RT3000 R007' },
+        { name: 'rootfs', display_index: 16, mtd: 'mtd16', size: '0x2800000', known: false, type: 'unknown', label: 'Unknown system',
+          version: 'unknown', kernel: '4.4.60' },
         { name: 'rootfs_1', display_index: 17, mtd: 'mtd17', size: 41943040, known: false, type: 'unknown', label: 'Unknown system',
-          firmware_version: null }
+          version: 'unknown', kernel: '', error: 'no_ubi' }
     ], 'zh-cn');
-    assert(!notRead.inner.textContent.includes('\u56fa\u4ef6\uff1a\u7b2c\u4e09\u65b9\u56fa\u4ef6'));
+    assert(notRead.inner.textContent.includes('系统：未识别 · Linux 4.4.60'));
+    assert(notRead.inner.textContent.includes('系统：未识别'));
+    assert(!notRead.inner.textContent.includes('unknown ·'));
 
     const qsdk = await render([
-        { name: 'rootfs', display_index: 16, mtd: 'mtd16', size: '0x2800000', known: true, type: 'QSDK', label: 'QSDK Product R1 Upgrade Preview',
-          version: 'Product R1 Upgrade Preview', firmware_version: null,
-          version: 'Product R1 Upgrade Preview' },
-        { name: 'rootfs_1', display_index: 17, mtd: 'mtd17', size: 41943040, known: true, type: 'ThirdParty', label: 'Third-party system', detection: 'rootfs_release_file', version: 'OpenWrt 21.02.7 r16847-f8282da11e' }
+        { name: 'rootfs', display_index: 16, mtd: 'mtd16', size: '0x2800000', known: true, type: 'Other', label: 'QSDK 11.5 r14',
+          version: 'QSDK 11.5 r14', kernel: '4.4.60' },
+        { name: 'rootfs_1', display_index: 17, mtd: 'mtd17', size: 41943040, known: true, type: 'OpenWrt', label: 'OpenWrt 21.02.7 r16847-f8282da11e', detection: 'rootfs_release_file', version: 'OpenWrt 21.02.7 r16847-f8282da11e' }
     ], 'en');
     assert(qsdk.inner.textContent.includes('rootfs'));
     assert(qsdk.inner.textContent.includes('rootfs_1'));
     assert(!qsdk.inner.textContent.includes('mtd'));
     assert(qsdk.inner.textContent.includes('Capacity: 41,943,040 bytes'));
-    assert(qsdk.inner.textContent.includes('Firmware: Third-party firmware'));
-    assert(qsdk.inner.textContent.includes('System: Third-party system (OpenWrt 21.02.7 r16847-f8282da11e)'));
+    assert(qsdk.inner.textContent.includes('System: QSDK 11.5 r14 · Linux 4.4.60'));
+    assert(qsdk.inner.textContent.includes('System: OpenWrt 21.02.7 r16847-f8282da11e'));
+    assert(!qsdk.inner.textContent.includes('OpenWrt 21.02.7 r16847-f8282da11e ·'));
     assert(!qsdk.inner.textContent.includes('Unknown system'));
 
-    console.log('PASS: plain partition names, capacities, OEM/third-party/unresolved firmware rows, release-file version display, safe text rendering, name-derived bootipq commands');
+    // Boards without the H3C layout code: set a default, then restart; no boot-once button.
+    const generic = await render([
+        { name: 'rootfs', slot: 0, physical_index: 1, offset: '0x2800000', size: '0x1e00000', known: true, type: 'OpenWrt',
+          version: 'OpenWrt 24.10.0', kernel: '6.6.73', boot_command: '' },
+        { name: 'rootfs_1', slot: 1, physical_index: 2, offset: '0x4600000', size: '0x1e00000', known: false, type: 'unknown',
+          version: 'unknown', kernel: '', boot_command: '' }
+    ], 'zh-cn', { boot_supported: false, read_only: false });
+    assert(generic.inner.textContent.includes('设为默认后，重启路由器即启动该系统。'));
+    assert(generic.inner.textContent.includes('系统：OpenWrt 24.10.0 · Linux 6.6.73'));
+    const genericBoot = generic.inner.findAll('button').filter(button => button.textContent.startsWith('启动 '));
+    assert(genericBoot.length === 2 && genericBoot.every(b => b.hidden === true && b.disabled === true));
+
+    console.log('PASS: plain partition names, capacities, release-text + kernel identity rows, unread slots, release-file version display, safe text rendering, name-derived bootipq commands, generic boards without boot-once');
 })().catch(error => { console.error(error); process.exitCode = 1; });

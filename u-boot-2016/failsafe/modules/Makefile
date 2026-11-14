@@ -19,6 +19,9 @@ endif
 obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_A) += buttons_h3c_hw_a.o
 obj-$(CONFIG_TARGET_IPQ5018_H3C_HW_C) += buttons_h3c_hw_c.o
 obj-$(CONFIG_H3C_IPQ5018_COMMON) += slots_rt3000_b.o
+ifneq ($(CONFIG_H3C_IPQ5018_COMMON),y)
+obj-y += slots_generic.o
+endif
 obj-$(CONFIG_H3C_NAND_ECC_COMPAT) += nor_nand_autoecc.o nor_nand_autoecc_core.o
 obj-$(CONFIG_H3C_IPQ5018_COMMON) += boot_default_rt3000_b.o boot_default_rt3000_b_core.o
 obj-y += upgrade.o
@@ -33,6 +36,6 @@ else
 obj-$(CONFIG_FAILSAFE_MAC_MANAGEMENT) += mac.o
 endif
 
-obj-$(CONFIG_H3C_IPQ5018_COMMON) += squashfs_release.o xz/
+obj-y += slot_probe.o slot_probe_kver.o squashfs_release.o xz/
 
-ccflags-$(CONFIG_H3C_IPQ5018_COMMON) += -DXZ_UBOOT_BUILD -DXZ_INTERNAL_CRC32=1
+ccflags-y += -DXZ_UBOOT_BUILD -DXZ_INTERNAL_CRC32=1

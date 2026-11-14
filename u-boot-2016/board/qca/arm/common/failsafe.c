@@ -1053,6 +1053,7 @@ static int ubi_wr_emit(void *c, uint64_t phys, size_t off, uint32_t n, int write
 
 /* Erase the partition and write the image into it; the caller appends its
  * own commands (bootconfig / slot select) to the list afterwards. */
+void slots_generic_invalidate_cache(void);
 static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_size)
 {
 	nand_info_t *nand = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
@@ -1061,6 +1062,7 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 	uint32_t offset, size;
 	int ret;
 
+	slots_generic_invalidate_cache();
 	if (getpart_offset_size((char *)part, &offset, &size)) {
 		handle_part_not_found(part);
 		return RET_PART_NOT_FOUND;

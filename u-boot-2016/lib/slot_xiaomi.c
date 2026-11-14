@@ -212,6 +212,11 @@ static int xiaomi_slot_set_next(unsigned int slot)
  * then panics is dropped by the crash rule and the old one boots again. The
  * new system confirms itself (stock boot_check sets L, S and T).
  */
+int xiaomi_slot_choose(unsigned int slot)
+{
+	return slot > 1 ? -EINVAL : xiaomi_slot_set_next(slot);
+}
+
 static int xiaomi_slot_set_ota(unsigned int slot)
 {
 	struct xiaomi_flags f;

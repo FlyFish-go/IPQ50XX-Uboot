@@ -9106,21 +9106,15 @@ const firmwareModeManager = (() => {
     return { initLanding, initMode };
 })();
 
-// Boot card version rows appear only when the backend classification supports them.
-function bootSlotFirmwareText(slot, chinese, hwC = false) {
+// What the slot itself says: release text and kernel version, on every board.
+function bootSlotFirmwareText(slot, chinese) {
     if (!slot) return null;
-    if (hwC && slot.known !== true) return chinese ? '系统身份：未识别' : 'System identity: unrecognized';
-    if (slot.known !== true) return null;
-    if (slot.type === 'OEM' && typeof slot.firmware_version === 'string' &&
-        slot.firmware_version.trim())
-        return (chinese ? '\u56fa\u4ef6\uff1a' : 'Firmware: ') + slot.firmware_version;
-    if (slot.detection === 'rootfs_release_file' && typeof slot.version === 'string' && slot.version.trim())
-        return (chinese ? '系统：第三方系统（' + slot.version + '）' : 'System: Third-party system (' + slot.version + ')');
-    if (slot.type === 'OpenWrt' && typeof slot.version === 'string')
-        return (chinese ? '系统：第三方系统（' + slot.version + '）' : 'System: Third-party system (' + slot.version + ')');
-    if (slot.type && slot.type !== 'unknown' && slot.type !== 'OEM')
-        return (chinese ? '\u56fa\u4ef6\uff1a\u7b2c\u4e09\u65b9\u56fa\u4ef6' : 'Firmware: Third-party firmware');
-    return null;
+    const system = slot.known === true && typeof slot.version === 'string' &&
+        slot.version.trim() && slot.version !== 'unknown' ? slot.version.trim() : '';
+    const kernel = typeof slot.kernel === 'string' && slot.kernel.trim() ? 'Linux ' + slot.kernel.trim() : '';
+    if (!system && !kernel) return chinese ? '系统：未识别' : 'System: unrecognized';
+    return (chinese ? '系统：' : 'System: ') + (system || (chinese ? '未识别' : 'unrecognized')) +
+        (kernel ? ' · ' + kernel : '');
 }
 function bootSlotLocationText(slot, chinese) {
     const raw = slot && slot.offset;
@@ -9270,7 +9264,11 @@ const bootSlotsManager = (() => {
             refresh.onclick = () => init();
             inner.appendChild(refresh);
             const hint = document.createElement('p');
-            hint.textContent = saved && saved.default_applies_to === 'bootipq' && saved.auto_web === false
+            hint.textContent = data.boot_supported === false && data.read_only !== true
+                ? (zh()
+                    ? '设为默认后，重启路由器即启动该系统。'
+                    : 'After setting a default, restart the router to boot that system.')
+                : saved && saved.default_applies_to === 'bootipq' && saved.auto_web === false
                 ? (zh()
                     ? '上电将启动已保存的默认分区；上电时按住 RESET 约 3 秒进入维护网页。'
                     : 'Power-on boots the saved default partition. At power-on, hold RESET for about 3 seconds to enter the maintenance page.')
@@ -9326,6 +9324,7 @@ const bootSlotsManager = (() => {
                 button.className = 'button';
                 button.textContent = (zh() ? '启动 ' : 'Boot ') + slot.name;
                 button.disabled = data.read_only === true || data.boot_supported === false;
+                button.hidden = data.boot_supported === false && data.read_only !== true;
                 bootButtons.push(button);
                 button.onclick = async () => {
                     if (operationBusy) return;

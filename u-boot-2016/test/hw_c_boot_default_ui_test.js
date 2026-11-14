@@ -95,25 +95,24 @@ const response = obj => ({ status: 200, ok: true, json: async () => obj });
 
 (async () => {
     const unknown = await render([
-        { name: 'rootfs', known: false, type: 'unknown', detection: 'unknown_rootfs_sha256',
-          label: 'Unknown system' },
-        { name: 'rootfs_1', known: true, type: 'OEM', firmware_version: 'RT3000 R012',
+        { name: 'rootfs', known: false, type: 'unknown', detection: 'no_release_file',
+          label: 'Unknown system', version: 'unknown' },
+        { name: 'rootfs_1', known: true, type: 'OpenWrt', version: 'OpenWrt Chaos Calmer 15.05.1', kernel: '4.4.60',
           dashboard_status: 'not_read' }
     ], 'zh-cn', { family: 'HW-C' });
-    assert(unknown.inner.textContent.includes('系统身份：未识别'));
-    assert(!unknown.inner.textContent.includes('第三方系统'));
-    assert(unknown.inner.textContent.includes('固件：RT3000 R012'));
+    assert(unknown.inner.textContent.includes('系统：未识别'));
+    assert(unknown.inner.textContent.includes('系统：OpenWrt Chaos Calmer 15.05.1 · Linux 4.4.60'));
 
     const thirdParty = await render([
         { name: 'rootfs', known: true, type: 'OpenWrt',
           version: 'OpenWrt 21.02.7 r16847-f8282da11e', detection: 'rootfs_release_file' }
     ], 'zh-cn', { family: 'HW-C' });
-    assert(thirdParty.inner.textContent.includes('系统：第三方系统（OpenWrt 21.02.7 r16847-f8282da11e）'));
+    assert(thirdParty.inner.textContent.includes('系统：OpenWrt 21.02.7 r16847-f8282da11e'));
 
     const production = await render([
-        { name: 'rootfs', known: false, type: 'unknown', detection: 'unknown_rootfs_sha256' },
-        { name: 'rootfs_1', known: true, type: 'OEM', firmware_version: 'RT3000 R012' },
-        { name: 'mtd16', known: true, type: 'OEM', firmware_version: 'MUST NOT DISPLAY' }
+        { name: 'rootfs', known: false, type: 'unknown', detection: 'no_release_file' },
+        { name: 'rootfs_1', known: true, type: 'OpenWrt', version: 'OpenWrt Chaos Calmer 15.05.1' },
+        { name: 'mtd16', known: true, type: 'OpenWrt', version: 'MUST NOT DISPLAY' }
     ], 'zh-cn', {
         family: 'HW-C',
         defaultResponse: response({

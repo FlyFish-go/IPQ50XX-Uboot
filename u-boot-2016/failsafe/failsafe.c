@@ -79,6 +79,9 @@ register_uri_handlers_func_t register_uri_handlers_funcs[] = {
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 	boot_default_rt3000_b_register_uri_handlers,
 #endif
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	slots_generic_register_uri_handlers,
+#endif
 	syslog_register_uri_handlers,
 	upgrade_register_uri_handlers,
 	webterm_register_uri_handlers,
