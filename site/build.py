@@ -944,7 +944,7 @@ def layout(page, title, body, description='', full_title=None):
 <body>
 <input type="checkbox" id="nav-open" class="nav-open" aria-label="打开目录">
 <header class="top">
-<a class="brand" href="/"><img src="/logo.svg" alt="" width="24" height="24">{NAME}<small>安装指南</small></a>
+<a class="brand" href="/"><img src="/logo.svg" alt="" width="26" height="26">{NAME}<small>安装指南</small></a>
 <a class="ext" href="{LINKS["repo"]}">GitHub</a>
 <label class="menu" for="nav-open">目录</label>
 </header>
