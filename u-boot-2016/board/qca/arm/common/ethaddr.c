@@ -67,8 +67,10 @@ static int ethaddr_from_ascii_part(uchar *enetaddr, uint no_of_macs)
 		return -ENOENT;
 	off = (loff_t)qca_smem_flash_info.flash_block_size * start +
 	      CONFIG_ETHADDR_ASCII_OFFSET;
-	if (nand_read(&nand_info[CONFIG_NAND_FLASH_INFO_IDX], off, &len,
-		      (u_char *)text) < 0 || len != sizeof(text) - 1)
+	j = nand_read(&nand_info[CONFIG_NAND_FLASH_INFO_IDX], off, &len,
+		      (u_char *)text);
+	/* -EUCLEAN: bit flips were corrected, the data is good */
+	if ((j < 0 && j != -EUCLEAN) || len != sizeof(text) - 1)
 		return -EIO;
 	text[sizeof(text) - 1] = '\0';
 	for (i = 0; i < sizeof(text) - 1; i++) {
