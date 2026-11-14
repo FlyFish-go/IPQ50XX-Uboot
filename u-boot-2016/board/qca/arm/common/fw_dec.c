@@ -44,6 +44,12 @@ int xiaomi_unwrap_firmware(uintptr_t addr, size_t size, uintptr_t *root,
 
 	if (ret)
 		return ret;
+	ret = xq_check_model(in.model, CONFIG_XIAOMI_FW_MODEL_ID);
+	if (ret) {
+		printf("Xiaomi package is for model %d, this board accepts only model %d\n",
+		       in.model, CONFIG_XIAOMI_FW_MODEL_ID);
+		return ret;
+	}
 	if (root)
 		*root = (uintptr_t)in.root;
 	if (root_size)

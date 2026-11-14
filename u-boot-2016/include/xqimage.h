@@ -40,6 +40,7 @@
 #define XQ_ESECTION	(-4)	/* unknown section name */
 #define XQ_ENOROOT	(-5)	/* no root.ubi, or more than one */
 #define XQ_ETYPE	(-6)	/* not a plain firmware package */
+#define XQ_EMODEL	(-7)	/* package is for another model */
 
 struct xq_info {
 	const uint8_t *root;	/* the root.ubi section data */
@@ -111,6 +112,12 @@ static inline int xq_parse(const uint8_t *buf, size_t len,
 	if (0xffffffffu - crc32(buf + 12, len - 12) != xq_le32(buf + 8))
 		return XQ_ECRC;
 	return XQ_OK;
+}
+
+/* allowed == 0 accepts any model; otherwise the package must carry exactly it. */
+static inline int xq_check_model(int model, int allowed)
+{
+	return allowed && model != allowed ? XQ_EMODEL : XQ_OK;
 }
 
 #endif /* XQIMAGE_H */

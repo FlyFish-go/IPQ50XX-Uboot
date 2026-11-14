@@ -539,6 +539,15 @@ config SLOT_BACKEND_XIAOMI
       which Linux updates with nvram. Boot the slot those flags select
       and record it the way the stock bootmiwifi command does.
 
+config XIAOMI_FW_MODEL_ID
+    int "Model id the Xiaomi official .bin must carry (0 = accept any)"
+    depends on SLOT_BACKEND_XIAOMI
+    default 51 if TARGET_IPQ5018_XIAOMI_CR8806
+    default 0
+    help
+      The HDR1 header of an official package holds a model id (CR8806 is
+      51, RA81 is 44). The rescue page refuses a package for another model.
+
 config ENV_SIZE_64K
     bool
     default y if SLOT_BACKEND_XIAOMI

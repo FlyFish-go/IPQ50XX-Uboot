@@ -136,6 +136,18 @@ int main(int argc, char **argv)
 	w32(b + 4, len + 1);
 	CHECK(xq_parse(b, len, crc32z, &in) == XQ_EFORMAT);
 
+	/* model id allowlist: the test packages carry model 51 (CR8806) */
+	len = build(b, 0, good, 2, 1);
+	CHECK(xq_parse(b, len, crc32z, &in) == XQ_OK);
+	CHECK(xq_check_model(in.model, 51) == XQ_OK);
+	CHECK(xq_check_model(in.model, 0) == XQ_OK);
+	CHECK(xq_check_model(44, 51) == XQ_EMODEL);		/* RA81 */
+	CHECK(xq_check_model(-1, 51) == XQ_EMODEL);
+	w16(b + 14, 44);
+	w32(b + 8, 0xffffffffu - crc32z(b + 12, len - 12));
+	CHECK(xq_parse(b, len, crc32z, &in) == XQ_OK && in.model == 44);
+	CHECK(xq_check_model(in.model, 51) == XQ_EMODEL);
+
 	if (argc > 1) {
 		FILE *fp = fopen(argv[1], "rb");
 		uint8_t *d;
