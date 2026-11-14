@@ -252,6 +252,9 @@ def facts_of(root, defconfig_text=None):
         "gmac": gmac_facts(kid(root, "gmac_cfg")),
         # stock U-Boot DTBs call the key group "button"
         "keys": {n: e["gpio"] for n, e in group_facts(root, ["keys", "button"]).items()},
+        # a key with the wrong polarity reads as held (or never pressed)
+        "keys_active": {n: e["active_level"] for n, e in
+                        group_facts(root, ["keys", "button"]).items() if "active_level" in e},
         "leds": group_facts(root, ["leds"]),
     }
     ms = mac_source(defconfig_text)

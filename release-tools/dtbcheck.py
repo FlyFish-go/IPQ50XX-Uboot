@@ -63,6 +63,8 @@ def flatten(facts):
             put("gmac." + k, v)
     for name, gpio in facts.get("keys", {}).items():
         put("keys.%s" % name, gpio)
+    for name, level in facts.get("keys_active", {}).items():
+        put("keys.%s.active_level" % name, level)
     for e in facts.get("leds", {}).values():
         put("leds.gpio%d" % e["gpio"], "present")
         put("leds.gpio%d.active_level" % e["gpio"], e.get("active_level"))

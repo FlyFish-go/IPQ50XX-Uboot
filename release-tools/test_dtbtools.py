@@ -123,6 +123,15 @@ class Check(unittest.TestCase):
                          [{"path": "gmac.gmac2.*", "reason": "swapped on purpose"}])
         self.assertEqual(rows["gmac.gmac2.reset_gpio"][4], "swapped on purpose")
 
+    def test_key_polarity(self):
+        f = dtbfacts.facts_of(dtbfacts.parse_fdt(fdt(board())))
+        self.assertEqual(f["keys_active"], {"reset": "low"})
+        flipped = board()
+        flipped["kids"]["keys"]["kids"]["reset"]["props"]["active_level"] = 0
+        rows = self.rows(flipped, board())
+        self.assertEqual(rows["keys.reset"][0], "SAME")
+        self.assertEqual(rows["keys.reset.active_level"][0], "DIFF")
+
     def test_ref_only_and_ours_only(self):
         ref = board()
         ref["kids"]["leds"]["kids"]["led_b"] = {"props": {"gpio": 30}}
