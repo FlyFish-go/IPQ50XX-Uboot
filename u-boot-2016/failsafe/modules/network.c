@@ -23,6 +23,7 @@
 #include <net/httpd.h>
 
 #include "modules.h"
+#include <slot_probe.h>
 
 # if defined(CONFIG_IPADDR)
 static const char *default_ipaddr = __stringify(CONFIG_IPADDR);
@@ -84,7 +85,7 @@ static void network_set_env(struct httpd_response *response, bool custom,
 			modified++;
 
 	if (modified)
-		ret = saveenv();
+		ret = slot_probe_env_broken() ? 1 : saveenv();
 
 	if (!ret)
 		handle_response_message(response, 200, "ok", NULL);

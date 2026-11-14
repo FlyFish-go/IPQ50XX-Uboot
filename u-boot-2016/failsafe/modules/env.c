@@ -28,6 +28,7 @@
 #endif
 
 #include "modules.h"
+#include <slot_probe.h>
 
 #include <h3c_board_profile.h>
 #define RT3_ENV_BOARD_LABEL H3C_BOARD_LABEL
@@ -409,7 +410,7 @@ static int rt3_env_transaction(rt3_env_mutator_fn mutate, void *arg,
 		goto done;
 	}
 	if (!ret) {
-		ret = saveenv();
+		ret = slot_probe_env_broken() ? 1 : saveenv();
 		if (!ret)
 			goto done;
 		ret = -EIO;
@@ -651,7 +652,7 @@ static void env_set_handler(enum httpd_uri_handler_status status,
 		if (!setenv(name, value))
 			changed = true;
 	if (changed)
-		ret = saveenv();
+		ret = slot_probe_env_broken() ? 1 : saveenv();
 	else
 		ret = 0;
 	free(name);
@@ -704,7 +705,7 @@ static void env_unset_handler(enum httpd_uri_handler_status status,
 	}
 	ret = setenv(name, NULL);
 	if (!ret)
-		ret = saveenv();
+		ret = slot_probe_env_broken() ? 1 : saveenv();
 	free(name);
 #endif
 	if (ret) {
@@ -733,7 +734,7 @@ static void env_reset_all_handler(enum httpd_uri_handler_status status,
 	ret = rt3_env_transaction(rt3_env_mutate_reset_all, NULL, 1);
 #else
 	set_default_env(NULL);
-	ret = saveenv();
+	ret = slot_probe_env_broken() ? 1 : saveenv();
 #endif
 	if (!ret)
 		failsafe_http_reply_text(response, 200, "ok");
@@ -792,7 +793,7 @@ static void env_reset_single_handler(enum httpd_uri_handler_status status,
 		if (!setenv(name, default_value))
 			changed = true;
 	if (changed)
-		ret = saveenv();
+		ret = slot_probe_env_broken() ? 1 : saveenv();
 	else
 		ret = 0;
 	free(name);
@@ -885,7 +886,7 @@ static void env_restore_handler(enum httpd_uri_handler_status status,
 		return;
 	}
 	if (env_import(envfile->data, 0))
-		if (!saveenv())
+		if (!slot_probe_env_broken() && !saveenv())
 			success = true;
 	if (success)
 		failsafe_http_reply_text(response, 200, "ok");

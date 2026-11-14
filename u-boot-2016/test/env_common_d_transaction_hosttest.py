@@ -62,6 +62,7 @@ static int env_export(env_t *);
 static int env_import(const char *, int);
 static int mock_saveenv(void) { saveenv_calls++; return saveenv_fail ? -1 : 0; }
 static int (*saveenv)(void)=mock_saveenv;
+static int slot_probe_env_broken(void) { return 0; }
 static int tail_mismatch;
 int rt3_nand_env_tail_matches(const void *tail,size_t size) { (void)tail;(void)size;return tail_mismatch ? -EINVAL : 0; }
 static const char *getenv_default(const char *);

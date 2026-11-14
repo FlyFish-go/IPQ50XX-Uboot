@@ -202,6 +202,10 @@ static void default_handler(enum httpd_uri_handler_status status,
 		answer(response, 409, "{\"status\":\"fail\",\"error\":\"environment_not_restored\"}");
 		return;
 	}
+	if (!slot_default_writable()) {
+		answer(response, 409, "{\"status\":\"fail\",\"error\":\"bootconfig_copies_differ\"}");
+		return;
+	}
 	if (!ready) {
 		answer(response, 409, "{\"status\":\"fail\",\"error\":\"target_slot_has_no_system\"}");
 		return;

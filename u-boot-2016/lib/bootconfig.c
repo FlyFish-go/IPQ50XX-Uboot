@@ -363,6 +363,19 @@ int get_bootconfig_readonly(const char *part_name)
 	return -ENOENT;
 }
 
+bool bootconfig_copies_identical(void)
+{
+	bootconfig_info_t a, b;
+
+	a.part_name = BOOTCONFIG_PART_NAME;
+	a.size = sizeof(struct bootconfig_info);
+	b.part_name = BOOTCONFIG_BACKUP_PART_NAME;
+	b.size = sizeof(struct bootconfig_info);
+	if (read_bootconfig(&a, false, true) || read_bootconfig(&b, false, true))
+		return false;
+	return !memcmp(&a.info, &b.info, sizeof(a.info));
+}
+
 #if !defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 #define BOOTCONFIG_PROBE_BYTES	2048
 

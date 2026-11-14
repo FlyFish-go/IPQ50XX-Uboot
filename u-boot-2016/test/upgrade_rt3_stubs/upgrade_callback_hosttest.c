@@ -24,6 +24,9 @@ int rt3_metadata_write_target(enum rt3_md_kind k,enum rt3_md_target target,const
 #include "../failsafe/modules/upgrade.c"
 static struct host_uri *find(const char*p){unsigned i;for(i=0;i<uri_count;i++)if(!strcmp(uris[i].path,p))return &uris[i];return NULL;}
 #define CHECK(x) do{if(!(x)){fprintf(stderr,"FAIL line %d: %s\n",__LINE__,#x);return 1;}}while(0)
+static unsigned int host_gen;
+void httpd_upload_buffer_clobbered(void){host_gen++;}
+unsigned int httpd_upload_buffer_gen(void){return host_gen;}
 int main(void){
  struct httpd_instance inst={0};struct httpd_request up={0},wr={0};struct httpd_response r={0};struct host_uri*u,*w;char bytes[]="ELF";
  upgrade_register_uri_handlers(&inst);u=find("/upload");w=find("/write");

@@ -1117,6 +1117,7 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 
 #ifdef CONFIG_SLOT_BACKEND_XIAOMI
 #include <slot_ops.h>
+#include <slot_probe.h>
 /*
  * Xiaomi slots: like stock OTA, write the slot that is not selected now and
  * boot it as a pending OTA, so the current system stays as the fallback: a
@@ -1133,6 +1134,12 @@ int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 	if (fw_type != FW_TYPE_UBI) {
 		handle_wrong_fw_type("UBI");
 		return RET_WRONG_FW_TYPE;
+	}
+	/* The slot flags live in the environment, which a failed probe restore
+	 * left incomplete: do not choose a slot from it or save it. */
+	if (slot_probe_env_broken()) {
+		strlcpy(info, "{\"type\":\"environment_not_restored\"}", sizeof(info));
+		return RET_FAILURE;
 	}
 	RETURN_IF_NAND_FLASH_NOT_FOUND;
 	printf("Xiaomi slots: installing into %s (slot %u)\n", part, slot);

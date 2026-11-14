@@ -4,7 +4,9 @@ enum httpd_uri_handler_status { HTTP_CB_NEW, HTTP_CB_RESPONDING, HTTP_CB_CLOSED 
 enum httpd_response_status { HTTP_RESP_NONE, HTTP_RESP_CUSTOM, HTTP_RESP_STD };
 struct httpd_form_value { const char *name; const char *data; const char *filename; unsigned int size; };
 struct httpd_form_values { unsigned int count; struct httpd_form_value values[8]; };
-struct httpd_request { struct httpd_form_values form; };
+struct httpd_request { struct httpd_form_values form; unsigned int upload_gen; };
+void httpd_upload_buffer_clobbered(void);
+unsigned int httpd_upload_buffer_gen(void);
 struct httpd_response_info { int http_1_0; int content_length; int connection_close; const char *content_type; int code; };
 struct httpd_response { enum httpd_response_status status; struct httpd_response_info info; const char *data; unsigned int size; void *session_data; };
 struct httpd_instance { int unused; };

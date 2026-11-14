@@ -109,6 +109,17 @@ static struct http_response_code http_resp_codes[] = {
 };
 
 u32 upload_id = (u32) -1;
+static u32 upload_buffer_gen;
+
+void httpd_upload_buffer_clobbered(void)
+{
+	upload_buffer_gen++;
+}
+
+u32 httpd_upload_buffer_gen(void)
+{
+	return upload_buffer_gen;
+}
 
 static int is_uploading;
 static LIST_HEAD(inst_head);
@@ -666,6 +677,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 
 			/* generate new upload identifier */
 			upload_id = rand();
+			pdata->request.upload_gen = upload_buffer_gen;
 
 			/* calculate new cache address */
 			pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);

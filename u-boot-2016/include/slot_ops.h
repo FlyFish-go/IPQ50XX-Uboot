@@ -24,6 +24,7 @@ static inline unsigned int slot_count(void) { return 1; }
 static inline const char *slot_part_name(unsigned int slot) { return "rootfs"; }
 static inline int slot_set_default(unsigned int slot) { return -ENOSYS; }
 static inline int slot_stored_default(void) { return 0; }
+static inline bool slot_default_writable(void) { return false; }
 
 #elif defined(CONFIG_SLOT_BACKEND_XIAOMI)
 
@@ -47,6 +48,7 @@ static inline const char *slot_part_name(unsigned int slot)
 /* Boot slot from now on (flags as after a clean boot of it); saves the env. */
 static inline int slot_set_default(unsigned int slot) { return xiaomi_slot_choose(slot); }
 static inline int slot_stored_default(void) { return xiaomi_slot_select(); }
+static inline bool slot_default_writable(void) { return true; }
 
 #else /* Qualcomm BOOTCONFIG */
 
@@ -102,6 +104,12 @@ static inline int slot_set_default(unsigned int slot)
 static inline int slot_stored_default(void)
 {
 	return get_bootconfig_readonly("rootfs");
+}
+/* set_bootconfig() syncs the whole table to the backup copy at the end:
+ * only start from two identical copies, so nothing else changes. */
+static inline bool slot_default_writable(void)
+{
+	return bootconfig_copies_identical();
 }
 
 #endif

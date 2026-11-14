@@ -35,6 +35,7 @@ struct result_session {
 	int ret;
 	int body_sent;
 	bool auto_reboot;
+	u32 gen;
 };
 
 static const struct {
@@ -112,6 +113,7 @@ static int metadata_upload_target(struct httpd_request *request,
 
 void failsafe_upload_invalidate(void)
 {
+	httpd_upload_buffer_clobbered();
 	/* result_handler writes only when upload_data_id == fs_upload_id. */
 	upload_data_id = fs_upload_id + 1;
 #ifdef CONFIG_H3C_IPQ5018_COMMON
@@ -172,6 +174,18 @@ static void upload_handler(enum httpd_uri_handler_status status,
 
 		if (sess->body_sent) {
 			response->status = HTTP_RESP_NONE;
+			return;
+		}
+
+		/* The buffer was reused (slot probe) while this upload was in it. */
+		if (request->upload_gen != httpd_upload_buffer_gen()) {
+			response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
+			response->size = strlen(response->data);
+			sess->body_sent = 1;
+			sess->ret = RET_FAILURE;
+#ifdef CONFIG_H3C_IPQ5018_COMMON
+			rt3_metadata_invalidate();
+#endif
 			return;
 		}
 
@@ -270,6 +284,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 			st->auto_reboot = true;
 
 		st->ret = RET_FAILURE;
+		st->gen = httpd_upload_buffer_gen();
 
 		response->session_data = st;
 
@@ -407,7 +422,9 @@ static void result_handler(enum httpd_uri_handler_status status,
 		bool upgrade_success;
 
 		st = response->session_data;
-		upgrade_success = st->ret == RET_SUCCESS ? true : false;
+		/* A RAM boot or reset must not follow if the buffer was reused. */
+		upgrade_success = st->ret == RET_SUCCESS &&
+				  st->gen == httpd_upload_buffer_gen();
 		auto_action_pending = st->auto_reboot && upgrade_success;
 
 		free(response->session_data);

@@ -66,5 +66,7 @@ unsigned int bootconfig_booted_flag(const char *entry);
 /* Like get_bootconfig() but never repairs or writes anything: the primary
  * copy if valid, else the backup copy, else a negative errno. */
 int get_bootconfig_readonly(const char *part_name);
+/* Both copies valid and identical (read only). */
+bool bootconfig_copies_identical(void);
 
 #endif /* __BOOTCONFIG_H__ */

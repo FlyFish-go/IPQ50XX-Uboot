@@ -44,7 +44,16 @@ struct httpd_request {
 	enum httpd_request_method method;
 	const struct httpd_uri_handler *urih;
 	struct httpd_form_values form;
+	u32 upload_gen;		/* buffer generation when the upload started */
 };
+
+/*
+ * Something else wrote the RAM that holds uploads (the rescue page's slot
+ * probe does). Bumps the generation, so an upload received before cannot be
+ * validated, written or booted any more.
+ */
+void httpd_upload_buffer_clobbered(void);
+u32 httpd_upload_buffer_gen(void);
 
 enum httpd_response_status {
 	HTTP_RESP_NONE,
