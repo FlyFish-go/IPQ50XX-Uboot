@@ -81,5 +81,19 @@ int main(void)
 	CHECK(oemdata_window(NULL, &none, &root, 1, &w) == OEMDATA_EXDEV);
 
 	puts("OEMDATA_RESTORE_HOSTTEST_PASS");
+	/* only whole-partition backups: the restore erases the whole extent */
+	for (i = 0; i < OEMDATA_NPARTS; i++) {
+		p = &oemdata_parts[i];
+		CHECK(oemdata_size_ok(p, p->size, p->size));
+		CHECK(!oemdata_size_ok(p, p->size - 1, p->size));
+		CHECK(!oemdata_size_ok(p, 0x20000, p->size));
+		CHECK(!oemdata_size_ok(p, p->size + 0x20000, p->size));
+		CHECK(!oemdata_size_ok(p, 0, p->size));
+		/* one bad block: the backup page saves the good blocks only */
+		CHECK(oemdata_size_ok(p, p->size - 0x20000, p->size - 0x20000));
+		CHECK(oemdata_size_ok(p, p->size, p->size - 0x20000));	/* raw dump */
+		CHECK(!oemdata_size_ok(p, p->size - 0x40000, p->size - 0x20000));
+	}
+	CHECK(!oemdata_size_ok(NULL, 0x600000, 0x600000));
 	return 0;
 }

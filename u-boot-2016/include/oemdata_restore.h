@@ -65,6 +65,18 @@ static inline const struct oemdata_part *oemdata_find(const char *filename)
 	return NULL;
 }
 
+/*
+ * The restore erases the whole extent, so only a backup of the whole
+ * partition may be written back: the full extent (a raw dump), or its good
+ * blocks (the backup page skips bad blocks). good = the good-block bytes of
+ * the extent on this unit now.
+ */
+static inline int oemdata_size_ok(const struct oemdata_part *p, uint64_t size,
+				  uint64_t good)
+{
+	return p && size && (size == p->size || size == good);
+}
+
 struct oemdata_smem {
 	int have;		/* the SMEM table has this entry */
 	uint64_t off, size;

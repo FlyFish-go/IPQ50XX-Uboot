@@ -1433,6 +1433,17 @@ static void oemdata_fail(const char *what, const char *name, int err)
 	printf("OEM data %s: %s (%d)\n", name, what, err);
 }
 
+static uint64_t oemdata_good_bytes(const struct oemdata_part *p)
+{
+	struct mtd_info *mtd = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
+	uint64_t pos, good = 0;
+
+	for (pos = p->off; pos < p->off + p->size; pos += mtd->erasesize)
+		if (!nand_block_isbad(mtd, pos))
+			good += mtd->erasesize;
+	return good;
+}
+
 int failsafe_validate_oemdata(const char *filename, const void *data, ulong size)
 {
 	const struct oemdata_part *p = oemdata_find(filename);
@@ -1447,6 +1458,11 @@ int failsafe_validate_oemdata(const char *filename, const void *data, ulong size
 	if (!size || size > p->size) {
 		handle_file_too_big("OEM data", size, p->name, p->size);
 		return RET_FILE_TOO_BIG;
+	}
+	if (!oemdata_size_ok(p, size, oemdata_good_bytes(p))) {
+		/* the whole extent is erased: a short file would lose the rest */
+		oemdata_fail("the file is not a whole-partition backup", p->name, -EINVAL);
+		return RET_FAILURE;
 	}
 	if (rt3_flash_reboot_required()) {
 		oemdata_fail("the partition table changed, reboot first", p->name, -EAGAIN);
