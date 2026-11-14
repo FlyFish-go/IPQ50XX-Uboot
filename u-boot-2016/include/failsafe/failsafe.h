@@ -84,6 +84,10 @@ void print_eth_init_halt_skip_hint(int init);
 int boot_from_mem(ulong data_addr);
 /* Forget any upload validated but not yet written (its RAM may be reused). */
 void failsafe_upload_invalidate(void);
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/* the validated upload is still in RAM, byte for byte */
+bool failsafe_upload_unchanged(void);
+#endif
 #ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 void failsafe_initramfs_invalidate(void);
 bool failsafe_initramfs_is_validated(ulong data_addr, ulong data_size);

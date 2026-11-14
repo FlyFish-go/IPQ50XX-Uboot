@@ -291,6 +291,11 @@ int start_web_failsafe(void)
 	}
 
 	failsafe_seed_rand();
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* Commands may have rewritten the upload RAM since the last session:
+	 * nothing validated before is trusted now. */
+	failsafe_upload_invalidate();
+#endif
 	print_greeting_message();
 	handle_start_led_state();
 
@@ -332,6 +337,14 @@ static int do_httpd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	ret = start_web_failsafe();
 
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* A queued RAM boot uses the validated bytes only. */
+	if (auto_action_pending && upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS &&
+	    !failsafe_upload_unchanged()) {
+		puts("INITRAMFS changed after validation: not booting it\n");
+		auto_action_pending = false;
+	}
+#endif
 	if (auto_action_pending) {
 		handle_success_led_state();
 		mdelay(1000);

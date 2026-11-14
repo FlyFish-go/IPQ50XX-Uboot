@@ -18,6 +18,9 @@
 #include <net/httpd.h>
 #include <failsafe/failsafe.h>
 #include <ipq_api.h>
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+#include <u-boot/md5.h>
+#endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 #include <rt3000_b_metadata.h>
 #endif
@@ -36,6 +39,9 @@ struct result_session {
 	int body_sent;
 	bool auto_reboot;
 	u32 gen;
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	u32 armed_id;	/* upload this /result was sent for */
+#endif
 };
 
 static const struct {
@@ -58,11 +64,24 @@ upgrade_type_t upgrade_type;
 
 static u32 fs_upload_id;
 static u32 upload_data_id;
-#ifndef CONFIG_H3C_IPQ5018_COMMON
-/* Shared-RAM generation of the last upload that passed validation. */
-static u32 upload_data_gen;
-#endif
 static size_t upload_size;
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/* Shared-RAM generation and MD5 of the last upload that passed validation:
+ * a write or a RAM boot uses the bytes only while both still match. */
+static u32 upload_data_gen;
+static u8 upload_data_md5[16];
+static bool upload_data_md5_valid;
+
+bool failsafe_upload_unchanged(void)
+{
+	u8 now[16];
+
+	if (!upload_data_md5_valid || upload_data_gen != httpd_upload_buffer_gen())
+		return false;
+	md5((u8 *)upload_data, upload_size, now);
+	return !memcmp(now, upload_data_md5, sizeof(now));
+}
+#endif
 
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 static int metadata_kind_for_upgrade(upgrade_type_t type, enum rt3_md_kind *kind)
@@ -120,6 +139,11 @@ void failsafe_upload_invalidate(void)
 	httpd_upload_buffer_clobbered();
 	/* result_handler writes only when upload_data_id == fs_upload_id. */
 	upload_data_id = fs_upload_id + 1;
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	upload_data_md5_valid = false;
+	/* a reboot or INITRAMFS boot queued by a finished /result */
+	auto_action_pending = false;
+#endif
 #ifdef CONFIG_H3C_IPQ5018_COMMON
 	rt3_metadata_invalidate();
 #endif
@@ -252,10 +276,14 @@ static void upload_handler(enum httpd_uri_handler_status status,
 						(ulong)upload_size, response);
 #ifndef CONFIG_H3C_IPQ5018_COMMON
 		/* Only an image that passed every check may reach /result. */
-		if (sess->ret != RET_SUCCESS)
+		if (sess->ret != RET_SUCCESS) {
 			upload_data_id = fs_upload_id + 1;
-		else
+			upload_data_md5_valid = false;
+		} else {
 			upload_data_gen = request->upload_gen;
+			md5((u8 *)upload_data, upload_size, upload_data_md5);
+			upload_data_md5_valid = true;
+		}
 #endif
 
 		sess->body_sent = 1;
@@ -286,17 +314,24 @@ static void upload_handler(enum httpd_uri_handler_status status,
  * tail. A failure leaves its JSON in response->data.
  */
 static int generic_prewrite_check(struct httpd_request *request,
-				  struct httpd_response *response)
+				  struct httpd_response *response, u32 armed_id)
 {
 	int ret;
 
-	if (upload_data_gen != httpd_upload_buffer_gen()) {
+	/* Only the upload that was current when this /result arrived. */
+	if (armed_id != upload_data_id) {
+		response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_id_mismatch\"}}";
+		return RET_FAILURE;
+	}
+	/* Same bytes as validated, whatever rewrote the RAM since (terminal,
+	 * telnet, a command run between two httpd sessions, a download). */
+	if (!failsafe_upload_unchanged()) {
 		response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
 		return RET_FAILURE;
 	}
 	ret = failsafe_validate_image(upgrade_type, NULL, RT3_MD_TARGET_DEFAULT,
 				      upload_data, (ulong)upload_size, response);
-	if (ret == RET_SUCCESS && upload_data_gen != httpd_upload_buffer_gen()) {
+	if (ret == RET_SUCCESS && !failsafe_upload_unchanged()) {
 		response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
 		return RET_FAILURE;
 	}
@@ -330,6 +365,9 @@ static void result_handler(enum httpd_uri_handler_status status,
 
 		st->ret = RET_FAILURE;
 		st->gen = httpd_upload_buffer_gen();
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+		st->armed_id = upload_data_id;
+#endif
 
 		response->session_data = st;
 
@@ -415,7 +453,7 @@ static void result_handler(enum httpd_uri_handler_status status,
 				}
 #else
 #ifndef CONFIG_H3C_IPQ5018_COMMON
-				st->ret = generic_prewrite_check(request, response);
+				st->ret = generic_prewrite_check(request, response, st->armed_id);
 				if (st->ret != RET_SUCCESS)
 					st->auto_reboot = false;
 				else
