@@ -62,31 +62,6 @@ static struct cmd_list {
 	int count;
 } *runcmd;
 
-static struct jdc_fw_entry {
-	const char *part_name;
-	const char *node_prefix;
-	char node_name[256];
-} jdc_fw_entries[] = {
-	{ .part_name = "0:HLOS", .node_prefix = "hlos" },
-	{ .part_name = "rootfs", .node_prefix = "rootfs" },
-	{
-		.part_name = "0:WIFIFW",
-#if defined(CONFIG_ARCH_IPQ5332)
-		.node_prefix = "wifi_fw"
-#elif defined(CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000)
-		.node_prefix = "wifi_fw_ipq5018_qcn6122cs",
-#else
-		.node_prefix = "wififw"
-#endif /* CONFIG_ARCH_IPQ5332 */
-	},
-#ifdef CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000
-	{ .part_name = "0:BTFW", .node_prefix = "btfw" }
-#endif
-};
-
-static char gl_fw_ubi_name[66];
-static ulong factory_fw_kernel_size;
-
 static char info[666];
 static char resp[888];
 static fw_type_t fw_type;
@@ -196,27 +171,6 @@ static void handle_part_not_found(const char *part_name)
 	printf("Error: partition %s not found\n", part_name);
 }
 
-static void handle_invalid_factory_fw(void)
-{
-	strlcpy(info, "{\"type\":\"invalid_factory_firmware\"}", sizeof(info));
-}
-
-static void handle_invalid_sysupgrade_fw(void)
-{
-	strlcpy(info,
-		"{\"type\":\"wrong_file_type\","
-		"\"expected\":\"sysupgrade tar image\","
-		"\"actual\":\"not a valid sysupgrade tar image\"}", sizeof(info));
-
-	printf("Error: not a valid sysupgrade tar image\n");
-}
-
-static void handle_invalid_qsdk_fw(const char *node_prefix)
-{
-	snprintf(info, sizeof(info),
-		"{\"type\":\"fit_node_not_found\",\"node_prefix\":\"%s\"}", node_prefix);
-}
-
 #ifndef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
 static void handle_command_too_long(const char *file, const char *func, int line, int len)
 {
@@ -264,7 +218,7 @@ static void handle_run_command_failed(const char *cmd, const char *output)
 // 帮助函数（验证相关）
 // =============================================================================
 
-static int part_exists(const char *part_name, int flag)
+static int __maybe_unused part_exists(const char *part_name, int flag)
 {
 	if (smem_part_exists(part_name) || mmc_part_exists(part_name))
 		return RET_SUCCESS;
@@ -325,62 +279,6 @@ file_too_big:
 part_not_found:
 	handle_part_not_found(part_name);
 	return RET_PART_NOT_FOUND;
-}
-
-static int parse_glinet_firmware(const void *data_addr)
-{
-	int ret;
-
-	ret = fit_image_get_node_by_prefix(data_addr, FIT_IMAGES_PATH, "ubi",
-                            gl_fw_ubi_name, sizeof(gl_fw_ubi_name));
-    if (ret)
-		handle_invalid_qsdk_fw("ubi");
-
-	return ret ? RET_FAILURE : RET_SUCCESS;
-}
-
-static int parse_jdcloud_firmware(const void *data_addr)
-{
-	int ret;
-	struct jdc_fw_entry *entry;
-
-	for (int i = 0; i < ARRAY_SIZE(jdc_fw_entries); i++) {
-		entry = &jdc_fw_entries[i];
-		ret = fit_image_get_node_by_prefix(data_addr, FIT_IMAGES_PATH,
-				entry->node_prefix, entry->node_name, sizeof(entry->node_name));
-		if (ret) {
-			handle_invalid_qsdk_fw(entry->node_prefix);
-			return RET_FAILURE;
-		}
-	}
-
-	return RET_SUCCESS;
-}
-
-static int parse_factory_firmware(const void *data_addr, ulong data_size)
-{
-	const void *p = data_addr;
-	const u32 magic = HEADER_MAGIC_SQUASHFS;
-	const size_t magic_len = sizeof(u32);
-	ulong size_remain = data_size;
-
-	if (!p)
-		goto fail;
-
-	while (size_remain >= magic_len) {
-		size_remain--;
-		if (!memcmp(p, &magic, magic_len) &&
-			((p - data_addr) % SZ_1M == 0)) {
-			/* 内核大小需为 1 MiB 的整数倍 */
-			factory_fw_kernel_size = p - data_addr;
-			return RET_SUCCESS;
-		}
-		p++;
-	}
-
-fail:
-	handle_invalid_factory_fw();
-	return RET_FAILURE;
 }
 
 void get_image_md5_str(const void *data_addr, ulong data_size, char *buf, size_t buf_size)
@@ -522,76 +420,20 @@ static int failsafe_run_command_list(void)
 // 文件验证函数
 // =============================================================================
 
+/*
+ * Firmware = one bare UBI image (an OpenWrt/QSDK .ubi or a full backup of a
+ * rootfs partition). Vendor packages carry SBL1/APPSBL and other boot-chain
+ * parts and are not unpacked here: the offline unpacker on the guide site
+ * takes their UBI out first.
+ */
 static int __maybe_unused failsafe_validate_firmware(const void *data_addr, ulong data_size)
 {
-    int ret = RET_SUCCESS;
-	size_t kernel_size, rootfs_size;
-
-    switch (fw_type) {
-    case FW_TYPE_FIT:
-		RETURN_IF_BOTH_NOR_FLASH_AND_MMC_FLASH_NOT_FOUND;
-        ret = parse_factory_firmware(data_addr, data_size);
-		if (ret)
-			break;
-        ret = validate_file_size("firmware kernel", "0:HLOS", factory_fw_kernel_size);
-        if (ret)
-            break;
-        ret = validate_file_size("firmware rootfs", "rootfs", data_size - factory_fw_kernel_size);
-        break;
-    case FW_TYPE_SYSUPGRADE:
-		RETURN_IF_BOTH_NOR_FLASH_AND_MMC_FLASH_NOT_FOUND;
-		ret = parse_tar_image(data_addr, (size_t)data_size,
-				NULL, &kernel_size, NULL, &rootfs_size);
-        if (ret) {
-            handle_invalid_sysupgrade_fw();
-            return RET_WRONG_FW_TYPE;
-        }
-        ret = validate_file_size("firmware kernel", "0:HLOS", (ulong)kernel_size);
-        if (ret)
-            break;
-        ret = validate_file_size("firmware rootfs", "rootfs", (ulong)rootfs_size);
-        break;
-    case FW_TYPE_ASUSWRT_EMMC:
-		RETURN_IF_MMC_FLASH_NOT_FOUND;
-        ret = part_exists("0:HLOS", 1);
-        if (ret)
-            break;
-        ret = part_exists("rootfs", 1);
-        break;
-	case FW_TYPE_GLINET_V3:
-	case FW_TYPE_GLINET_V4:
-		RETURN_IF_NAND_FLASH_NOT_FOUND;
-		ret = part_exists("rootfs", 1);
-        if (ret)
-            break;
-		ret = parse_glinet_firmware(data_addr);
-		break;
-    case FW_TYPE_JDCLOUD:
-		RETURN_IF_MMC_FLASH_NOT_FOUND;
-		for (int i = 0; i < ARRAY_SIZE(jdc_fw_entries); i++) {
-			ret = part_exists(jdc_fw_entries[i].part_name, 1);
-			if (ret)
-				break;
-		}
-        if (ret)
-            break;
-#ifndef CONFIG_ARCH_IPQ5332
-        ret = part_exists("rootfs_data", 1);
-        if (ret)
-            break;
-#endif /* CONFIG_ARCH_IPQ5332 */
-        ret = parse_jdcloud_firmware(data_addr);
-        break;
-    case FW_TYPE_UBI:
-        RETURN_IF_NAND_FLASH_NOT_FOUND;
-        ret = validate_file_size("firmware", "rootfs", FW_UBI_PAYLOAD_SIZE(data_addr, data_size));
-        break;
-    default:
-        handle_wrong_fw_type("FIRMWARE");
-        ret = RET_WRONG_FW_TYPE;
-    }
-
-    return ret;
+	if (fw_type != FW_TYPE_UBI) {
+		handle_wrong_fw_type("UBI");
+		return RET_WRONG_FW_TYPE;
+	}
+	RETURN_IF_NAND_FLASH_NOT_FOUND;
+	return validate_file_size("firmware", "rootfs", data_size);
 }
 
 static int __maybe_unused failsafe_validate_uboot(const void *data_addr, ulong data_size)
@@ -730,52 +572,12 @@ static int failsafe_write_firmware(ulong data_addr, ulong data_size)
 {
 	FAILSAFE_FIRMWARE_SLOT_HOOK(data_addr, data_size); print_upgrade_hint("FIRMWARE");
 
-	switch (fw_type) {
-	case FW_TYPE_FIT:
-		RETURN_IF_BOTH_NOR_FLASH_AND_MMC_FLASH_NOT_FOUND;
-		ADD_CMD_TO_LIST("flash 0:HLOS 0x%lx 0x%lx",
-			data_addr, factory_fw_kernel_size);
-		ADD_CMD_TO_LIST("flash rootfs 0x%lx 0x%lx",
-			data_addr + factory_fw_kernel_size,
-			data_size - factory_fw_kernel_size);
-		break;
-	case FW_TYPE_GLINET_V3:
-	case FW_TYPE_GLINET_V4:
-		RETURN_IF_NAND_FLASH_NOT_FOUND;
-		ADD_CMD_TO_LIST("xtract_n_flash 0x%lx %s rootfs",
-			data_addr, gl_fw_ubi_name);
-		break;
-	case FW_TYPE_JDCLOUD:
-		RETURN_IF_MMC_FLASH_NOT_FOUND;
-		for (int i = 0; i < ARRAY_SIZE(jdc_fw_entries); i++) {
-			struct jdc_fw_entry *entry = &jdc_fw_entries[i];
-			ADD_CMD_TO_LIST("xtract_n_flash 0x%lx %s %s",
-				data_addr, entry->node_name, entry->part_name);
-		}
-#if !defined(CONFIG_ARCH_IPQ5332) && !defined(CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000)
-		ADD_CMD_TO_LIST("flasherase rootfs_data");
-#endif /* !CONFIG_ARCH_IPQ5332 && !CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000 */
-		break;
-	case FW_TYPE_SYSUPGRADE:
-	case FW_TYPE_ASUSWRT_EMMC:
-		RETURN_IF_BOTH_NOR_FLASH_AND_MMC_FLASH_NOT_FOUND;
-		ADD_CMD_TO_LIST("untar 0x%lx 0x%lx", data_addr, data_size);
-		ADD_CMD_TO_LIST("flash 0:HLOS $kernel_addr $kernel_size");
-		ADD_CMD_TO_LIST("flash rootfs $rootfs_addr $rootfs_size");
-		break;
-	case FW_TYPE_UBI:
-		RETURN_IF_NAND_FLASH_NOT_FOUND;
-		ADD_CMD_TO_LIST("flash rootfs 0x%lx 0x%lx", data_addr, data_size);
-		break;
-	default:
-		handle_wrong_fw_type("FIRMWARE");
+	if (fw_type != FW_TYPE_UBI) {
+		handle_wrong_fw_type("UBI");
 		return RET_WRONG_FW_TYPE;
 	}
-
-#ifdef CONFIG_TARGET_IPQ5018_JDCLOUD_AX3000
-	if (!part_exists("rootfs_data", 0))
-		ADD_CMD_TO_LIST("flasherase rootfs_data");
-#endif
+	RETURN_IF_NAND_FLASH_NOT_FOUND;
+	ADD_CMD_TO_LIST("flash rootfs 0x%lx 0x%lx", data_addr, data_size);
 
 	if (validate_bootconfig())
 		ADD_CMD_TO_LIST("bootconfig set firmware 0");
@@ -1311,7 +1113,6 @@ static int failsafe_ubi_install(const char *part, ulong data_addr, ulong data_si
 
 #ifdef CONFIG_SLOT_BACKEND_XIAOMI
 #include <slot_ops.h>
-#include <xqimage.h>
 /*
  * Xiaomi slots: like stock OTA, write the slot that is not selected now and
  * boot it as a pending OTA, so the current system stays as the fallback: a
@@ -1325,22 +1126,6 @@ int failsafe_write_firmware_xiaomi(ulong data_addr, ulong data_size)
 	int ret;
 
 	print_upgrade_hint("FIRMWARE");
-	if (data_size >= 4 && *(const u32 *)data_addr == XQ_MAGIC) {
-		uintptr_t root;
-		size_t root_size;
-
-		/* Official package: only its root.ubi is written. Move it to
-		 * the start of the buffer so the NAND writes stay aligned. */
-		if (xiaomi_unwrap_firmware(data_addr, data_size, &root, &root_size)) {
-			handle_wrong_fw_type("UBI");
-			return RET_WRONG_FW_TYPE;
-		}
-		printf("Xiaomi package: writing root.ubi, %lu bytes\n",
-		       (ulong)root_size);
-		memmove((void *)data_addr, (void *)root, root_size);
-		data_size = root_size;
-		fw_type = FW_TYPE_UBI;
-	}
 	if (fw_type != FW_TYPE_UBI) {
 		handle_wrong_fw_type("UBI");
 		return RET_WRONG_FW_TYPE;

@@ -26,64 +26,8 @@
 #define U32_DATA_AT_OFFSET(n) (*((const u32 *)(n)))
 #define U64_DATA_AT_OFFSET(n) (*((const u64 *)(n)))
 
-#ifdef CONFIG_SLOT_BACKEND_XIAOMI
-#include <u-boot/crc.h>
-#include <xqimage.h>
-
-static uint32_t xiaomi_crc32(const uint8_t *p, size_t n)
-{
-	return crc32(0, p, n);
-}
-
-/* Xiaomi official .bin: find the root.ubi section, refuse anything else. */
-int xiaomi_unwrap_firmware(uintptr_t addr, size_t size, uintptr_t *root,
-			   size_t *root_size)
-{
-	struct xq_info in;
-	int ret = xq_parse((const uint8_t *)addr, size, xiaomi_crc32, &in);
-
-	if (ret)
-		return ret;
-	ret = xq_check_model(in.model, CONFIG_XIAOMI_FW_MODEL_ID);
-	if (ret) {
-		printf("Xiaomi package is for model %d, this board accepts only model %d\n",
-		       in.model, CONFIG_XIAOMI_FW_MODEL_ID);
-		return ret;
-	}
-	ret = xq_check_root(&in);
-	if (ret) {
-		puts("Xiaomi package: root.ubi is not a UBI image\n");
-		return ret;
-	}
-	if (root)
-		*root = (uintptr_t)in.root;
-	if (root_size)
-		*root_size = in.root_size;
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_SLOT_BACKEND_XIAOMI
-/* Bytes that go to the rootfs: the root.ubi of a Xiaomi package, else all. */
-size_t fw_ubi_payload_size(uintptr_t addr, size_t size)
-{
-	size_t root_size;
-
-	if (size >= 4 && U32_DATA_AT_OFFSET(addr) == XQ_MAGIC &&
-	    !xiaomi_unwrap_firmware(addr, size, NULL, &root_size))
-		return root_size;
-	return size;
-}
-#endif
-
 fw_type_t check_fw_type(uintptr_t addr, size_t size)
 {
-#ifdef CONFIG_SLOT_BACKEND_XIAOMI
-	/* A valid Xiaomi package is reported as the UBI image it carries. */
-	if (U32_DATA_AT_OFFSET(addr) == XQ_MAGIC)
-		return xiaomi_unwrap_firmware(addr, size, NULL, NULL) ?
-			FW_TYPE_UNKNOWN : FW_TYPE_UBI;
-#endif
 	switch (U32_DATA_AT_OFFSET(addr)) {
 	case HEADER_MAGIC_CDT:
 		return FW_TYPE_CDT;

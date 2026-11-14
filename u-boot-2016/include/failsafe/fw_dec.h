@@ -82,18 +82,6 @@ typedef enum {
 #define HEADER_MAGIC_JDCLOUD       0x636D6D65
 
 fw_type_t check_fw_type(uintptr_t addr, size_t size);
-#ifdef CONFIG_SLOT_BACKEND_XIAOMI
-/* 0 and the root.ubi section when addr holds a valid Xiaomi HDR1 package. */
-int xiaomi_unwrap_firmware(uintptr_t addr, size_t size, uintptr_t *root,
-			   size_t *root_size);
-#endif
-/* Bytes of an upload that go to the rootfs (the root.ubi of a Xiaomi package). */
-#ifdef CONFIG_SLOT_BACKEND_XIAOMI
-size_t fw_ubi_payload_size(uintptr_t addr, size_t size);
-#define FW_UBI_PAYLOAD_SIZE(addr, size)	fw_ubi_payload_size((uintptr_t)(addr), size)
-#else
-#define FW_UBI_PAYLOAD_SIZE(addr, size)	(size)
-#endif
 char *fw_type_to_string(fw_type_t fw_type);
 
 /*

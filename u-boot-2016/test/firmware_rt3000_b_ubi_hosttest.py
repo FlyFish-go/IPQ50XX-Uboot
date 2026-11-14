@@ -18,7 +18,7 @@ CATALOG = ROOT / "doc/RT3000-B-OEM-CATALOG-20261008.json"
 def make_test_lib(tmp):
     src = SOURCE.read_text()
     begin = src.index("static int fw_crc_ok(")
-    end = src.index("\nstatic const struct rt3_oem_fw *fw_catalog_match", begin)
+    end = src.index("\n/*\n * The rescue writes one thing: a bare UBI image", begin)
     validator = src[begin:end]
     import re
     validator = re.sub(r"return -(EINVAL|EFBIG|EBADMSG|EOVERFLOW|ENOSPC);",

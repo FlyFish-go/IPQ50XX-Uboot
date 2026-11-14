@@ -13,7 +13,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE = ROOT / "u-boot-2016/failsafe/modules/firmware_rt3000_b.c"
-OEM_HEADER = ROOT / "u-boot-2016/failsafe/modules/firmware_oem_catalog.h"
 CATALOG = Path(os.environ.get("RT3000_OEM_CATALOG", str(ROOT / "doc/RT3000-B-OEM-CATALOG-20261008.json")))
 UBI_TEST = Path(__file__).with_name("firmware_rt3000_b_ubi_hosttest.py")
 EVIDENCE = Path(os.environ.get("RT3000_B_HANDLER_EVIDENCE_OUT", "handler-hosttest.json"))
@@ -164,22 +163,20 @@ class HostField(ctypes.Structure):
 def build_test_lib(tmp):
     src = MODULE.read_text()
     src = re.sub(r"^#include\s+.*$", "", src, flags=re.M)
-    # The real production allowlist is embedded verbatim in the generated test TU.
-    catalog = OEM_HEADER.read_text()
     core_header = ROOT / "u-boot-2016/include/rt3000_b_fw_core.h"
     core_src = (ROOT / "u-boot-2016/failsafe/modules/firmware_rt3000_b_core.c").read_text()
     core_src = re.sub(r"^#include\s+.*$", "", core_src, flags=re.M)
-    # QSDK FIT unwrap and platform notice live in their own production files.
+    # The platform notice lives in its own production file.
     extra_headers = "".join("\n#include \"%s\"" % (ROOT / "u-boot-2016/include" / h)
-                            for h in ("rt3_fw_fit_ubi.h", "rt3_fw_platform.h"))
+                            for h in ("rt3_fw_platform.h",))
     extra_objs = []
-    for f in ("firmware_fit_ubi.c", "firmware_platform.c"):
+    for f in ("firmware_platform.c",):
         obj = Path(tmp) / (f[:-2] + ".o")
         subprocess.run(["gcc", "-c", "-fPIC", "-O1", "-std=gnu99", "-DRT3_FW_HOST_TEST", "-DUSE_HOSTCC",
                         "-I" + str(ROOT / "u-boot-2016/tools"), "-idirafter", str(ROOT / "u-boot-2016/include"),
                         "-o", str(obj), str(ROOT / "u-boot-2016/failsafe/modules" / f)], check=True)
         extra_objs.append(str(obj))
-    test_src = (SHIM + "\n#include \"" + str(core_header) + "\"" + extra_headers + "\n" + catalog + "\n" +
+    test_src = (SHIM + "\n#include \"" + str(core_header) + "\"" + extra_headers + "\n" +
                 src + "\n" + core_src + "\n" + WRAPPERS)
     cfile = Path(tmp) / "http_handlers.c"
     sofile = Path(tmp) / "http_handlers.so"
@@ -255,6 +252,29 @@ def without_oem_volumes(ubi):
     assert out != bytearray(ubi)
     return bytes(out)
 
+def fit_ubi(package):
+    """The one UBI image inside an H3C package (outer FIT at offset 160), as the
+    offline unpacker on the guide site takes it out."""
+    import struct
+    fit = package[160:]
+    magic, total, so, stro, _, _, _, _, ss, sz = struct.unpack_from(">10I", fit, 0)
+    assert magic == 0xd00dfeed
+    st, strings, pos, found = fit[so:so + sz], fit[stro:stro + ss], 0, []
+    while pos < len(st):
+        tok = struct.unpack_from(">I", st, pos)[0]; pos += 4
+        if tok == 1:
+            pos = (st.index(0, pos) + 4) & ~3
+        elif tok == 3:
+            n, o = struct.unpack_from(">II", st, pos); pos += 8
+            name = strings[o:strings.index(0, o)]
+            if name == b"data" and st[pos:pos + 4] == b"UBI#":
+                found.append(bytes(st[pos:pos + n]))
+            pos = (pos + n + 3) & ~3
+        elif tok == 9:
+            break
+    assert len(found) == 1
+    return found[0]
+
 def token_from(response):
     value = json.loads(response)
     return value["token"]
@@ -294,20 +314,25 @@ def run():
         assert dispatch(lib,"/firmware/layout",2)[0] == 405
         assert dispatch(lib,"/firmware/validate",1)[0] == 405
 
-        # Every exact OEM package passes through the actual validate callback, including target capacity.
+        # Vendor packages are never written by the rescue: every OEM .bin, and its
+        # bare outer FIT, is refused before anything is staged; the UBI taken out
+        # of it (what the offline unpacker produces) validates as a plain UBI.
         for entry in oem:
             package = Path(entry["package_paths"][0]).read_bytes()
-            fields = [("firmware",package),("target","rootfs_1"),("mode","dual")]
+            for name, blob in (("h3c_bin", package), ("fit", package[160:])):
+                code, body, _ = dispatch(lib,"/firmware/validate",2,[("firmware",blob),("target","rootfs_1"),("mode","dual")])
+                assert code == 422 and json.loads(body)["error"] == "vendor package, extract its UBI first", (entry["release"], name, code, body)
+                assert lib.host_erase_count_get() == 0
+            ubi = fit_ubi(package)
+            fields = [("firmware",ubi),("target","rootfs_1"),("mode","dual")]
             code, body, keep = dispatch(lib,"/firmware/validate",2,fields)
             response = json.loads(body)
             assert code == 200 and response["status"] == "ok", (entry["release"], code, body)
             assert response["target"] == "rootfs_1" and response["mode"] == "dual"
-            assert response["format"] == "h3c_rt3000_oem_ubi"
-            assert response["firmware_identity"] == entry["model"] + " " + entry["release"]
-            assert response["sha256"] == entry["package_sha256"]
+            assert response["format"] == "ubi_unidentified" and response["firmware_identity"] == "unidentified"
+            assert response["sha256"] == hashlib.sha256(ubi).hexdigest()
             evidence["oem_validate"].append({"release": entry["release"], "http_status": code,
-                "bytes": response["bytes"], "sha256": response["sha256"],
-                "format": response["format"], "firmware_identity": response["firmware_identity"],
+                "bytes": response["bytes"], "sha256": response["sha256"], "format": response["format"],
                 "target": response["target"], "mode": response["mode"]})
             # A later validate always invalidates the previous token, even if this request fails.
             oldtoken = response["token"]
@@ -318,15 +343,7 @@ def run():
             writefields = [("token",oldtoken),("target","rootfs_1"),("mode","dual")]
             assert dispatch(lib,"/firmware/write",2,writefields)[0] == 409
             assert lib.host_erase_count_get() == 0
-
-        # An H3C package whose exact bytes are not listed gets its own error, not "invalid UBI".
-        tampered = bytearray(Path(next(e for e in entries if e["model"] == "RC3000" and e["release"] == "R013L01")["package_paths"][0]).read_bytes())
-        tampered[-1] ^= 0xff
-        code, body, _ = dispatch(lib,"/firmware/validate",2,[("firmware",bytes(tampered)),("target","rootfs_1"),("mode","dual")])
-        assert code == 422 and json.loads(body)["error"] == "unknown H3C OEM package", (code, body)
-        assert json.loads(body)["sha256"] == hashlib.sha256(bytes(tampered)).hexdigest(), body
-        assert lib.host_erase_count_get() == 0
-        evidence["negative_callback_cases"].append({"case": "unlisted_h3c_package", "http_status": code})
+        evidence["negative_callback_cases"].append({"case": "vendor_packages_refused", "http_status": 422})
 
         # The staging window is mandatory; heap-backed direct pointers are rejected before parsing.
         ubi = ubi_test.extract_ubi(next(e for e in rt if e["release"] == "R012"))
@@ -491,7 +508,7 @@ def run():
         "malformed_trailing_token", "single_layout_wrong_target", "one_shot_replay", "readback_failure_consumes_token"]
     EVIDENCE.parent.mkdir(parents=True, exist_ok=True)
     EVIDENCE.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    print("HANDLER_HOSTTEST_PASS: GET/validate/write callbacks, 47 OEM packages (NX30/RC3000/RT3000/RW3000), unlisted H3C package error, one-shot/layout guards, commit and readback failure")
+    print("HANDLER_HOSTTEST_PASS: GET/validate/write callbacks, 47 OEM packages refused as vendor packages, their UBI accepted, one-shot/layout guards, commit and readback failure")
     print("EVIDENCE: " + str(EVIDENCE))
 
 

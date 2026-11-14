@@ -15,6 +15,8 @@
 
 每个机型的安装步骤、下载和验证情况以[安装指南网站](https://flyfish-go.github.io/IPQ50XX-Uboot/devices/)为准，规划中的机型在那里写了现在缺什么。不拆机的「系统内安装（Telnet / SSH）」还在调研。
 
+救援页的「固件更新」只写 UBI 系统镜像（`.ubi`，或之前备份的 rootfs 分区），不认厂商升级包：厂商包还带着 SBL1、APPSBL 等启动链，救援页不该碰；认厂商包还得在 U-Boot 里放一份可信包名单，厂商每出新版本都要跟着更新 U-Boot。厂商包请先用网页拆包工具（在浏览器里离线运行）取出 UBI。
+
 H3C 机型的 v0.1.0 及更早版本在 [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases) 下载，之后的版本在本仓库发布。
 
 ## 目录

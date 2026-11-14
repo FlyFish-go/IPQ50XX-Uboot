@@ -10,16 +10,13 @@
 #include <nand.h>
 #include <net/httpd.h>
 #include <u-boot/sha256.h>
-#include <libfdt.h>
 #include <rt3000_b_layout.h>
 #include <rt3000_b_fw_write.h>
 #include <rt3000_b_fw_core.h>
-#include <rt3_fw_fit_ubi.h>
 #include <rt3_fw_platform.h>
 #include <asm/arch-qca-common/qca_common.h>
 #include "modules.h"
 #include "../../drivers/mtd/ubi/ubi-media.h"
-#include "firmware_oem_catalog.h"
 
 #define RT3_FW_MAX_UPLOAD       (80U * SZ_1M)
 #define RT3_FW_MAX_PEB_COUNT    928U /* 116 MiB extra-large single rootfs */
@@ -32,7 +29,6 @@
 #define RT3_UBI_VTBL_SIZE       (128U * RT3_UBI_VTBL_REC_SIZE)
 #define RT3_UBI_LAYOUT_ID       (0x7fffffffU - 4096U)
 #define RT3_UBI_MIN_RESERVE     4U /* 2 layout + WL + EBA PEBs */
-#define RT3_FIT_OFFSET          160U
 
 struct rt3_fw_pending {
 	const u8 *file;
@@ -51,8 +47,7 @@ struct rt3_ubi_summary {
 	u32 reserved_pebs;
 	int oem_volumes;	/* wifi_fw or bt_fw: an H3C OEM system */
 };
-struct rt3_fw_oem {
-	const struct rt3_oem_fw *catalog;
+struct rt3_fw_input {
 	const u8 *ubi;
 	size_t ubi_size;
 };
@@ -160,13 +155,6 @@ static int fw_parse_token(const char *text, u32 *token)
 	}
 	*token = value;
 	return 0;
-}
-
-static int fw_digest_matches(const u8 digest[SHA256_SUM_LEN], const char *hex)
-{
-	char got[SHA256_SUM_LEN * 2 + 1];
-	fw_hex(digest, SHA256_SUM_LEN, got);
-	return !strcmp(got, hex);
 }
 
 static u64 fw_get_unaligned_le64(const u8 *p)
@@ -428,71 +416,23 @@ static int fw_validate_ubi(const u8 *image, size_t size,
 	return 0;
 }
 
-static const struct rt3_oem_fw *fw_catalog_match(size_t size,
-						 const u8 digest[SHA256_SUM_LEN])
-{
-	char hex[SHA256_SUM_LEN * 2 + 1];
-	u32 i;
-	fw_hex(digest, SHA256_SUM_LEN, hex);
-	for (i = 0; i < ARRAY_SIZE(rt3_oem_fw_catalog); i++)
-		if (size == rt3_oem_fw_catalog[i].package_bytes &&
-		    !strcmp(hex, rt3_oem_fw_catalog[i].package_sha256))
-			return &rt3_oem_fw_catalog[i];
-	return NULL;
-}
-
+/*
+ * The rescue writes one thing: a bare UBI image, which is also what a full
+ * backup of a rootfs partition is. Vendor upgrade packages (H3C .bin, QSDK
+ * FIT, Xiaomi HDR1, ...) also carry SBL1/APPSBL and other boot-chain parts,
+ * so they are not unpacked here; the offline unpacker on the guide site takes
+ * the UBI out of them. U-Boot then needs no package allowlist, and a new
+ * vendor release never requires a new U-Boot.
+ */
 static int fw_extract_input(const u8 *file, size_t file_size,
-			    const u8 file_hash[SHA256_SUM_LEN],
-			    struct rt3_fw_oem *out,
-			    const char **format)
+			    struct rt3_fw_input *out, const char **format)
 {
-	const struct rt3_oem_fw *entry;
-	const u8 *fit, *data;
-	char path[160];
-	int node, len;
-	struct rt3_ubi_summary sum;
-	const void *fit_ubi;
-	size_t fit_ubi_size;
-
 	memset(out, 0, sizeof(*out));
-	if (file_size >= 4 && get_unaligned_be32(file) == UBI_EC_HDR_MAGIC) {
-		out->ubi = file;
-		out->ubi_size = file_size;
-		*format = "ubi_unidentified";
-	} else if ((entry = fw_catalog_match(file_size, file_hash))) {
-		if (file_size <= RT3_FIT_OFFSET || entry->fit_bytes > file_size - RT3_FIT_OFFSET)
-			return -EINVAL;
-		fit = file + RT3_FIT_OFFSET;
-		if (fdt_check_header(fit) || fdt_totalsize(fit) != entry->fit_bytes)
-			return -EBADMSG;
-		snprintf(path, sizeof(path), "/images/%s", entry->ubi_name);
-		node = fdt_path_offset(fit, path);
-		if (node < 0)
-			return -ENOENT;
-		data = fdt_getprop(fit, node, "data", &len);
-		if (!data || len < 0 || (u32)len != entry->ubi_bytes)
-			return -EBADMSG;
-		{
-			u8 ubi_hash[SHA256_SUM_LEN];
-			fw_sha256(data, len, ubi_hash);
-			if (!fw_digest_matches(ubi_hash, entry->ubi_sha256))
-				return -EBADMSG;
-		}
-		out->catalog = entry;
-		out->ubi = data;
-		out->ubi_size = len;
-		*format = "h3c_rt3000_oem_ubi";
-	} else if (!rt3_fw_fit_ubi(file, file_size, &fit_ubi, &fit_ubi_size)) {
-		/* QSDK upgrade package (e.g. third-party firmware): write its one
-		 * UBI image to the chosen slot; its flash script is never run. */
-		out->ubi = fit_ubi;
-		out->ubi_size = fit_ubi_size;
-		*format = "qsdk_fit_ubi";
-	} else {
+	if (file_size < 4 || get_unaligned_be32(file) != UBI_EC_HDR_MAGIC)
 		return -EPERM;
-	}
-	if (fw_validate_ubi(out->ubi, out->ubi_size, &sum))
-		return -EBADMSG;
+	out->ubi = file;
+	out->ubi_size = file_size;
+	*format = "ubi_unidentified";
 	return 0;
 }
 
@@ -625,7 +565,7 @@ static void fw_validate_handler(enum httpd_uri_handler_status status,
 	struct httpd_form_value *file;
 	struct rt3_layout layout;
 	const struct rt3_partition *part;
-	struct rt3_fw_oem extracted;
+	struct rt3_fw_input extracted;
 	struct rt3_ubi_summary summary;
 	struct mtd_info *mtd;
 	const char *format = "unknown";
@@ -670,20 +610,14 @@ static void fw_validate_handler(enum httpd_uri_handler_status status,
 		return;
 	}
 	fw_sha256(file->data, file->size, digest);
-	ret = fw_extract_input((const u8 *)file->data, file->size, digest, &extracted, &format);
+	ret = fw_extract_input((const u8 *)file->data, file->size, &extracted, &format);
 	if (ret == -EPERM) {
-		/* Neither UBI, a listed OEM package nor a QSDK FIT. Say whether
-		 * it looked like an H3C package so the page does not blame the
-		 * UBI structure of a file whose release is simply not listed. */
-		if (file->size >= 4 && !memcmp(file->data, "H3C_", 4)) {
-			/* The page shows the hash so a user can report the file. */
-			static char unlisted[160];
-			fw_hex(digest, SHA256_SUM_LEN, digest_hex);
-			snprintf(unlisted, sizeof(unlisted),
-				 "{\"status\":\"fail\",\"error\":\"unknown H3C OEM package\",\"sha256\":\"%s\"}",
-				 digest_hex);
-			fw_reply_json(response, 422, unlisted);
-		} else
+		/* Name vendor packages, so the page can point to the unpacker. */
+		const u8 *d = (const u8 *)file->data;
+		if (file->size >= 4 && (!memcmp(d, "H3C_", 4) || !memcmp(d, "HDR1", 4) ||
+					get_unaligned_be32(d) == 0xd00dfeedU))
+			fw_reply_json(response, 422, "{\"status\":\"fail\",\"error\":\"vendor package, extract its UBI first\"}");
+		else
 			fw_reply_json(response, 422, "{\"status\":\"fail\",\"error\":\"unsupported firmware format\"}");
 		return;
 	}
@@ -695,7 +629,7 @@ static void fw_validate_handler(enum httpd_uri_handler_status status,
 	/* The big single rootfs is for third-party systems; OEM firmware was
 	 * never verified there. Restore the dual MIBIB to run it again. */
 	if (layout.mode == RT3_LAYOUT_SINGLE &&
-	    (extracted.catalog || summary.oem_volumes)) {
+	    summary.oem_volumes) {
 		fw_reply_json(response, 422, "{\"status\":\"fail\",\"error\":\"oem_firmware_needs_dual_layout\"}");
 		return;
 	}
@@ -719,8 +653,6 @@ static void fw_validate_handler(enum httpd_uri_handler_status status,
 	memcpy(fw_pending.digest, digest, sizeof(digest));
 	fw_pending.valid = 1;
 	fw_hex(digest, sizeof(digest), digest_hex);
-	if (extracted.catalog)
-		snprintf(identity, sizeof(identity), "%s %s", extracted.catalog->model, extracted.catalog->release);
 	fw_platform_json(extracted.ubi, extracted.ubi_size, platform, sizeof(platform));
 	snprintf(fw_reply, sizeof(fw_reply),
 		 "{\"status\":\"ok\",\"token\":\"%08x\",\"target\":\"%s\",\"mode\":\"%s\",\"bytes\":%lu,\"sha256\":\"%s\",\"format\":\"%s\",\"firmware_identity\":\"%s\"%s}",
@@ -869,7 +801,7 @@ static void fw_write_handler(enum httpd_uri_handler_status status,
 	struct rt3_fw_pending tx;
 	struct rt3_layout layout;
 	const struct rt3_partition *part;
-	struct rt3_fw_oem extracted;
+	struct rt3_fw_input extracted;
 	struct rt3_ubi_summary sum;
 	struct mtd_info *mtd;
 	const char *format;
@@ -915,7 +847,7 @@ static void fw_write_handler(enum httpd_uri_handler_status status,
 		fw_reply_json(response, 409, "{\"status\":\"fail\",\"error\":\"layout changed since validation\"}");
 		return;
 	}
-	ret = fw_extract_input(tx.file, tx.file_size, digest, &extracted, &format);
+	ret = fw_extract_input(tx.file, tx.file_size, &extracted, &format);
 	if (!rt3_fw_core_request_matches(tx.token, token, tx.target, target,
 					 tx.mode, mode, tx.layout_fingerprint,
 					 layout.fingerprint, tx.digest, digest,

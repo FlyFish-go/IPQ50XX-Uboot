@@ -3,7 +3,7 @@
 obj-y += backup.o
 obj-y += env.o
 ifeq ($(CONFIG_H3C_IPQ5018_COMMON),y)
-obj-y += firmware_rt3000_b.o firmware_rt3000_b_core.o firmware_fit_ubi.o firmware_platform.o
+obj-y += firmware_rt3000_b.o firmware_rt3000_b_core.o firmware_platform.o
 obj-y += metadata_rt3000_b.o rt3000_b_metadata_core.o
 obj-y += h3c_build_id.o h3c_fem.o rt3000_mibib.o
 endif

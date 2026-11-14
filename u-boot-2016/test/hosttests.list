@@ -8,7 +8,6 @@ run  test/env_common_d_transaction_hosttest.py
 run  test/env_rt3000_b_storage_hosttest.py
 run  test/env_rt3000_b_transaction_hosttest.py
 run  test/fdtedit_hosttest.py --source @SRC@/board/qca/arm/common/fdt_fixup.c --output-dir @OUT@
-run  test/firmware_fit_ubi_hosttest.py
 skip test/firmware_openwrt_ubi_hosttest.py needs OPENWRT_UBI, an OpenWrt UBI image (not in the tree)
 run  test/firmware_platform_hosttest.py
 skip test/firmware_rt3000_b_handler_hosttest.py needs the private doc/RT3000-B-OEM-CATALOG-20261008.json (or RT3000_OEM_CATALOG)
@@ -73,4 +72,3 @@ run  test/upgrade_rt3_callback_hosttest.sh
 run  test/ubi_trimffs_hosttest.sh
 run  test/oemdata_restore_hosttest.sh
 run  test/slot_xiaomi_hosttest.sh
-run  test/xqimage_hosttest.sh

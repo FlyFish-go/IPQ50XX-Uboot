@@ -11,6 +11,8 @@ Install guide (Chinese): <https://flyfish-go.github.io/IPQ50XX-Uboot/>
 | CMCC RAX3000Q, CMCC PZ-L8, Ruijie RG-MA3063 V3 | Builds, **not tested on hardware, do not flash** (RAM trial only) |
 | Most other IPQ50xx boards (Xiaomi AX6000, Redmi AX5400, TP-Link, Linksys, ...) | Planned, no build yet |
 
+The rescue page's firmware update writes only a UBI system image (a `.ubi` file or a backup of a rootfs partition). It does not take vendor upgrade packages: they also carry SBL1, APPSBL and the rest of the boot chain, which the rescue page should not touch, and accepting them would need an allowlist in U-Boot that every vendor release would force us to update. Take the UBI out of a vendor package with the web unpacker, which runs offline in your browser.
+
 First-time H3C installs use [BootBridge Web](https://flyfish-go.github.io/H3C-NX30-Uboot/). Releases up to v0.1.0 are at [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases); later releases are published here.
 
 Build instructions: [BUILDING.md](BUILDING.md). Based on [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build) (uBootKit); see [LICENSE](LICENSE) and [LICENSE-NOTICE.md](LICENSE-NOTICE.md).
