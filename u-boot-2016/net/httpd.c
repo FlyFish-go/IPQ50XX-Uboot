@@ -666,6 +666,11 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 					tcp_close_conn(cbd->conn, 1);
 					return 1;
 				}
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+				/* This body now owns the shared RAM: anything validated in
+				 * it before is stale (failsafe upgrade checks the generation). */
+				pdata->request.upload_gen = ++upload_buffer_gen;
+#endif
 				memcpy(pdata->upload_ptr, pdata->buf + hdr_size, pdata->upload_size);
 			} else {
 				/* 其他数据，直接保存在当前缓冲区中 */
@@ -688,6 +693,9 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 				tcp_close_conn(cbd->conn, 1);
 				return 1;
 			}
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+			pdata->request.upload_gen = ++upload_buffer_gen;
+#endif
 
 			pdata->upload_size = cbd->datalen - hdr_size;
 			/* copy received parts to new cache */

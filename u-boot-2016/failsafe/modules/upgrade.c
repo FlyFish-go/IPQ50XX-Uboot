@@ -58,6 +58,10 @@ upgrade_type_t upgrade_type;
 
 static u32 fs_upload_id;
 static u32 upload_data_id;
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/* Shared-RAM generation of the last upload that passed validation. */
+static u32 upload_data_gen;
+#endif
 static size_t upload_size;
 
 #ifdef CONFIG_H3C_IPQ5018_COMMON
@@ -241,6 +245,13 @@ static void upload_handler(enum httpd_uri_handler_status status,
 		sess->ret = failsafe_validate_image(upgrade_type, form_value->filename,
 						metadata_target, upload_data,
 						(ulong)upload_size, response);
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+		/* Only an image that passed every check may reach /result. */
+		if (sess->ret != RET_SUCCESS)
+			upload_data_id = fs_upload_id + 1;
+		else
+			upload_data_gen = request->upload_gen;
+#endif
 
 		sess->body_sent = 1;
 
@@ -260,6 +271,33 @@ static void upload_handler(enum httpd_uri_handler_status status,
 		free(response->session_data);
 	}
 }
+
+
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/*
+ * Right before /result writes: the shared RAM must not have been claimed by
+ * any other upload (or the slot probe) since validation, and the image is
+ * validated again in place, which repeats the board check and the 0xff page
+ * tail. A failure leaves its JSON in response->data.
+ */
+static int generic_prewrite_check(struct httpd_request *request,
+				  struct httpd_response *response)
+{
+	int ret;
+
+	if (upload_data_gen != httpd_upload_buffer_gen()) {
+		response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
+		return RET_FAILURE;
+	}
+	ret = failsafe_validate_image(upgrade_type, NULL, RT3_MD_TARGET_DEFAULT,
+				      upload_data, (ulong)upload_size, response);
+	if (ret == RET_SUCCESS && upload_data_gen != httpd_upload_buffer_gen()) {
+		response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
+		return RET_FAILURE;
+	}
+	return ret;
+}
+#endif
 
 static void result_handler(enum httpd_uri_handler_status status,
         struct httpd_request *request,
@@ -371,6 +409,12 @@ static void result_handler(enum httpd_uri_handler_status status,
 						(ulong)upload_size,response);
 				}
 #else
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+				st->ret = generic_prewrite_check(request, response);
+				if (st->ret != RET_SUCCESS)
+					st->auto_reboot = false;
+				else
+#endif
 				if (upgrade_type == WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS) {
 					st->auto_reboot = true;
 					st->ret = RET_SUCCESS;

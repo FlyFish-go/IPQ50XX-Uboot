@@ -1467,29 +1467,34 @@ int failsafe_uboot_board_check(const void *data_addr, ulong data_size)
 	default:
 		actual = found; break;	/* [a-z0-9_] only: JSON safe */
 	}
+	/* own is printed only when the check accepted it as [a-z0-9_]. */
+	if (r == FAILSAFE_BOARD_MARK_UNSET)
+		own = "(no valid board id)";
 	snprintf(info, sizeof(info),
 		 "{\"type\":\"wrong_file_type\",\"expected\":\"U-Boot ELF for %s\",\"actual\":\"%s\"}",
-		 *own ? own : "(none)", actual);
+		 own, actual);
 	printf("Error: U-Boot image is not for this board (expected %s, got %s)\n",
-	       *own ? own : "(none)", actual);
+	       own, actual);
 	return RET_WRONG_FW_TYPE;
 }
 
 /*
  * "nand write" programs whole pages and reads past the end of the file, so
  * the tail of the last page would hold whatever follows the upload in RAM
- * (the multipart boundary). Fill up to 4 KiB (the largest IPQ50xx serial NAND
- * page; a multiple of the 512 B eMMC block) with 0xff, so the flash holds the
- * file padded like erased flash.
+ * (the multipart boundary). Fill it with 0xff up to the NAND page size, at
+ * least 4 KiB (a multiple of the 512 B eMMC block; SPI NOR writes the exact
+ * length), so the flash holds the file padded like erased flash.
  */
 #define FAILSAFE_PAD_ALIGN	4096UL
 
 int failsafe_pad_tail_ff(const void *data_addr, ulong data_size)
 {
-	ulong addr = (ulong)data_addr;
-	ulong padded = (data_size + FAILSAFE_PAD_ALIGN - 1) & ~(FAILSAFE_PAD_ALIGN - 1);
+	ulong addr = (ulong)data_addr, align = FAILSAFE_PAD_ALIGN, padded;
 
-	if (!data_size || padded < data_size ||
+	if (has_nand() && nand_info[CONFIG_NAND_FLASH_INFO_IDX].writesize > align)
+		align = nand_info[CONFIG_NAND_FLASH_INFO_IDX].writesize;
+	padded = data_size + (align - data_size % align) % align;
+	if (!data_size || padded < data_size || addr + padded < addr ||
 	    !is_memory_region_available(addr, padded)) {
 		strlcpy(info, "{\"type\":\"pad_failed\"}", sizeof(info));
 		puts("Error: no RAM to pad the image to a full flash page\n");
