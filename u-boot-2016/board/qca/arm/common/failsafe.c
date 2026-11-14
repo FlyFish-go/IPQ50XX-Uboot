@@ -838,8 +838,8 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 	case WEBFAILSAFE_UPGRADE_TYPE_ART: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_art(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
 	case WEBFAILSAFE_UPGRADE_TYPE_CDT: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_cdt(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
 	case WEBFAILSAFE_UPGRADE_TYPE_PTABLE: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_ptable(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
-	case WEBFAILSAFE_UPGRADE_TYPE_SIMG: ret=failsafe_validate_simg(data_addr,data_size); break;
-	case WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS: ret=failsafe_validate_initramfs(data_addr,data_size); break;
+	case WEBFAILSAFE_UPGRADE_TYPE_SIMG: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_simg(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
+	case WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS: { int failsafe_initramfs_extent_check(const void *, ulong); ret=failsafe_validate_initramfs(data_addr,data_size); if (!ret) ret=failsafe_initramfs_extent_check(data_addr,data_size); } break;
 	default: handle_wrong_upgrade_type(); ret=RET_WRONG_UPGRADE_TYPE; break;
 	}
 #endif
@@ -1502,5 +1502,36 @@ int failsafe_pad_tail_ff(const void *data_addr, ulong data_size)
 	}
 	memset((void *)(addr + data_size), 0xff, padded - data_size);
 	return RET_SUCCESS;
+}
+
+#include <libfdt.h>
+
+/*
+ * INITRAMFS for a RAM boot: bootm reads the FIT by its own header, so the
+ * whole device tree (header, structure and strings blocks) must lie inside
+ * the uploaded file, which is what validation hashed. This U-Boot has no
+ * FIT external data, so every sub-image is inside that tree.
+ */
+int failsafe_initramfs_extent_check(const void *data_addr, ulong data_size)
+{
+	const void *fit = data_addr;
+	u32 total;
+
+	if (data_size < sizeof(struct fdt_header) || fdt_magic(fit) != FDT_MAGIC)
+		goto bad;
+	total = fdt_totalsize(fit);
+	if (total < sizeof(struct fdt_header) || total > data_size ||
+	    fdt_off_mem_rsvmap(fit) > total ||
+	    fdt_off_dt_struct(fit) > total ||
+	    fdt_size_dt_struct(fit) > total - fdt_off_dt_struct(fit) ||
+	    fdt_off_dt_strings(fit) > total ||
+	    fdt_size_dt_strings(fit) > total - fdt_off_dt_strings(fit) ||
+	    fdt_check_header(fit))
+		goto bad;
+	return RET_SUCCESS;
+bad:
+	strlcpy(info, "{\"type\":\"invalid_initramfs\"}", sizeof(info));
+	puts("Error: INITRAMFS FIT does not fit inside the uploaded file\n");
+	return -EINVAL;
 }
 #endif

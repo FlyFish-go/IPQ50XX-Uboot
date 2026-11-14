@@ -490,6 +490,11 @@ static void result_handler(enum httpd_uri_handler_status status,
 #endif
 
 		/* invalidate upload identifier */
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+		/* Consume only the upload this request was for: a request refused
+		 * because a newer upload replaced its own leaves that one armed. */
+		if (st->armed_id == upload_data_id)
+#endif
 		upload_data_id = rand();
 
 		if (st->ret == RET_SUCCESS) {
