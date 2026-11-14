@@ -23,6 +23,7 @@ static inline int slot_default_rootfs(void) { return 0; }
 static inline unsigned int slot_count(void) { return 1; }
 static inline const char *slot_part_name(unsigned int slot) { return "rootfs"; }
 static inline int slot_set_default(unsigned int slot) { return -ENOSYS; }
+static inline int slot_stored_default(void) { return 0; }
 
 #elif defined(CONFIG_SLOT_BACKEND_XIAOMI)
 
@@ -45,6 +46,7 @@ static inline const char *slot_part_name(unsigned int slot)
 }
 /* Boot slot from now on (flags as after a clean boot of it); saves the env. */
 static inline int slot_set_default(unsigned int slot) { return xiaomi_slot_choose(slot); }
+static inline int slot_stored_default(void) { return xiaomi_slot_select(); }
 
 #else /* Qualcomm BOOTCONFIG */
 
@@ -95,6 +97,11 @@ static inline const char *slot_part_name(unsigned int slot)
 static inline int slot_set_default(unsigned int slot)
 {
 	return set_bootconfig("rootfs", slot);
+}
+/* The stored choice for the rescue page; never repairs or writes BOOTCONFIG. */
+static inline int slot_stored_default(void)
+{
+	return get_bootconfig_readonly("rootfs");
 }
 
 #endif

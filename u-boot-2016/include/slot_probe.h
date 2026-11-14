@@ -24,6 +24,10 @@ int slot_probe_read(const char *part_name, unsigned long long offset,
 
 /* The version after the first "Linux-" (as in "ARM OpenWrt Linux-6.6.73",
  * the FIT kernel description or the legacy uImage name): 0 or -ENOENT. */
+/* Nonzero once an environment restore failed: no more probes, and nothing
+ * that saves the environment should run until a reboot. */
+int slot_probe_env_broken(void);
+
 int slot_probe_kernel_version(const unsigned char *buf, size_t len,
 			      char *out, size_t out_len);
 #endif

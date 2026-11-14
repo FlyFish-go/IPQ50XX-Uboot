@@ -341,6 +341,28 @@ unsigned int bootconfig_booted_flag(const char *entry)
 	return 0;
 }
 
+int get_bootconfig_readonly(const char *part_name)
+{
+	bootconfig_info_t bc;
+	int i, ret;
+
+	bc.part_name = BOOTCONFIG_PART_NAME;
+	bc.size = sizeof(struct bootconfig_info);
+	ret = read_bootconfig(&bc, false, true);
+	if (ret) {
+		bc.part_name = BOOTCONFIG_BACKUP_PART_NAME;
+		bc.size = sizeof(struct bootconfig_info);
+		ret = read_bootconfig(&bc, false, true);
+		if (ret)
+			return ret;
+	}
+	for (i = 0; i < bc.info.numaltpart && i < NUM_ALT_PARTITION; i++)
+		if (!strncmp(bc.info.per_part_entry[i].name, part_name,
+			     ALT_PART_NAME_LENGTH))
+			return bc.info.per_part_entry[i].primaryboot;
+	return -ENOENT;
+}
+
 #if !defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
 #define BOOTCONFIG_PROBE_BYTES	2048
 

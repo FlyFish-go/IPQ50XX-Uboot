@@ -130,7 +130,7 @@ static const char *default_name(void)
 
 	if (slot_count() < 2)
 		return "rootfs";
-	d = slot_default_rootfs();
+	d = slot_stored_default();
 	if (d != 0 && d != 1)
 		return NULL;
 	return slot_part_name((unsigned int)d);
@@ -186,6 +186,10 @@ static void default_handler(enum httpd_uri_handler_status status,
 		answer(response, 409, "{\"status\":\"fail\",\"error\":\"locked_after_partial_write\"}");
 		return;
 	}
+	if (slot_probe_env_broken()) {
+		answer(response, 409, "{\"status\":\"fail\",\"error\":\"environment_not_restored\"}");
+		return;
+	}
 	/* Refuse a slot that holds no UBI system before touching BOOTCONFIG. */
 	if (!gslots_ready) {
 		scan();
@@ -194,6 +198,10 @@ static void default_handler(enum httpd_uri_handler_status status,
 	for (i = 0; i < gslot_n; i++)
 		if (gslots[i].slot == want && gslots[i].probed && !gslots[i].ret)
 			ready = 1;
+	if (slot_probe_env_broken()) {
+		answer(response, 409, "{\"status\":\"fail\",\"error\":\"environment_not_restored\"}");
+		return;
+	}
 	if (!ready) {
 		answer(response, 409, "{\"status\":\"fail\",\"error\":\"target_slot_has_no_system\"}");
 		return;

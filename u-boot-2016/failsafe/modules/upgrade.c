@@ -110,6 +110,18 @@ static int metadata_upload_target(struct httpd_request *request,
 }
 #endif
 
+void failsafe_upload_invalidate(void)
+{
+	/* result_handler writes only when upload_data_id == fs_upload_id. */
+	upload_data_id = fs_upload_id + 1;
+#ifdef CONFIG_H3C_IPQ5018_COMMON
+	rt3_metadata_invalidate();
+#endif
+#ifdef CONFIG_H3C_RESCUE_INITRAMFS_STAGE
+	failsafe_initramfs_invalidate();
+#endif
+}
+
 static void upload_handler(enum httpd_uri_handler_status status,
         struct httpd_request *request,
         struct httpd_response *response)

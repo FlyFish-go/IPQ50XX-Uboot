@@ -63,5 +63,8 @@ bool validate_bootconfig(void);
  * info. SBL names that copy plainly and the other one with "_1", so flag
  * value v is the partition "<entry>" when v equals this, else "<entry>_1". */
 unsigned int bootconfig_booted_flag(const char *entry);
+/* Like get_bootconfig() but never repairs or writes anything: the primary
+ * copy if valid, else the backup copy, else a negative errno. */
+int get_bootconfig_readonly(const char *part_name);
 
 #endif /* __BOOTCONFIG_H__ */

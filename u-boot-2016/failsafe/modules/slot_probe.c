@@ -6,8 +6,11 @@
 #include <asm/errno.h>
 #include <squashfs_release.h>
 #include <slot_probe.h>
+#include <failsafe/failsafe.h>
 
 #ifndef CONFIG_CMD_UBI
+int slot_probe_env_broken(void) { return 0; }
+
 /* No UBI in this build: nothing can be read from a slot. */
 int slot_probe_read(const char *part_name, unsigned long long offset,
 		    unsigned long long size, struct slot_probe *p)
@@ -34,6 +37,7 @@ extern long long ubi_get_volume_size(char *volume);
 #define SQUASH_MAGIC	0x73717368U
 
 static char *env_snapshot;
+static int env_broken;
 static ssize_t env_snapshot_len;
 static u32 env_snapshot_crc;
 
@@ -176,6 +180,14 @@ int slot_probe_read(const char *part_name, unsigned long long offset,
 	int i, ret;
 
 	memset(p, 0, sizeof(*p));
+	if (env_broken) {
+		p->env_lost = 1;
+		strlcpy(p->error, "environment_restore_failed", sizeof(p->error));
+		return -EIO;
+	}
+	/* The probe window is also part of the /upload buffer on some boards:
+	 * an upload validated earlier must not be written after this. */
+	failsafe_upload_invalidate();
 	if (CONFIG_SYS_SDRAM_BASE > PROBE_ADDR ||
 	    PROBE_END - CONFIG_SYS_SDRAM_BASE > gd->ram_size) {
 		strlcpy(p->error, "probe_buffer_out_of_ram", sizeof(p->error));
@@ -210,10 +222,15 @@ int slot_probe_read(const char *part_name, unsigned long long offset,
 		strlcpy(p->error, ret == -ENODEV ? "no_ubi" : "scan_setup_failed",
 			sizeof(p->error));
 	if (env_restore()) {
+		env_broken = 1;
 		p->env_lost = 1;
 		strlcpy(p->error, "environment_restore_failed", sizeof(p->error));
 		return -EIO;
 	}
 	return ret;
+}
+int slot_probe_env_broken(void)
+{
+	return env_broken;
 }
 #endif /* CONFIG_CMD_UBI */
