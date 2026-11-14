@@ -17,7 +17,13 @@ description: 给高通 IPQ50xx 路由器换一个带网页救援的 U-Boot，原
 
 {{verified_table}}
 
-另外有 {{n_untested}} 款有构建、还没人在真机上验证过，只能 RAM 试跑；{{n_planned}} 款在规划中。全部见[机型列表](/devices/)。
+点机型名进入它的安装步骤。
+
+## 其他机型
+
+下面这些现在还不能照步骤安装。带筛选的完整列表见[机型列表](/devices/)。
+
+{{home_others}}
 
 ## 安装会改动什么
 

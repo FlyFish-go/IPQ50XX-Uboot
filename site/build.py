@@ -261,6 +261,11 @@ def full_name(d):
     return f'{d["vendor"]}{sep}{d["name"]}'
 
 
+def anchor_of(m):
+    """Row id of a model that has no page of its own, so other pages can link to it."""
+    return 'm-' + norm(m['name'])
+
+
 def keys_of(x):
     parts = [x['name'], x.get('vendor', '') + x['name'], x.get('family', ''), x.get('artifact', '')]
     parts += x.get('aliases') or []
@@ -767,12 +772,14 @@ def device_list(devices, others):
     out.append(text_block('还没有构建，请不要刷。打算以后支持，下面写了现在卡在哪里。手里有这些机器、能接 TTL 的，'
                           '欢迎[参与收录](/contribute/)。'))
     out.append(table(['机型', '已知情况', '还缺什么'],
-                     [([other_name(m), inline(m.get('known', '')), inline(m['missing'])], f' data-k="{esc(keys_of(m))}"')
+                     [([other_name(m), inline(m.get('known', '')), inline(m['missing'])],
+                       f' id="{esc(anchor_of(m))}" data-k="{esc(keys_of(m))}"')
                       for m in planned], 'devs others') + '</section>')
 
     if wontdo:
         out.append(f'<section data-group><h2 id="wontdo"><span class="dot wontdo"></span>不打算做 <span class="n">{len(wontdo)}</span></h2>')
-        out.append(table(['机型', '原因'], [([other_name(m), inline(m['reason'])], f' data-k="{esc(keys_of(m))}"')
+        out.append(table(['机型', '原因'], [([other_name(m), inline(m['reason'])],
+                                           f' id="{esc(anchor_of(m))}" data-k="{esc(keys_of(m))}"')
                                           for m in wontdo], 'devs') + '</section>')
     out.append('<p id="none" hidden>没有匹配的机型。可能还没收录，换个写法试试（只输型号，不带品牌）。</p>')
     return '\n'.join(out)
@@ -781,6 +788,34 @@ def device_list(devices, others):
 def device_filter():
     return ('<p class="filter" hidden><label for="q">按型号筛选</label>'
             '<input id="q" type="search" placeholder="输入型号，例如 VS010、AX6000" autocomplete="off"></p>')
+
+
+def home_others(devices, others):
+    """Front page: every model that cannot be installed yet, each name a link to its entry."""
+    trial = [d for d in devices if route_of(d) == 'trial']
+    planned = [m for m in others if m['status'] == 'planned']
+    wontdo = [m for m in others if m['status'] == 'wontdo']
+
+    def names(models):
+        return ('<ul class="names">' + ''.join(
+            f'<li><a href="/devices/#{esc(anchor_of(m))}">{esc(m["name"])}</a></li>' for m in models) + '</ul>')
+
+    out = []
+    if trial:
+        out.append(f'<h3><span class="dot untested"></span>有构建，未验证 <span class="n">{len(trial)}</span></h3>')
+        out.append(text_block('U-Boot 已经编出来了，还没有人在真机上跑过。能接 TTL 的可以做 [RAM 试跑](/install/ram-trial)，'
+                              '不要写进闪存。'))
+        out.append(table(['机型', '说明'], [([name_cell(d), inline(d.get('brief', ''))], '') for d in trial], 'devs'))
+    if planned:
+        out.append(f'<h3><span class="dot planned"></span>规划中 <span class="n">{len(planned)}</span></h3>')
+        out.append(text_block('还没有构建，请不要刷。点机型名看它现在的已知情况和还缺什么；'
+                              '手里有这些机器的，欢迎[参与收录](/contribute/)。'))
+        out.append(names(planned))
+    if wontdo:
+        out.append(f'<h3><span class="dot wontdo"></span>不打算做 <span class="n">{len(wontdo)}</span></h3>')
+        out.append(text_block('这几款不在计划里，点机型名看原因。'))
+        out.append(names(wontdo))
+    return '\n'.join(out)
 
 
 def home_finder():
@@ -1013,6 +1048,7 @@ def build(out):
         'verified_table': lambda: verified_table(devices),
         'device_filter': device_filter,
         'home_finder': home_finder,
+        'home_others': lambda: home_others(devices, others),
         'fig_flow': fig_flow,
         'fig_flash': fig_flash,
         'fig_wiring': fig_wiring,
