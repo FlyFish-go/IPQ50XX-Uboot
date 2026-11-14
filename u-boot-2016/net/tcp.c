@@ -46,6 +46,7 @@ struct tcp_conn {
 
 	tcp_conn_cb cb;
 	int close_flag;
+	int rst_flag;	/* reset requested: no more callbacks, reaped by the periodic check */
 	int ack_flag;
 
 	int rexmit_mode;
@@ -75,6 +76,7 @@ static int tcp_send_packet_opt(struct tcp_conn *c, u16 flags, u32 seq, u32 ack,
 			void *opt, int opt_size, const void *payload, int payload_len);
 static int tcp_send_packet(struct tcp_conn *c, u16 flags, u32 seq, u32 ack,
 			const void *payload, int payload_len);
+static void tcp_rst_now(struct tcp_conn *c);
 static int tcp_send_packet_ctrl(struct tcp_conn *c, u16 flags);
 
 static LIST_HEAD(listen_head);
@@ -463,6 +465,10 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 	/* find existing connection */
 	c = tcp_conn_find(net_read_ip(&ip->ip_src).s_addr, tcp->src, tcp->dst);
 
+	/* being reset: ignore it until the periodic check removes it */
+	if (c && c->rst_flag)
+		return true;
+
 	if (!c) {
 		/* whether to create new connection */
 		if ((flags & TCP_FLAG_MASK) == TCP_SYN) {
@@ -493,7 +499,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 			/* The peer has reset the connection */
 			cbd.status = TCP_CB_REMOTE_CLOSED;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(&cbd);
+			if (!c->rst_flag)
+				c->cb(&cbd);
 		}
 
 		tcp_conn_del(c);
@@ -519,7 +526,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 
 			cbd.status = TCP_CB_CLOSED;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(&cbd);
+			if (!c->rst_flag)
+				c->cb(&cbd);
 
 			tcp_conn_del(c);
 			break;
@@ -550,7 +558,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 
 		cbd.status = TCP_CB_NEW_CONN;
 		assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-		c->cb(&cbd);
+		if (!c->rst_flag)
+			c->cb(&cbd);
 
 		if (!data_size)
 			break;
@@ -614,7 +623,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 				c->txlen = 0;
 				cbd.status = TCP_CB_DATA_SENT;
 				assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-				c->cb(&cbd);
+				if (!c->rst_flag)
+					c->cb(&cbd);
 			}
 		} else {
 			/*
@@ -650,7 +660,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 			cbd.data = data;
 			cbd.datalen = data_size;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(&cbd);
+			if (!c->rst_flag)
+				c->cb(&cbd);
 		}
 
 		if (flags & TCP_FIN) {
@@ -658,7 +669,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 			c->status = CLOSE_WAIT;
 			cbd.status = TCP_CB_REMOTE_CLOSING;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(&cbd);
+			if (!c->rst_flag)
+				c->cb(&cbd);
 		}
 
 		break;
@@ -669,7 +681,8 @@ bool receive_tcp(struct ip_hdr *ip, int len, struct ethernet_hdr *et)
 		c->status = CLOSE_WAIT;
 		cbd.status = TCP_CB_REMOTE_CLOSED;
 		assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-		c->cb(&cbd);
+		if (!c->rst_flag)
+			c->cb(&cbd);
 		tcp_conn_del(c);
 		break;
 	case FIN_WAIT_1:
@@ -737,13 +750,15 @@ static int tcp_rexmit_check(struct tcp_conn *c, struct tcp_cb_data *cbd)
 			cbd->status = TCP_CB_REMOTE_CLOSED;
 			cbd->timedout = true;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(cbd);
+			if (!c->rst_flag)
+				c->cb(cbd);
 			break;
 		case FIN_WAIT_1:
 		case CLOSE_WAIT:
 			cbd->status = TCP_CB_CLOSED;
 			assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-			c->cb(cbd);
+			if (!c->rst_flag)
+				c->cb(cbd);
 			break;
 		default:;
 		}
@@ -788,7 +803,8 @@ static int tcp_connect_rexmit_check(struct tcp_conn *c,
 		cbd->status = TCP_CB_REMOTE_CLOSED;
 		cbd->timedout = true;
 		assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-		c->cb(cbd);
+		if (!c->rst_flag)
+			c->cb(cbd);
 
 		tcp_conn_del(c);
 		return -1;
@@ -998,7 +1014,8 @@ static void tcp_conn_check(struct tcp_conn *c)
 
 				cbd.status = TCP_CB_CLOSING;
 				assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-				c->cb(&cbd);
+				if (!c->rst_flag)
+					c->cb(&cbd);
 			}
 		}
 
@@ -1033,7 +1050,8 @@ static void tcp_conn_check(struct tcp_conn *c)
 		tcp_send_packet_ctrl(c, TCP_ACK);
 		cbd.status = TCP_CB_CLOSED;
 		assert((size_t)c->cb > CONFIG_SYS_SDRAM_BASE);
-		c->cb(&cbd);
+		if (!c->rst_flag)
+			c->cb(&cbd);
 		tcp_conn_del(c);
 		break;
 	default:
@@ -1049,6 +1067,10 @@ int tcp_periodic_check(void)
 
 	list_for_each_safe(lh, n, &conn_head) {
 		c = list_entry(lh, struct tcp_conn, node);
+		if (c->rst_flag) {
+			tcp_rst_now(c);
+			continue;
+		}
 		tcp_conn_check(c);
 		num++;
 	}
@@ -1161,7 +1183,7 @@ int tcp_send_data(const void *conn, const void *data, u32 size)
 	if (!c || !data || !size)
 		return -EINVAL;
 
-	if (c->close_flag)
+	if (c->close_flag || c->rst_flag)
 		return 1;
 
 	datalen_acked = tcp_seq_sub(c->local_seq_acked, c->local_seq_last);
@@ -1177,6 +1199,19 @@ int tcp_send_data(const void *conn, const void *data, u32 size)
 	return 0;
 }
 
+static void tcp_rst_now(struct tcp_conn *c)
+{
+	tcp_send_packet(c, TCP_RST | TCP_ACK, c->local_seq,
+			c->peer_seq, NULL, 0);
+	tcp_conn_del(c);
+}
+
+/*
+ * A reset requested from a callback must not free the connection under the
+ * receive path that called it (it may still handle a FIN of the same
+ * segment): it is only marked, gets no further callbacks or data, and the
+ * next periodic check sends the RST and frees it.
+ */
 int tcp_close_conn(const void *conn, int rst)
 {
 	struct tcp_conn *c = (struct tcp_conn *)conn;
@@ -1185,9 +1220,7 @@ int tcp_close_conn(const void *conn, int rst)
 		return -EINVAL;
 
 	if (rst) {
-		tcp_send_packet(c, TCP_RST | TCP_ACK, c->local_seq,
-				c->peer_seq, NULL, 0);
-		tcp_conn_del(c);
+		c->rst_flag = 1;
 	} else {
 		c->close_flag = 1;
 	}
@@ -1215,7 +1248,7 @@ void tcp_reset_all_conn(void)
 
 	list_for_each_safe(lh, n, &conn_head) {
 		c = list_entry(lh, struct tcp_conn, node);
-		tcp_close_conn(c, 1);
+		tcp_rst_now(c);
 	}
 
 	tcp_stop = 1;
