@@ -46,6 +46,24 @@ static void xm_set_flag(const char *name, unsigned int val)
 	setenv(name, buf);
 }
 
+/*
+ * Saves U-Boot makes on its own while booting. A RAM trial run must leave the
+ * flash as it was, so they stay in RAM there; an upgrade the user started on
+ * the web page still saves.
+ */
+static int xm_boot_saveenv(void)
+{
+#ifdef CONFIG_RAM_TRIAL_BUILD
+	puts("Xiaomi slots: RAM trial, environment not saved\n");
+	return 0;
+#else
+	return saveenv();
+#endif
+}
+
+/* The slot slot_prepare_boot() chose: a failure must blame this one. */
+static int xm_tried_slot = -1;
+
 static void xm_read_flags(struct xiaomi_flags *f)
 {
 	const char *bs = getenv("flag_boot_success");
@@ -92,10 +110,26 @@ int slot_prepare_boot(void)
 				   xm_flag("flag_ota_reboot"))) {
 		puts("Xiaomi slots: previous run crashed, dropping the pending OTA\n");
 		xm_set_flag("flag_ota_reboot", 0);
-		if (saveenv())
+		if (xm_boot_saveenv())
 			puts("Xiaomi slots: cannot save flag_ota_reboot\n");
 	}
+	{
+		struct xiaomi_flags f;
+
+		xm_read_flags(&f);
+		if (xiaomi_ota_confirmed(&f, xm_flag("flag_boot_rootfs"),
+					 readl(XIAOMI_RESET_REASON_REG))) {
+			printf("Xiaomi slots: slot %lu came back cleanly, OTA confirmed\n",
+			       1 - f.last);
+			xm_set_flag("flag_last_success", 1 - f.last);
+			xm_set_flag("flag_ota_reboot", 0);
+			xm_set_flag("flag_boot_success", 1);
+			if (xm_boot_saveenv())
+				puts("Xiaomi slots: cannot save the OTA confirmation\n");
+		}
+	}
 	slot = xiaomi_slot_select();
+	xm_tried_slot = slot;
 	name = slot ? "rootfs_1" : "rootfs";
 	if (smem_getpart(name, &start, &size)) {
 		printf("Xiaomi slots: no %s partition\n", name);
@@ -113,7 +147,7 @@ int slot_prepare_boot(void)
 	v = getenv("flag_boot_rootfs");
 	if (!v || simple_strtoul(v, NULL, 10) != slot) {
 		xm_set_flag("flag_boot_rootfs", slot);
-		if (saveenv())
+		if (xm_boot_saveenv())
 			puts("Xiaomi slots: cannot save flag_boot_rootfs\n");
 	}
 
@@ -132,15 +166,20 @@ void slot_boot_failed(void)
 {
 	struct xiaomi_flags f;
 	struct xiaomi_failure fail;
-	unsigned int slot = xiaomi_slot_select();
+	unsigned int slot;
 	char name[24];
 
+	/*
+	 * Selecting again is not a query: it may drop the OTA flag and then
+	 * name the other slot. Blame the slot that was really tried.
+	 */
+	slot = xm_tried_slot >= 0 ? (unsigned int)xm_tried_slot : xiaomi_slot_select();
 	xm_read_flags(&f);
 	fail = xiaomi_failure_core(&f, slot);
 	snprintf(name, sizeof(name), "flag_try_sys%u_failed", fail.mark_slot + 1);
 	xm_set_flag(name, 1);
 	xm_set_flag("flag_ota_reboot", 0);
-	if (saveenv()) {
+	if (xm_boot_saveenv()) {
 		puts("Xiaomi slots: cannot save the failure flag\n");
 		return;
 	}
@@ -167,6 +206,27 @@ static int xiaomi_slot_set_next(unsigned int slot)
 	return saveenv();
 }
 
+/*
+ * Boot slot next as a pending OTA, the way stock OTA leaves the flags: the
+ * slot that runs now stays flag_last_success, so a new system that loads but
+ * then panics is dropped by the crash rule and the old one boots again. The
+ * new system confirms itself (stock boot_check sets L, S and T).
+ */
+static int xiaomi_slot_set_ota(unsigned int slot)
+{
+	struct xiaomi_flags f;
+
+	xm_read_flags(&f);
+	xiaomi_pending_ota(&f, slot);
+	xm_set_flag("flag_last_success", f.last);
+	xm_set_flag(slot ? "flag_try_sys2_failed" : "flag_try_sys1_failed", 0);
+	xm_set_flag("flag_ota_reboot", f.ota);
+	xm_set_flag("flag_boot_success", f.success);
+	/* the first boot of slot writes R = slot; a clean boot after that confirms */
+	xm_set_flag("flag_boot_rootfs", 1 - slot);
+	return saveenv();
+}
+
 static int do_xiaomi_slot(cmd_tbl_t *cmdtp, int flag, int argc,
 			  char *const argv[])
 {
@@ -177,11 +237,21 @@ static int do_xiaomi_slot(cmd_tbl_t *cmdtp, int flag, int argc,
 		       xiaomi_slot_select() ? "rootfs_1" : "rootfs");
 		return CMD_RET_SUCCESS;
 	}
-	if (argc != 3 || strcmp(argv[1], "select"))
+	if (argc != 3 || (strcmp(argv[1], "select") && strcmp(argv[1], "ota")))
 		return CMD_RET_USAGE;
 	slot = simple_strtoul(argv[2], NULL, 10);
 	if (slot > 1 || strlen(argv[2]) != 1)
 		return CMD_RET_USAGE;
+	if (!strcmp(argv[1], "ota")) {
+		if (xiaomi_slot_set_ota(slot)) {
+			puts("xiaomi_slot: cannot save the environment\n");
+			return CMD_RET_FAILURE;
+		}
+		printf("next boot: slot %lu (%s) on trial: kept after a clean reboot, "
+		       "the current slot again if it crashes first\n",
+		       slot, slot ? "rootfs_1" : "rootfs");
+		return CMD_RET_SUCCESS;
+	}
 	if (xiaomi_slot_set_next(slot)) {
 		puts("xiaomi_slot: cannot save the environment\n");
 		return CMD_RET_FAILURE;
@@ -194,7 +264,10 @@ U_BOOT_CMD(xiaomi_slot, 3, 0, do_xiaomi_slot,
 	   "show or choose the Xiaomi system slot for the next boot",
 	   "\n    - show the slot the flags select\n"
 	   "xiaomi_slot select <0|1>\n"
-	   "    - boot rootfs (0) or rootfs_1 (1) from now on; saves the environment");
+	   "    - boot rootfs (0) or rootfs_1 (1) from now on; saves the environment\n"
+	   "xiaomi_slot ota <0|1>\n"
+	   "    - boot that slot on trial (pending OTA): back to the current one if it crashes\n"
+	   "      before a clean reboot");
 
 /* The stock environment says bootcmd=bootmiwifi; keep it working. */
 static int do_bootmiwifi(cmd_tbl_t *cmdtp, int flag, int argc,

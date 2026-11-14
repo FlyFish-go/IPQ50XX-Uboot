@@ -125,5 +125,99 @@ int main(void)
 	CHECK(xiaomi_select_core(&f).slot == 0);	/* after the drop: old slot */
 
 	puts("SLOT_XIAOMI_HOSTTEST_PASS");
+	/*
+	 * Web upgrade = pending OTA (xiaomi_pending_ota): from every starting
+	 * state with sane flags, the next boot is the new slot; a crash of the
+	 * new system (crash rule drops O) goes back to the old slot unless the
+	 * old one is marked failed; a load failure (T[new]=1, O=0) goes back too.
+	 */
+	{
+		unsigned long t0, t1, last;
+		int s, succ;
+
+		for (t0 = 0; t0 <= 1; t0++)
+		for (t1 = 0; t1 <= 1; t1++)
+		for (last = 0; last <= 1; last++)
+		for (succ = -1; succ <= 1; succ++)
+		for (s = 0; s <= 1; s++) {
+			struct xiaomi_flags f = F(t0, t1, 0, last, succ), g;
+			struct xiaomi_select r;
+			unsigned long old_failed;
+
+			xiaomi_pending_ota(&f, s);
+			old_failed = s ? f.t0 : f.t1;
+			CHECK(f.last == (unsigned long)(1 - s) && f.ota == 1);
+			CHECK((s ? f.t1 : f.t0) == 0);
+			CHECK(f.success_set && f.success == 1);
+			r = xiaomi_select_core(&f);
+			CHECK(r.slot == (unsigned int)s && !r.drop_ota);
+			/* panic in the new system */
+			CHECK(xiaomi_crash_drops_ota(XIAOMI_RESET_REASON_CRASH, f.ota));
+			g = f;
+			g.ota = 0;
+			r = xiaomi_select_core(&g);
+			CHECK(r.slot == (old_failed ? (unsigned int)s : (unsigned int)(1 - s)));
+			/* the new system did not load: slot_boot_failed marks it */
+			g = f;
+			if (s)
+				g.t1 = 1;
+			else
+				g.t0 = 1;
+			g.ota = 0;
+			CHECK(xiaomi_failure_core(&g, s).mark_slot == (unsigned int)s);
+			if (!old_failed)
+				CHECK(xiaomi_select_core(&g).slot == (unsigned int)(1 - s));
+		}
+	}
+	/*
+	 * Selecting is not idempotent: with O=1 and S=0 the first call picks L
+	 * and drops O, a second call then follows T[L] to the other slot. This
+	 * is why slot_boot_failed() blames the slot slot_prepare_boot() chose.
+	 */
+	{
+		struct xiaomi_flags f = F(1, 0, 1, 0, 0);
+		struct xiaomi_select r = xiaomi_select_core(&f);
+
+		CHECK(r.slot == 0 && r.drop_ota);
+		f.ota = 0;
+		CHECK(xiaomi_select_core(&f).slot == 1);
+	}
+	/*
+	 * Pending OTA lifecycle: web upgrade -> first boot writes R -> a clean
+	 * reboot confirms (L = new, O = 0) -> later crashes keep the new slot.
+	 * A crash before the confirmation goes back to the old slot.
+	 */
+	{
+		int s;
+
+		for (s = 0; s <= 1; s++) {
+			struct xiaomi_flags f = F(0, 0, 0, 1 - s, 1);
+			unsigned long r = 1 - s;	/* set by xiaomi_slot ota */
+
+			xiaomi_pending_ota(&f, s);
+			/* first boot: not confirmed yet (R is still the old slot) */
+			CHECK(!xiaomi_ota_confirmed(&f, r, 0));
+			CHECK(xiaomi_select_core(&f).slot == (unsigned int)s);
+			r = s;				/* slot_prepare_boot writes R */
+			/* crash during the first run: no confirmation, rollback */
+			CHECK(!xiaomi_ota_confirmed(&f, r, XIAOMI_RESET_REASON_CRASH));
+			/* clean reboot: confirmed */
+			CHECK(xiaomi_ota_confirmed(&f, r, 0));
+			f.last = s;
+			f.ota = 0;
+			CHECK(xiaomi_select_core(&f).slot == (unsigned int)s);
+			CHECK(!xiaomi_crash_drops_ota(XIAOMI_RESET_REASON_CRASH, f.ota));
+			CHECK(!xiaomi_ota_confirmed(&f, r, 0));	/* nothing pending */
+		}
+		/* never confirm a slot marked failed or an explicit S=0 */
+		{
+			struct xiaomi_flags f = F(0, 1, 1, 0, 1);
+			CHECK(!xiaomi_ota_confirmed(&f, 1, 0));
+			f = F(0, 0, 1, 0, 0);
+			CHECK(!xiaomi_ota_confirmed(&f, 1, 0));
+			f = F(0, 0, 2, 0, 1);
+			CHECK(!xiaomi_ota_confirmed(&f, 1, 0));
+		}
+	}
 	return 0;
 }

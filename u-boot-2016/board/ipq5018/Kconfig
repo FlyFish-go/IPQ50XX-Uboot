@@ -495,6 +495,8 @@ config H3C_NAND_HYBRID_ECC
 config H3C_UBI_ATTACH_READONLY
     bool
     default y if TARGET_IPQ5018_H3C_HW_D
+    # a RAM trial must not let UBI attach rewrite the volume table
+    default y if RAM_TRIAL_BUILD
     help
       Diagnostic and boot UBI attaches must not schedule writes.
 

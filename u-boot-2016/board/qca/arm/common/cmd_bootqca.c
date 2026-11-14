@@ -941,7 +941,7 @@ static int set_fs_bootargs(int *fs_on_nand)
 			(sfi->flash_type == SMEM_BOOT_QSPI_NAND_FLASH))) {
 		ret = slot_prepare_boot();
 		if (ret)
-			return ret;
+			return CMD_RET_FAILURE;
 		bootargs = nand_rootfs;
 		if (getenv("fsbootargs") == NULL)
 			setenv("fsbootargs", bootargs);

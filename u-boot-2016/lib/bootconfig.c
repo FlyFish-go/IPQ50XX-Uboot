@@ -227,7 +227,9 @@ int read_bootconfig_and_write_back_if_needed(bootconfig_info_t *bootcfg)
 	bootcfg->size = sizeof(struct bootconfig_info);
 
 	ret = read_bootconfig(bootcfg, false, false);
-#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY)
+	/* A RAM trial uses a valid backup in RAM, like H3C stage 0, and does
+	 * not rewrite the primary copy on its own. */
+#if defined(CONFIG_H3C_BOOTCONFIG_STAGE0_POLICY) || defined(CONFIG_RAM_TRIAL_BUILD)
 	if (!ret)
 		return 0;
 	backup_bootcfg.part_name = BOOTCONFIG_BACKUP_PART_NAME;

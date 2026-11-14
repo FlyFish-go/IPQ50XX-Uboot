@@ -6282,6 +6282,14 @@ void qpic_nand_init(qpic_nand_cfg_t *qpic_nand_cfg)
 	 * qcom_nandc does not redo the training (OpenWrt 5.4) then reads
 	 * only 0xff from a trained 200 MHz bus, so stay at the default.
 	 */
+#ifdef CONFIG_RAM_TRIAL_BUILD
+	/* A RAM trial must leave the flash as it was: training erases and
+	 * programs 0:TRAINING, so stay at the default bus speed. */
+	if (1) {
+		printf("RAM trial: skip serial training\n");
+		ret = -1;
+	} else
+#endif
 	if (serial_params && serial_params->id[0] == 0xc8 &&
 	    serial_params->id[1] == 0x11) {
 		printf("%s: skip serial training\n", serial_params->name);

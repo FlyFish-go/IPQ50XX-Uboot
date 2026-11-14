@@ -78,6 +78,45 @@ static inline struct xiaomi_failure xiaomi_failure_core(const struct xiaomi_flag
 	return r;
 }
 
+/*
+ * Flags for "boot slot as a pending OTA", as stock OTA leaves them: the other
+ * slot (the one that runs now) is the last success, slot is not marked failed,
+ * flag_ota_reboot=1 and flag_boot_success=1 (an explicit 0 would cancel the
+ * OTA). The other slot's failure mark is kept: rolling back to a slot that
+ * failed would only loop.
+ */
+static inline void xiaomi_pending_ota(struct xiaomi_flags *f, unsigned int slot)
+{
+	f->last = 1 - slot;
+	if (slot)
+		f->t1 = 0;
+	else
+		f->t0 = 0;
+	f->ota = 1;
+	f->success_set = 1;
+	f->success = 1;
+}
+
+/*
+ * A pending OTA (O=1) whose slot already booted once (R is that slot, written
+ * on the first try) and came back without a crash record ran fine: make it
+ * the last success, as stock boot_check would. Systems that never touch the
+ * flags (OpenWrt) are confirmed this way instead of staying pending forever.
+ */
+static inline int xiaomi_ota_confirmed(const struct xiaomi_flags *f,
+				       unsigned long rootfs, uint32_t reset_reason)
+{
+	unsigned long slot = 1 - f->last;
+
+	if (f->ota != 1 || f->last > 1 || f->t0 > 1 || f->t1 > 1)
+		return 0;
+	if (f->success_set && f->success == 0)
+		return 0;
+	if ((slot ? f->t1 : f->t0) || rootfs != slot)
+		return 0;
+	return reset_reason != XIAOMI_RESET_REASON_CRASH;
+}
+
 /* Stock row 11: a RAM crash record means the system that just ran died, so a
  * pending OTA flag must go before the slot is decided. */
 static inline int xiaomi_crash_drops_ota(uint32_t reset_reason, unsigned long ota)
