@@ -80,6 +80,8 @@ struct httpd_tcp_pdata {
 	int is_uploading;
 	int body_dropped;	/* rest of the body dropped: never parse it */
 	int body_shared;	/* body lives in the shared upload RAM */
+	int rst_pending;	/* reset this connection once the callback returns */
+	int new_called;		/* the URI handler saw HTTP_CB_NEW */
 	char *upload_ptr;
 	u32 payload_size;
 	u32 upload_size;
@@ -90,6 +92,22 @@ struct httpd_tcp_pdata {
 
 	int resp_std_cnt;
 };
+
+/*
+ * Reset the connection after the TCP callback returns: tcp_close_conn(.., 1)
+ * frees the connection without an HTTP close callback, so the per-connection
+ * data (and an upload lock) would leak, while callers here still touch that
+ * data after deciding to reset.
+ */
+static void httpd_rst_later(struct tcp_cb_data *cbd)
+{
+	struct httpd_tcp_pdata *pdata = cbd->pdata;
+
+	if (pdata)
+		pdata->rst_pending = 1;
+	else
+		tcp_close_conn(cbd->conn, 1);
+}
 
 struct http_response_code {
 	u32 code;
@@ -678,7 +696,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 #endif
 				pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);
 				if (pdata->upload_ptr == NULL) {
-					tcp_close_conn(cbd->conn, 1);
+					httpd_rst_later(cbd);
 					return 1;
 				}
 #ifndef CONFIG_H3C_IPQ5018_COMMON
@@ -706,7 +724,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			/* calculate new cache address */
 			pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);
 			if (pdata->upload_ptr == NULL) {
-				tcp_close_conn(cbd->conn, 1);
+				httpd_rst_later(cbd);
 				return 1;
 			}
 #ifndef CONFIG_H3C_IPQ5018_COMMON
@@ -778,7 +796,7 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 
 	if (pdata->upload_size > pdata->payload_size) {
 		/* cannot happen after the first copy is capped; never subtract */
-		tcp_close_conn(cbd->conn, 1);
+		httpd_rst_later(cbd);
 		return 1;
 	}
 	size_recv = min(pdata->payload_size - pdata->upload_size, cbd->datalen);
@@ -836,24 +854,59 @@ static void *memstr(void *src, size_t limit, const char *str)
 	return NULL;
 }
 
-static char *name_extract(char *s)
+/*
+ * name and filename of a multipart part, from the parameters of its
+ * Content-Disposition header only: exact parameter names in any order,
+ * quoted values taken whole (a "name=" inside filename="..." is not a name).
+ * Values are NUL terminated in place.
+ */
+static void disposition_params(char *hdrs, char **name, char **filename)
 {
-	char *name, *p;
+	static const char cd[] = "Content-Disposition:";
+	char *line = hdrs, *eol, *q, *key, *val;
+	size_t klen;
 
-	if (*s == '\"') {
-		s++;
-		name = s;
-		p = strchr(s, '\"');
-		if (p)
-			*p = 0;
-	} else {
-		name = s;
-		p = strchr(s, '\r');
-		if (p)
-			*p = 0;
+	*name = *filename = NULL;
+	for (; line && *line; line = eol ? eol + 2 : NULL) {
+		eol = strstr(line, "\r\n");
+		if (strncasecmp(line, cd, sizeof(cd) - 1))
+			continue;
+		if (eol)
+			*eol = 0;
+		q = line + sizeof(cd) - 1;
+		while (*q) {
+			while (*q == ' ' || *q == '\t' || *q == ';')
+				q++;
+			key = q;
+			while (*q && *q != '=' && *q != ';')
+				q++;
+			klen = q - key;
+			while (klen && (key[klen - 1] == ' ' || key[klen - 1] == '\t'))
+				klen--;
+			if (*q != '=') {
+				continue;	/* a bare token such as form-data */
+			}
+			q++;
+			while (*q == ' ' || *q == '\t')
+				q++;
+			if (*q == '"') {
+				val = ++q;
+				while (*q && *q != '"')
+					q++;
+			} else {
+				val = q;
+				while (*q && *q != ';' && *q != ' ' && *q != '\t')
+					q++;
+			}
+			if (*q)
+				*q++ = 0;
+			if (klen == 4 && !strncasecmp(key, "name", 4) && !*name)
+				*name = val;
+			else if (klen == 8 && !strncasecmp(key, "filename", 8) && !*filename)
+				*filename = val;
+		}
+		return;
 	}
-
-	return name;
 }
 
 /**
@@ -872,8 +925,6 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 	u32 i, numformdata = 0, boundarylen;
 	struct httpd_form_value *val;
 
-	static const char name_str[] = "name=";
-	static const char filename_str[] = "filename=";
 
 	if (req->method != HTTP_POST || pdata->payload_size <= 0)
 		return 0;
@@ -897,7 +948,7 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 	boundary = malloc(boundarylen + 3);
 	if (!boundary) {
 		/* out of memory */
-		tcp_close_conn(cbd->conn, 1);
+		httpd_rst_later(cbd);
 		return -ENOMEM;
 	}
 
@@ -958,23 +1009,12 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 		 */
 		val->data = (char *)(((uintptr_t)p) & (~(4 - 1)));
 
-		name_ptr = strstr(formdata[i], name_str);
-		filename_ptr = strstr(formdata[i], filename_str);
-
-		if (name_ptr) {
-			name_ptr += sizeof(name_str) - 1;
-			val->name = name_extract(name_ptr);
-		}
+		disposition_params(formdata[i], &name_ptr, &filename_ptr);
 		/* a part without a name cannot be looked up: drop it */
-		if (!val->name) {
-			val->filename = NULL;
+		if (!name_ptr || !*name_ptr)
 			continue;
-		}
-
-		if (filename_ptr) {
-			filename_ptr += sizeof(filename_str) - 1;
-			val->filename = name_extract(filename_ptr);
-		}
+		val->name = name_ptr;
+		val->filename = filename_ptr;
 
 		val->size = formdata_end[i] - p;
 		req->form.count++;
@@ -1008,7 +1048,7 @@ static int httpd_handle_request(struct httpd_instance *inst,
 		req->urih = httpd_find_uri_handler(inst, pdata->uri);
 		if (!req->urih) {
 			/* TODO: no handler / response 404 */
-			tcp_close_conn(cbd->conn, 1);
+			httpd_rst_later(cbd);
 			return 1;
 		}
 
@@ -1020,7 +1060,7 @@ static int httpd_handle_request(struct httpd_instance *inst,
 
 		if (!parse_post_data_later) {
 			if (httpd_parse_post_data(cbd)) {
-				tcp_close_conn(cbd->conn, 1);
+				httpd_rst_later(cbd);
 				pdata->status = HTTPD_S_CLOSING;
 				return 1;
 			}
@@ -1028,6 +1068,7 @@ static int httpd_handle_request(struct httpd_instance *inst,
 
 		/* call uri handler */
 		assert((size_t)req->urih->cb > CONFIG_SYS_SDRAM_BASE);
+		pdata->new_called = 1;
 		req->urih->cb(HTTP_CB_NEW, req, &pdata->response);
 
 		if (pdata->response.status == HTTP_RESP_NONE) {
@@ -1109,7 +1150,7 @@ static void httpd_tx(struct httpd_instance *inst, struct tcp_cb_data *cbd)
 
 	if (pdata->status == HTTPD_S_HEADER_SENT) {
 		if (httpd_parse_post_data(cbd)) {
-			tcp_close_conn(cbd->conn, 1);
+			httpd_rst_later(cbd);
 			pdata->status = HTTPD_S_CLOSING;
 			return;
 		}
@@ -1146,8 +1187,8 @@ static void httpd_cleanup(struct httpd_instance *inst, struct tcp_cb_data *cbd)
 	if (pdata->is_uploading)
 		is_uploading = 0;
 
-	/* call uri handler */
-	if (req->urih) {
+	/* call uri handler (only one that saw HTTP_CB_NEW has a session) */
+	if (req->urih && pdata->new_called) {
 		assert((size_t)req->urih->cb > CONFIG_SYS_SDRAM_BASE);
 		req->urih->cb(HTTP_CB_CLOSED, req, resp);
 	}
@@ -1187,9 +1228,17 @@ static void httpd_tcp_callback(struct tcp_cb_data *cbd)
 	case TCP_CB_REMOTE_CLOSED:
 	case TCP_CB_CLOSED:
 		httpd_cleanup(inst, cbd);
-		break;
+		return;
 	default:
 		;
+	}
+
+	if (cbd->pdata &&
+	    ((struct httpd_tcp_pdata *)cbd->pdata)->rst_pending) {
+		httpd_cleanup(inst, cbd);
+		cbd->pdata = NULL;
+		tcp_conn_set_pdata(cbd->conn, NULL);
+		tcp_close_conn(cbd->conn, 1);
 	}
 }
 
