@@ -183,8 +183,13 @@ static void upload_handler(enum httpd_uri_handler_status status,
 
 		/* The buffer was reused (slot probe) while this upload was in it. */
 		if (request->upload_gen != httpd_upload_buffer_gen()) {
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 			/* This upload already overwrote the RAM of the previous one. */
 			upload_data_id = fs_upload_id + 1;
+#endif
+			/* Non-H3C: a newer upload may own the RAM and its validated
+			 * state now; /result checks the generation before writing, so
+			 * this stale request only reports itself. */
 			response->data = "{\"status\":\"fail\",\"info\":{\"type\":\"upload_interrupted\"}}";
 			response->size = strlen(response->data);
 			sess->body_sent = 1;

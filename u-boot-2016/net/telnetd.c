@@ -302,11 +302,23 @@ struct telnetd_custom_arg {
 	const char *prompt;
 };
 
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/* Web failsafe (failsafe/modules/upgrade.c) overrides this when built. */
+void __weak failsafe_upload_invalidate(void)
+{
+}
+#endif
+
 static int telnetd_run_command(void *arg)
 {
 	struct telnetd_custom_arg *p = arg;
 	int ret;
 
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* Like the web terminal: a command may rewrite the shared upload RAM,
+	 * so a validated upload (or a pending INITRAMFS boot) is dropped. */
+	failsafe_upload_invalidate();
+#endif
 	/* Run the U-Boot command */
 	ret = run_command(p->cmd, 0);
 
