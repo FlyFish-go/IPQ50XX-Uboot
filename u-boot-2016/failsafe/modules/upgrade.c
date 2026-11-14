@@ -519,7 +519,14 @@ static void result_handler(enum httpd_uri_handler_status status,
 		/* A RAM boot or reset must not follow if the buffer was reused. */
 		upgrade_success = st->ret == RET_SUCCESS &&
 				  st->gen == httpd_upload_buffer_gen();
+#ifdef CONFIG_H3C_IPQ5018_COMMON
 		auto_action_pending = st->auto_reboot && upgrade_success;
+#else
+		/* Only a successful session queues an action; a failed or stale
+		 * one closing later must not cancel it (invalidation does). */
+		if (st->auto_reboot && upgrade_success)
+			auto_action_pending = true;
+#endif
 
 		free(response->session_data);
 

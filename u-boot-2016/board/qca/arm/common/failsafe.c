@@ -1512,6 +1512,82 @@ int failsafe_pad_tail_ff(const void *data_addr, ulong data_size)
  * the uploaded file, which is what validation hashed. This U-Boot has no
  * FIT external data, so every sub-image is inside that tree.
  */
+static u32 fs_be32(const u8 *p)
+{
+	return (u32)p[0] << 24 | (u32)p[1] << 16 | (u32)p[2] << 8 | p[3];
+}
+
+/*
+ * Walk the whole structure block with byte reads and explicit bounds (the
+ * libfdt walker of this tree can overflow on a huge property length): every
+ * tag, node name and property value inside the block, every property name
+ * offset inside the strings block and NUL terminated there, nodes balanced,
+ * FDT_END last.
+ */
+static bool fs_fit_struct_ok(const u8 *fit)
+{
+	const u8 *st = fit + fdt_off_dt_struct(fit);
+	const u8 *str = fit + fdt_off_dt_strings(fit);
+	u32 ss = fdt_size_dt_struct(fit), strs = fdt_size_dt_strings(fit);
+	u32 off = 0, depth = 0, tag, len, nameoff;
+	const u8 *end;
+
+	for (;;) {
+		if (off > ss || ss - off < 4)
+			return false;
+		tag = fs_be32(st + off);
+		off += 4;
+		switch (tag) {
+		case FDT_BEGIN_NODE:
+			end = memchr(st + off, 0, ss - off);
+			if (!end)
+				return false;
+			off = (u32)(end - st) + 1;
+			depth++;
+			break;
+		case FDT_END_NODE:
+			if (!depth)
+				return false;
+			depth--;
+			break;
+		case FDT_PROP:
+			if (ss - off < 8)
+				return false;
+			len = fs_be32(st + off);
+			nameoff = fs_be32(st + off + 4);
+			off += 8;
+			if (len > ss - off || nameoff >= strs ||
+			    !memchr(str + nameoff, 0, strs - nameoff))
+				return false;
+			off += len;
+			break;
+		case FDT_NOP:
+			break;
+		case FDT_END:
+			return depth == 0;
+		default:
+			return false;
+		}
+		off = (off + 3) & ~3U;	/* off <= ss here, ss < 4 GiB */
+	}
+}
+
+/* The memory reserve map must end (an all-zero entry) inside the tree. */
+static bool fs_fit_rsvmap_ok(const u8 *fit, u32 total)
+{
+	u32 off = fdt_off_mem_rsvmap(fit);
+	int i;
+
+	while (off <= total && total - off >= 16) {
+		for (i = 0; i < 16 && !fit[off + i]; i++)
+			;
+		if (i == 16)
+			return true;
+		off += 16;
+	}
+	return false;
+}
+
 int failsafe_initramfs_extent_check(const void *data_addr, ulong data_size)
 {
 	const void *fit = data_addr;
@@ -1520,13 +1596,17 @@ int failsafe_initramfs_extent_check(const void *data_addr, ulong data_size)
 	if (data_size < sizeof(struct fdt_header) || fdt_magic(fit) != FDT_MAGIC)
 		goto bad;
 	total = fdt_totalsize(fit);
+	/* v17+: the version whose header carries size_dt_struct, which the
+	 * libfdt reads of this tree rely on for their bounds */
 	if (total < sizeof(struct fdt_header) || total > data_size ||
+	    fdt_version(fit) < 17 ||
 	    fdt_off_mem_rsvmap(fit) > total ||
 	    fdt_off_dt_struct(fit) > total ||
 	    fdt_size_dt_struct(fit) > total - fdt_off_dt_struct(fit) ||
 	    fdt_off_dt_strings(fit) > total ||
 	    fdt_size_dt_strings(fit) > total - fdt_off_dt_strings(fit) ||
-	    fdt_check_header(fit))
+	    fdt_check_header(fit) ||
+	    !fs_fit_rsvmap_ok(fit, total) || !fs_fit_struct_ok(fit))
 		goto bad;
 	return RET_SUCCESS;
 bad:

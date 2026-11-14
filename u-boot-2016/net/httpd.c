@@ -713,9 +713,23 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			pdata->body_shared = 1;
 #endif
 
-			pdata->upload_size = cbd->datalen - hdr_size;
-			/* copy received parts to new cache */
-			memcpy(pdata->upload_ptr, cbd->data + hdr_size, pdata->upload_size);
+			/* The header may have arrived over several segments: hdr_size
+			 * counts all of it, cbd->data holds only this segment, whose
+			 * first (hdr_size - earlier bytes) bytes end the header. */
+			{
+				u32 earlier = pdata->bufsize - size_rcvd;
+				u32 hdr_here, body_here;
+
+				if (hdr_size < earlier || hdr_size - earlier > cbd->datalen) {
+					err_code = 400;
+					goto bad_request;
+				}
+				hdr_here = hdr_size - earlier;
+				body_here = cbd->datalen - hdr_here;
+				pdata->upload_size = min(body_here, pdata->payload_size);
+				/* copy received parts to new cache */
+				memcpy(pdata->upload_ptr, cbd->data + hdr_here, pdata->upload_size);
+			}
 		}
 
 		httpd_debug("pdata->upload_ptr = 0x%lx\n", (ulong)pdata->upload_ptr);
