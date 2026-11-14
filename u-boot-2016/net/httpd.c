@@ -658,7 +658,8 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 		 * into the small (one packet) branch. */
 		if (hdr_size < sizeof(pdata->buf) &&
 		    pdata->payload_size < sizeof(pdata->buf) - hdr_size) {
-			pdata->upload_size = pdata->bufsize - hdr_size;
+			/* never more than Content-Length, even if the client sent more */
+			pdata->upload_size = min(pdata->bufsize - hdr_size, pdata->payload_size);
 			if (!strcmp(pdata->uri, "/upload") ||
 				!strcmp(pdata->uri, "/console/upload") ||
 #ifdef CONFIG_H3C_IPQ5018_COMMON
@@ -775,6 +776,11 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 	int stale;
 #endif
 
+	if (pdata->upload_size > pdata->payload_size) {
+		/* cannot happen after the first copy is capped; never subtract */
+		tcp_close_conn(cbd->conn, 1);
+		return 1;
+	}
 	size_recv = min(pdata->payload_size - pdata->upload_size, cbd->datalen);
 #ifndef CONFIG_H3C_IPQ5018_COMMON
 	/* The shared RAM was claimed or clobbered since this body started:
