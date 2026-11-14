@@ -7,6 +7,7 @@ soc: IPQ5018
 status: verified
 family: 小米 CR880x
 summary: "小米 CR8806 已实机刷入：小米环境变量双系统、网页刷固件、冷启动 10 次通过。按键没有测。CR8808、CR8809、Redmi AX3000 是同硬件，没有实机验证。"
+brief: "CR8808 等同硬件机型没有实机验证；按键没测"
 artifact: ipq5018_xiaomi_cr8806
 hardware:
   - { label: 闪存, value: "NAND（ESMT F50D1G41LB，ECC 4 位；该颗粒 U-Boot 不做串行训练，和原厂一致）" }
@@ -27,37 +28,22 @@ not_tested:
   - "从原厂 SSH 一键安装"
 warnings:
   - "同一硬件，未实机验证：小米 CR8808、CR8809、Redmi AX3000（RA81，M79 / M81 两版）。第三方 OpenWrt 项目用同一个设备树覆盖这几款，GPIO 和 CR8806 一致，但我们没有看过它们的启动链、分区表和安全启动状态。刷入前先做 RAM 试跑，并核对原厂的 `nvram get model`。"
-  - "小米原厂默认关闭串口输出。要在 U-Boot 里执行 `setenv boot_wait on; setenv uart_en 1; saveenv`（或按原厂文档）打开串口，否则 TTL 什么都看不到。"
   - "部分小米机型的零售版可能开启了安全启动，装之前必须确认熔丝是关闭的。"
 slots:
   mechanism: xiaomi-env
   note: "原厂用 flag_boot_rootfs 等环境变量在两个 rootfs 之间切换，本项目的 U-Boot 照原厂逻辑读写这些变量，所以原厂系统和 U-Boot 可以互相切换。网页刷固件会写入另一个槽，再切换过去。"
 install:
   method: ttl
-  label: TTL 串口 + 救援页（暂无安装脚本）
-steps:
-  - title: 准备 TTL 串口
-    body: |
-      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 原厂默认关闭串口输出，见上面的提示。
-    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
-  - title: 完整备份
-    body: |
-      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
-
-      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
-  - title: 确认安全启动没有开启
-    body: |
-      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
-  - title: RAM 试跑
-    body: |
-      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_xiaomi_cr8806`。
-  - title: 在救援页写入 U-Boot
-    body: |
-      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_xiaomi_cr8806.mbn`，两份 APPSBL 会一起写入并读回校验。
-    warn: 写入过程中不要断电。
-  - title: 冷启动检查
-    body: |
-      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+ttl:
+  voltage: 1.8 V
+  prompt: "IPQ5018#"
+  fdt: "0x4a9d4004"
+  port: LAN 口
+notes:
+  interrupt: "如果通电后串口一个字都没有，可能是原厂关了串口输出：先用 [XMiR-Patcher](https://github.com/openwrt-xiaomi/xmir-patcher) 打开原厂 SSH，执行 `nvram set uart_en=1; nvram set boot_wait=on; nvram commit` 后重启再试。"
+  verify: "冷启动后应进入原厂小米系统，地址 `192.168.31.1`。"
+shell:
+  access: "原厂系统没有现成的 SSH。社区工具 [XMiR-Patcher](https://github.com/openwrt-xiaomi/xmir-patcher) 可以打开原厂 SSH。"
 rescue:
   how: TTL 截停启动后输入 `httpd`
   address: 192.168.1.1

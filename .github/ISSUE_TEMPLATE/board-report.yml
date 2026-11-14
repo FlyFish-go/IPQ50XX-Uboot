@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢你的反馈。这份报告只记录 **RAM 试跑**（不写闪存）的结果，步骤见[参与收录页](https://flyfish-go.github.io/IPQ50XX-Uboot/contribute/#ram-试跑)。
+        感谢你的反馈。这份报告只记录 **RAM 试跑**（不写闪存）的结果，步骤见 [RAM 试跑](https://flyfish-go.github.io/IPQ50XX-Uboot/install/ram-trial.html)。
 
         请**不要上传**整片闪存备份、ART 分区、原厂固件；启动日志里的 MAC 地址、序列号、密码请先打码。
   - type: input

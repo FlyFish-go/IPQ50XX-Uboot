@@ -1,0 +1,9 @@
+# 已经正式发布的构建（键 = 机型资料里的 artifact）。
+# 没列在这里的构建，机型页的「下载」会指向 GitHub Actions 里最新一次成功的构建（需要登录 GitHub）。
+#
+# 例：
+# builds:
+#   ipq5018_xiaomi_cr8806:
+#     tag: v0.2.0
+#     url: https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0
+builds: {}

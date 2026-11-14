@@ -6,9 +6,10 @@ Install guide (Chinese): <https://flyfish-go.github.io/IPQ50XX-Uboot/>
 
 | Device | Status |
 |---|---|
-| H3C NX30 / RT3000 / RC3000 / RW3000 | Verified, current release v0.1.0 |
-| Lingyan LYW-30M, CUCC VS010 / VS010 MAX | Builds, **not tested on hardware, do not flash** |
-| TCL T30 Pro | Builds, **not tested on hardware, do not flash** |
+| H3C NX30 / RT3000 / RC3000 / RW3000 | Verified, current release v0.1.0, installed with BootBridge Web |
+| Xiaomi CR8806, Lingyan LYW-30M (CUCC VS010), TCL T30 Pro, HW3000B1, Ruijie RG-MA3063, CMCC MR3000D-CI | Verified, installed over a TTL serial console |
+| CMCC RAX3000Q, CMCC PZ-L8, Ruijie RG-MA3063 V3 | Builds, **not tested on hardware, do not flash** (RAM trial only) |
+| Most other IPQ50xx boards (Xiaomi AX6000, Redmi AX5400, TP-Link, Linksys, ...) | Planned, no build yet |
 
 First-time H3C installs use [BootBridge Web](https://flyfish-go.github.io/H3C-NX30-Uboot/). Releases up to v0.1.0 are at [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases); later releases are published here.
 

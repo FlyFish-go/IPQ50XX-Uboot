@@ -7,6 +7,7 @@ soc: IPQ5018
 status: verified
 family: 锐捷 RG-MA3063
 summary: "锐捷 RG-MA3063（硬件 1.00）已实机刷入，冷启动 10 次通过。LED 和按键没有测；和原厂的一个区别是装了本 U-Boot 以后不会自动回退到另一个槽。"
+brief: "硬件版本 1.00；不会像原厂那样自动回退"
 artifact: ipq5018_ruijie_rg_ma3063
 hardware:
   - { label: 闪存, value: "NAND（多种型号，U-Boot 自动识别）" }
@@ -35,30 +36,15 @@ slots:
   note: "原厂用 BOOTCONFIG 选 rootfs 槽。切换槽要断电重启后才生效（SBL 到 SMEM 要重新读）。"
 install:
   method: ttl
-  label: TTL 串口 + 救援页（暂无安装脚本）
-steps:
-  - title: 准备 TTL 串口
-    body: |
-      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 原厂 U-Boot 的设备树地址是 `0x4a984004`，和 CR8806 不同，RAM 试跑时用 `printenv fdtcontroladdr` 核对。
-    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
-  - title: 完整备份
-    body: |
-      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
-
-      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
-  - title: 确认安全启动没有开启
-    body: |
-      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
-  - title: RAM 试跑
-    body: |
-      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_ruijie_rg_ma3063`。 这台的 fdt 地址与其它机型不同，别照抄别人的命令。
-  - title: 在救援页写入 U-Boot
-    body: |
-      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_ruijie_rg_ma3063.mbn`，两份 APPSBL 会一起写入并读回校验。
-    warn: 写入过程中不要断电。
-  - title: 冷启动检查
-    body: |
-      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+ttl:
+  voltage: 1.8 V
+  pins: GPIO28/29
+  fdt: "0x4a984004"
+  port: 1 号口（GE 口）
+notes:
+  interrupt: "原厂 U-Boot 的倒计时只有 1 秒。可以在通电前就按住回车不放，看到提示符再松开。"
+  rescue: "救援页默认走 1 号口。想用 4 号口，要先在 U-Boot 里执行 `setenv ethact eth1`；一次只接一根网线。"
+  verify: "**不要**在这台机器上执行 `bootconfig set all`：样机上第二套 QSEE、DEVCFG、CDT 是空的，全部切过去会起不来。"
 rescue:
   how: TTL 截停启动后输入 `httpd`
   address: 192.168.1.1

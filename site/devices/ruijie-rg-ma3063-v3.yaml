@@ -7,6 +7,7 @@ soc: IPQ5018
 status: untested
 family: 锐捷 RG-MA3063
 summary: "硬件版本 3.00（原厂 CDT AP-MP03.5-C1）。只有一份第三方设备树，置信度低，没有任何实机验证。"
+brief: "只有一份第三方设备树，置信度低"
 artifact: ipq5018_ruijie_rg_ma3063_v3-untested
 hardware:
   - { label: 主板分类, value: "AP-MP03.5-C1，machid `0x8040004`" }
@@ -14,7 +15,7 @@ hardware:
   - { label: 网络, value: "GE 口（LAN）+ QCA8337 交换芯片，复位 GPIO26" }
   - { label: 串口, value: "GPIO20/21（和 V1.00 的 GPIO28/29 不同）" }
 warnings:
-  - "未验证，不建议刷入，置信度低。设备树只来自一份第三方文件，我们没有看过这个版本的原厂设备树。"
+  - "置信度低：设备树只来自一份第三方文件，我们没有看过这个版本的原厂设备树。"
   - "LED 的 GPIO 可疑：第三方文件把 GPIO38 当 LED，而 V1.00 实机是 19/17/22/20。"
   - "硬件版本由 CDT 里的 machid 决定，不是机身贴纸或 productid。machid 为 `0x8040004` 才是这个页面，V4 和 RG-MA3064（`0x8040104`）没有设备树，不在收录范围。"
   - "和已验证的 V1.00 一样：原厂 U-Boot 有 `ipqboot_num` 开机计数，本 U-Boot 不复现；绝不要执行 `bootconfig set all`。"
@@ -33,21 +34,11 @@ slots:
   note: "假设同已验证的 V1.00：BOOTCONFIG 双系统。V3 本身没有来源。"
 install:
   method: ttl
-  label: 仅 RAM 试跑（不要刷入）
-steps:
-  - title: 先确认你能接受风险
-    body: |
-      这块板没有在实机上验证过，**不建议刷入**。下面只有 RAM 试跑：把 U-Boot 加载到内存里跑一次，不写任何闪存，断电就恢复原样。
-    warn: 未验证，不建议刷入。即使 RAM 试跑一切正常，也不代表可以安全刷入。
-  - title: 准备 TTL 串口并做只读备份
-    body: |
-      接 TTL 串口（115200 8N1，先确认电平，很多机型是 1.8 V）。在原厂系统或原厂 U-Boot 里把分区只读备份到自己电脑上，**备份文件含校准数据和序列号，不要公开上传**。
-  - title: 在原厂 U-Boot 里 RAM 试跑
-    body: |
-      在原厂 U-Boot 提示符下执行 `printenv fdtcontroladdr` 记下地址，再用 `tftpboot 0x44000000 ipq5018_ruijie_rg_ma3063_v3-untested-ram.uimg` 和 `bootm 0x44000000 - <刚才的地址>` 启动。完整步骤和检查项见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)。
-  - title: 报告结果
-    body: |
-      无论成功失败，都请用 [board-report 表单](https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml) 把启动日志、闪存型号和救援页结果告诉我们，这是这块板升到「已验证」的唯一途径。
+ttl:
+  pins: GPIO20/21（和 V1.00 的 GPIO28/29 不同）
+notes:
+  prepare: "确认你的机器是 V3：硬件版本由 CDT 里的 machid 决定（应为 `0x8040004`），不看机身贴纸。V4 和 RG-MA3064 不适用。"
+  rescue: "**不要**执行 `bootconfig set all`。LED 的 GPIO 可疑，记录每个灯的实际表现。"
 links:
   - { text: IPQ50XX-Uboot 仓库, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot" }
   - { text: 提交试跑报告, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml" }

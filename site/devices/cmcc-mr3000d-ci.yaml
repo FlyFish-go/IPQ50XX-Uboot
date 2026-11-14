@@ -7,6 +7,7 @@ soc: IPQ5018
 status: verified
 family: 中国移动 MR3000D-CI
 summary: "中国移动 MR3000D-CI 已实机刷入，冷启动 5 次通过。LED 和按键没有测。"
+brief: "原厂 U-Boot 要输密码 `netpower`；LED 和按键没测"
 artifact: ipq5018_cmcc_mr3000d_ci
 hardware:
   - { label: 闪存, value: "128 MiB NAND（ECC 8 位，U-Boot 自动识别）" }
@@ -22,7 +23,7 @@ tested:
   - "MAC 从 ART 读取"
 not_tested:
   - "LED、Reset 和 WPS 按键"
-  - "救援页「固件更新」写 rootfs（通用 NAND 写入对 0xff 页的处理在 UBI 上还有已知问题）"
+  - "救援页「固件更新」写 rootfs（新的 UBI 写入方式已经合入代码，这台还没实机测过）"
   - "从原厂 SSH 一键安装"
 warnings:
   - "原厂 U-Boot 要先敲一个空格打断自动启动，然后输入密码 `netpower`。"
@@ -31,30 +32,12 @@ slots:
   note: "原厂用 BOOTCONFIG 选 rootfs 槽。"
 install:
   method: ttl
-  label: TTL 串口 + 救援页（暂无安装脚本）
-steps:
-  - title: 准备 TTL 串口
-    body: |
-      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 原厂 U-Boot 要敲空格再输密码，见上面的提示。
-    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
-  - title: 完整备份
-    body: |
-      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
-
-      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
-  - title: 确认安全启动没有开启
-    body: |
-      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
-  - title: RAM 试跑
-    body: |
-      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_cmcc_mr3000d_ci`。
-  - title: 在救援页写入 U-Boot
-    body: |
-      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_cmcc_mr3000d_ci.mbn`，两份 APPSBL 会一起写入并读回校验。
-    warn: 写入过程中不要断电。
-  - title: 冷启动检查
-    body: |
-      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+ttl:
+  fdt: "0x4a9d4004"
+  interrupt: 先敲一个**空格**打断自动启动，再输入密码 `netpower` 回车
+  port: LAN 口（WAN 口也能进救援页）
+shell:
+  access: "上游 OpenWrt 的安装说明里，原厂网页的 ping 功能可以注入命令开 telnet。我们还没有在样机上按这个方法走过。"
 rescue:
   how: TTL 截停启动后输入 `httpd`
   address: 192.168.1.1

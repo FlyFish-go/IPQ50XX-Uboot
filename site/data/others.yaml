@@ -1,0 +1,147 @@
+# 列在机型页上、但还没有构建的 IPQ50xx 机型。机型页的「规划中」「不打算做」两张表从这里生成。
+#   status: planned  规划中。known = 已知情况，missing = 还缺什么（必填）
+#   status: wontdo   不打算做。reason = 原因（必填）
+# aliases 只用于筛选，不显示。规划中的按离能出构建的远近排，近的在前。
+models:
+  - name: 小米 AX6000
+    aliases: [Xiaomi AX6000]
+    status: planned
+    known: 上游 OpenWrt 有设备树。双系统方式和小米 CR8806 一样，这部分代码已经有了。内存 512 MiB，串口 1.8 V，部分机器闪存要 ECC 8 位。
+    missing: 网络是 GE PHY 加 QCA8081 再接交换芯片，要新写；安全启动状态要先查。
+  - name: 红米 AX5400（RA74）
+    aliases: [Redmi AX5400, RA74, Xiaomi Redmi AX5400]
+    status: planned
+    known: 上游 OpenWrt 有设备树。双系统方式和小米 CR8806 一样。GE PHY 和 SGMII 同时接 QCA8337。
+    missing: 原厂 U-Boot 里有 `is_sec_boot_enabled`，安全启动状态必须先查；没有实物备份。
+  - name: ELECOM WRC-X3000GS2、WRC-X3000GST2
+    aliases: [WRC-X3000GS2, WRC-X3000GST2, ELECOM]
+    status: planned
+    known: 上游 OpenWrt 有设备树。分区表和中国移动 PZ-L8 几乎一样，BOOTCONFIG 双系统加 QCA8337。
+    missing: 实物资料：原厂 U-Boot 环境、machid、串口。
+  - name: I-O DATA WN-DAX3000GR
+    aliases: [WN-DAX3000GR, I-O DATA, IODATA]
+    status: planned
+    known: 同 ELECOM WRC-X3000GS2。
+    missing: 实物资料。
+  - name: 锐捷 RG-MA3063 V4、RG-MA3064
+    aliases: [RG-MA3063 V4, RG-MA3064, MA3064, mp03.5-c2]
+    status: planned
+    known: 原厂 CDT 是 `AP-MP03.5-C2`（machid `0x8040104`），BOOTCONFIG 双系统。
+    missing: 没有这个版本的设备树；串口、网口、LED、按键都不清楚。
+  - name: 中国移动 MR3000D-04
+    aliases: [MR3000D-04, CMCC MR3000D-04]
+    status: planned
+    known: 只有第三方的一份设备树，写着「继承 MR3000D-CI」。
+    missing: 和 MR3000D-CI 到底差在哪；实物备份。
+  - name: 京东云 AX3000
+    aliases: [JDCloud AX3000, 京东云 雅典娜 AX3000, 雅典娜]
+    status: planned
+    known: 闪存是 eMMC（GPT 分区），不是 NAND。
+    missing: 我们的写入流程都建立在 NAND 上，eMMC 要另写；环境变量位置、分区表、实物备份。
+  - name: 中国电信 AP301-L
+    aliases: [AP301-L, CTCC AP301-L]
+    status: planned
+    known: 和领研 LYW-30M 同一个 machid，但网络芯片不同（NAPA PHY），不能照搬它的网络配置。
+    missing: 内存、闪存、双系统方式、环境变量位置，都没有实物证据。
+  - name: SKSPRUCE AP8330C
+    aliases: [AP8330C]
+    status: planned
+    known: 情况和中国电信 AP301-L 类似，网口的 gmac 方向和别的机型相反。
+    missing: 内存、闪存、双系统方式、环境变量位置。
+  - name: TP-Link Archer AX55 v1
+    aliases: [Archer AX55, AX55, TP-Link]
+    status: planned
+    known: 上游 OpenWrt 有设备树。原厂用环境变量 `tp_boot_idx` 在两个系统之间切换。
+    missing: 按 `tp_boot_idx` 切换的代码还没写，等有测试者时写。
+  - name: TP-Link EAP650-Outdoor v1
+    aliases: [EAP650, EAP650-Outdoor, TP-Link]
+    status: planned
+    known: 同 Archer AX55，用 `tp_boot_idx`。
+    missing: 同上。
+  - name: TP-Link RE700X v1
+    aliases: [RE700X, TP-Link]
+    status: planned
+    known: 同 Archer AX55，用 `tp_boot_idx`。
+    missing: 同上。
+  - name: Mercusys MR80X v2
+    aliases: [MR80X, Mercusys]
+    status: planned
+    known: 同 Archer AX55，用 `tp_boot_idx`。
+    missing: 同上。
+  - name: Linksys MR2000、MR5500、MX2000、MX5500、SPNMX56
+    aliases: [MR2000, MR5500, MX2000, MX5500, SPNMX56, Linksys]
+    status: planned
+    known: 上游 OpenWrt 有设备树。原厂用环境变量 `boot_part` 在两个系统之间切换。
+    missing: 按 `boot_part` 切换的代码还没写。
+  - name: Netgear WAX630E
+    aliases: [WAX630E, Netgear]
+    status: planned
+    known: 原厂按 `boot_count` 切换系统。
+    missing: 按 `boot_count` 切换的代码还没写。
+  - name: 小米 CR8812、CR8816、CR8818
+    aliases: [CR8812, CR8816, CR8818, CR881x]
+    status: planned
+    known: 交换芯片是 YT9215S。
+    missing: U-Boot 里没有 YT9215S 的驱动，要先写驱动。
+  - name: 小米 AX3000T v2
+    aliases: [AX3000T, Xiaomi AX3000T]
+    status: planned
+    known: 交换芯片是 AN8855。
+    missing: U-Boot 里没有 AN8855 的驱动。
+  - name: Lite-On WPX8324
+    aliases: [WPX8324, Lite-On]
+    status: planned
+    known: 从 SPI NOR 闪存启动。
+    missing: 我们的流程都建立在 NAND 上，NOR 要另写。
+  - name: 中兴 T5400
+    aliases: [ZTE T5400, T5400]
+    status: planned
+    known: 上游 OpenWrt 有设备树，分区里有 `rootfs_1`。
+    missing: 几乎全部实物资料。
+  - name: Zyxel SCR50AXE
+    aliases: [SCR50AXE, Zyxel]
+    status: planned
+    known: 上游 OpenWrt 有设备树。
+    missing: 几乎全部实物资料。
+  - name: Xunison Exigo Hub D50 5G
+    aliases: [Xunison, D50, Zearts D50 5G, Zearts]
+    status: planned
+    known: 上游 OpenWrt 有设备树。
+    missing: 几乎全部实物资料。
+  - name: GL.iNet GL-X2000
+    aliases: [GL-X2000, X2000, GL.iNet]
+    status: planned
+    known: 上游 OpenWrt 有设备树。
+    missing: 几乎全部实物资料。
+  - name: Yuncore AX830、AX850
+    aliases: [AX830, AX850, Yuncore]
+    status: planned
+    known: 上游 OpenWrt 有设备树，网络用 QCA8081。
+    missing: 几乎全部实物资料。
+  - name: Wallys DR5018S
+    aliases: [DR5018S, Wallys]
+    status: planned
+    known: 上游 OpenWrt 有设备树，网络用 QCA8081。
+    missing: 几乎全部实物资料。
+  - name: Davolink DVW-632X
+    aliases: [DVW-632X, Davolink]
+    status: planned
+    known: 拿原厂 root 的方法要到 2027-01-27 才公开。
+    missing: 等公开。
+
+  - name: Linksys MX6200
+    aliases: [MX6200, Linksys]
+    status: wontdo
+    reason: 开了安全启动，只能运行厂商签名的启动程序，换不了 U-Boot。
+  - name: AVM FRITZ!Box 4050
+    aliases: [AVM, FRITZ!Box 4050, 4050]
+    status: wontdo
+    reason: 用厂商自己的引导程序，不是高通 QSDK 的 U-Boot。
+  - name: UniFi 6 Pro
+    aliases: [UniFi, U6 Pro, Ubiquiti]
+    status: wontdo
+    reason: 用厂商自己的引导程序，不是高通 QSDK 的 U-Boot。
+  - name: GL.iNet GL-B3000
+    aliases: [GL-B3000, B3000, GL.iNet]
+    status: wontdo
+    reason: 原厂 U-Boot 已经自带网页救援，换掉的意义不大。

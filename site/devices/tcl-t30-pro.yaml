@@ -7,6 +7,7 @@ soc: IPQ5018
 status: verified
 family: TCL T30 Pro
 summary: "TCL 为运营商定制的 T30 Pro，1A 版和 1.5A 版都已用旧构建（3bc92a2f）实机刷入。最新构建还没有重新刷过，需要复测。"
+brief: "要拆一个电阻才能输入；最新构建待复测"
 artifact: ipq5018_tcl_t30_pro
 hardware:
   - { label: 闪存, value: "128 MiB NAND" }
@@ -23,6 +24,7 @@ not_tested:
   - "从原厂 SSH 一键安装"
   - "原厂 `factory` 分区里的 MAC 在救援页的显示"
 warnings:
+  - "串口 RX 对 GND 有一个电阻，**要拆掉才能输入**：1A 版是 **R5596**，1.5A 版是 **R5600**。"
   - "这是运营商定制机，启动链和通用 IPQ5018 不同，并且多一个 `factory` 分区。请确认你的机器背面铭牌是 T30 Pro，再对照 1A / 1.5A 版本（两个版本的原厂 U-Boot 有差异）。"
   - "串口是 1.8 V。接 3.3 V 的 TTL 适配器会损坏串口脚甚至主芯片，一定要用 1.8 V 电平，或加电平转换。"
 slots:
@@ -30,30 +32,12 @@ slots:
   note: "按 BOOTCONFIG 构建；T30 原厂分区布局下的双系统切换没有逐项验证。"
 install:
   method: ttl
-  label: TTL 串口 + 救援页（暂无安装脚本）
-steps:
-  - title: 准备 TTL 串口
-    body: |
-      拆机，接 TTL 串口（115200 8N1，注意电平，本项目测过的机型多为 1.8 V）。 先确认电平是 1.8 V。有的样机 RX 脚被电阻拉到地，要去掉才能输入。
-    warn: 目前没有安装脚本，只有这一种安装方式。不会接串口、不想拆机的请等安装脚本。
-  - title: 完整备份
-    body: |
-      在原厂系统（SSH）或原厂 U-Boot 里把所有分区读出来保存在自己电脑上，至少包括两份 APPSBL、APPSBLENV、BOOTCONFIG（如果有）、ART，读回后核对校验值。
-
-      **备份文件含有这台机器的校准数据和序列号，只保存在自己电脑上，不要发给别人。**
-  - title: 确认安全启动没有开启
-    body: |
-      原厂 U-Boot 或 SSH 里查熔丝状态，必须是未开启。开启了安全启动的机器不能换 U-Boot。
-  - title: RAM 试跑
-    body: |
-      先不写闪存，在原厂 U-Boot 里把本项目的 RAM 版加载到内存运行，确认串口横幅、网口和救援页都正常。步骤见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)，构建名为 `ipq5018_tcl_t30_pro`。
-  - title: 在救援页写入 U-Boot
-    body: |
-      在 RAM 版 U-Boot 的救援页（`http://192.168.1.1`，电脑用网线接 LAN 口）上传 `ipq5018_tcl_t30_pro.mbn`，两份 APPSBL 会一起写入并读回校验。
-    warn: 写入过程中不要断电。
-  - title: 冷启动检查
-    body: |
-      断电再通电，反复冷启动几次，确认串口横幅、原厂系统和 LAN 口都正常。
+ttl:
+  voltage: 1.8 V
+  pins: GPIO20/21
+notes:
+  wire: "**要先拆一个电阻才能输入**：T30 Pro 串口的 RX 对 GND 接了一个电阻，不拆的话串口只能看、不能打字。**1A 版拆 R5596，1.5A 版拆 R5600**。拆之前先对照铭牌确认是哪一版。"
+  prepare: "先确认机身铭牌是 T30 Pro，并记下是 1A 还是 1.5A 版本（两版原厂 U-Boot 有差异，反馈时要写上）。"
 rescue:
   how: TTL 截停启动后输入 `httpd`
   address: 192.168.1.1

@@ -6,7 +6,8 @@ aliases: [RAX3000Q, RAX3000QY]
 soc: IPQ5018
 status: untested
 family: 中国移动 RAX3000Q
-summary: "有构建，没有任何实机验证。不建议刷入，只欢迎能接 TTL 的人做 RAM 试跑并反馈。"
+summary: "按上游 OpenWrt 和第三方设备树写成的构建。闪存、网口、启动槽都还没在实机上确认，欢迎能接 TTL 的人做 RAM 试跑并反馈。"
+brief: "启动槽机制没有来源，要试跑确认"
 artifact: ipq5018_cmcc_rax3000q-untested
 hardware:
   - { label: 主板分类, value: "AP-MP02.1" }
@@ -14,7 +15,6 @@ hardware:
   - { label: 网络, value: "QCA8337 交换芯片，复位 GPIO26" }
   - { label: 串口, value: "GPIO28/29" }
 warnings:
-  - "未验证，不建议刷入。"
   - "上游 OpenWrt 说 Dosilicon 颗粒的版本不支持，原因不明。如果你的机器是这个版本，RAM 试跑时留意闪存识别那一行。"
   - "启动槽机制没有来源，我们按同家族机型假设是 BOOTCONFIG，试跑时请先 `bootconfig` 看一眼。"
   - "ART 里 MAC 的确切位置上游也没有确认，所以救援页不提供写 ART 的入口。"
@@ -32,21 +32,12 @@ slots:
   note: "假设为 BOOTCONFIG 双系统（同家族机型如此，本机没有来源，待 RAM 试跑确认）。"
 install:
   method: ttl
-  label: 仅 RAM 试跑（不要刷入）
-steps:
-  - title: 先确认你能接受风险
-    body: |
-      这块板没有在实机上验证过，**不建议刷入**。下面只有 RAM 试跑：把 U-Boot 加载到内存里跑一次，不写任何闪存，断电就恢复原样。
-    warn: 未验证，不建议刷入。即使 RAM 试跑一切正常，也不代表可以安全刷入。
-  - title: 准备 TTL 串口并做只读备份
-    body: |
-      接 TTL 串口（115200 8N1，先确认电平，很多机型是 1.8 V）。在原厂系统或原厂 U-Boot 里把分区只读备份到自己电脑上，**备份文件含校准数据和序列号，不要公开上传**。
-  - title: 在原厂 U-Boot 里 RAM 试跑
-    body: |
-      在原厂 U-Boot 提示符下执行 `printenv fdtcontroladdr` 记下地址，再用 `tftpboot 0x44000000 ipq5018_cmcc_rax3000q-untested-ram.uimg` 和 `bootm 0x44000000 - <刚才的地址>` 启动。完整步骤和检查项见[参与收录页的「RAM 试跑」](/contribute/#ram-试跑)。
-  - title: 报告结果
-    body: |
-      无论成功失败，都请用 [board-report 表单](https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml) 把启动日志、闪存型号和救援页结果告诉我们，这是这块板升到「已验证」的唯一途径。
+ttl:
+  pins: GPIO28/29
+notes:
+  fdt: "RAX3000Q 的地址没有人测过，一定要用你自己看到的值。"
+  ramboot: "上游说 Dosilicon 颗粒的版本不支持。试跑时留意闪存识别那一行，把型号写进报告。"
+  rescue: "启动槽机制没有来源。救援页打开后，在网页终端执行 `bootconfig` 看一眼，把输出写进报告。"
 links:
   - { text: IPQ50XX-Uboot 仓库, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot" }
   - { text: 提交试跑报告, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml" }

@@ -20,19 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
-      - run: npm ci
-        working-directory: site
-      - run: npm run docs:build
-        working-directory: site
+          python-version: '3.12'
+      - run: pip install -r site/requirements.txt
+      - run: python3 site/build.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site/docs/.vitepress/dist
+          path: site/dist
   deploy:
     needs: build
     runs-on: ubuntu-latest
