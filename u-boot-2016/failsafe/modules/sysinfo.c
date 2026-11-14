@@ -168,8 +168,12 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
             model[n] = 0;
             snprintf(folder, sizeof(folder), "HW-%s/%s-ECC%s", h3c_build_board(), model, ecc);
         }
-        APPEND_JSON_TO_BUF("\"uboot_build\":{\"board\":\"HW-%s\",\"nand_model\":\"%s\",\"ecc\":\"%s\",\"folder\":\"%s\"},",
-            h3c_build_board(), model, ecc, folder);
+        /* An auto build ships as one file per board (h3c-hw-<x>.mbn); the
+         * folder above then names the matching pinned v0.1.0 file, which
+         * it also accepts. */
+        APPEND_JSON_TO_BUF("\"uboot_build\":{\"board\":\"HW-%s\",\"nand_model\":\"%s\",\"ecc\":\"%s\",\"folder\":\"%s\",\"auto\":%s},",
+            h3c_build_board(), model, ecc, folder,
+            IS_ENABLED(CONFIG_H3C_NAND_AUTO_PROFILE) ? "true" : "false");
 
         /* MP02.1 only: which group this unit's 5 GHz FEM flags call for
          * (no FEM -> HW-B, also on a D-PCB), and that group's folder. */

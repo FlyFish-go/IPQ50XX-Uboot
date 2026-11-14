@@ -55,6 +55,10 @@ jobs:
           - { kind: h3c, name: B }
           - { kind: h3c, name: C }
           - { kind: h3c, name: D }
+          - { kind: h3c-auto, name: A }
+          - { kind: h3c-auto, name: B }
+          - { kind: h3c-auto, name: C }
+          - { kind: h3c-auto, name: D }
           - { kind: defconfig, name: ipq5018_lingyan_lyw_30m }
           - { kind: defconfig, name: ipq5018_tcl_t30_pro }
           - { kind: defconfig, name: ipq5018_xiaomi_cr8806 }
@@ -85,8 +89,8 @@ jobs:
           echo "STAGING_DIR=$staging" >> "$GITHUB_ENV"
           echo "CROSS_COMPILE=$staging/toolchain-arm_cortex-a7+neon-vfpv4_gcc-8.4.0_musl_eabi/bin/arm-openwrt-linux-" >> "$GITHUB_ENV"
       - run: release-tools/ci-build.sh "${{ matrix.kind }}" "${{ matrix.name }}" "$RUNNER_TEMP/out"
-      - if: matrix.kind == 'defconfig'
+      - if: matrix.kind != 'h3c'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
+          name: ${{ matrix.kind == 'h3c-auto' && format('h3c-hw-{0}', matrix.name) || matrix.name }}
           path: ${{ runner.temp }}/out/dist/

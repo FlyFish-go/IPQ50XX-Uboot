@@ -1956,15 +1956,27 @@ class FileUploadComponent {
         if (!box || typeof fetch !== 'function') return;
         fetch('/sysinfo').then(r => r.json()).then(info => {
             const b = info.uboot_build;
-            if (!b || !b.folder) return;
-            box.textContent = zh
-                ? `本机：${b.board} · NAND ${b.nand_model} · ECC${b.ecc}。请从 ${b.board} 的 zip 中选择 ${b.folder}/appsbl.mbn，其他文件夹的文件会被拒绝。`
-                : `This device: ${b.board} · NAND ${b.nand_model} · ECC${b.ecc}. From the ${b.board} zip choose ${b.folder}/appsbl.mbn; files from other folders are refused.`;
+            if (!b || !b.board) return;
+            // Release file of a board: HW-A -> h3c-hw-a.mbn (one per board, NAND detected at boot).
+            const autoFile = g => `h3c-${g.toLowerCase()}.mbn`;
+            const nand = b.nand_model ? ` · NAND ${b.nand_model} · ECC${b.ecc}` : '';
+            if (b.auto) {
+                box.textContent = zh
+                    ? `本机：${b.board}${nand}（启动时自动识别）。请上传 ${autoFile(b.board)}，其他硬件组的文件会被拒绝。`
+                    : `This device: ${b.board}${nand} (detected at boot). Upload ${autoFile(b.board)}; files for other boards are refused.`;
+            } else if (b.folder) {
+                box.textContent = zh
+                    ? `本机：${b.board}${nand}。请从 ${b.board} 的 zip 中选择 ${b.folder}/appsbl.mbn，其他文件夹的文件会被拒绝。`
+                    : `This device: ${b.board}${nand}. From the ${b.board} zip choose ${b.folder}/appsbl.mbn; files from other folders are refused.`;
+            } else {
+                return;
+            }
             const f = info.fem;
-            if (f && f.match === false && f.group && f.folder) {
+            if (f && f.match === false && f.group && (b.auto || f.folder)) {
+                const want = b.auto ? autoFile(f.group) : (zh ? `${f.group} 的 zip 中的 ${f.folder}/appsbl.mbn` : `${f.folder}/appsbl.mbn in the ${f.group} zip`);
                 box.textContent += zh
-                    ? ` 注意：本机 5 GHz ${f.state === 'absent' ? '没有' : '有'}外置 FEM，按规则属于 ${f.group}，系统固件请选 ${f.group}；对应的 U-Boot 是 ${f.group} 的 zip 中的 ${f.folder}/appsbl.mbn。当前 U-Boot 只接受本组（${b.board}）的文件，换组暂不能在本页完成。`
-                    : ` Note: this unit's 5 GHz radio ${f.state === 'absent' ? 'has no' : 'has'} external FEMs, so it belongs to ${f.group}: use the ${f.group} system image; its U-Boot is ${f.folder}/appsbl.mbn in the ${f.group} zip. This U-Boot only accepts ${b.board} files, so changing group is not possible from this page yet.`;
+                    ? ` 注意：本机 5 GHz ${f.state === 'absent' ? '没有' : '有'}外置 FEM，按规则属于 ${f.group}，系统固件请选 ${f.group}；对应的 U-Boot 是 ${want}。当前 U-Boot 只接受本组（${b.board}）的文件，换组暂不能在本页完成。`
+                    : ` Note: this unit's 5 GHz radio ${f.state === 'absent' ? 'has no' : 'has'} external FEMs, so it belongs to ${f.group}: use the ${f.group} system image; its U-Boot is ${want}. This U-Boot only accepts ${b.board} files, so changing group is not possible from this page yet.`;
                 box.classList.add('warning');
             }
         }).catch(() => {});
