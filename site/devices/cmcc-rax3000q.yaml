@@ -4,40 +4,48 @@ vendor: 中国移动
 name: RAX3000Q
 aliases: [RAX3000Q, RAX3000QY]
 soc: IPQ5018
-status: untested
+status: verified
 family: 中国移动 RAX3000Q
-summary: "按上游 OpenWrt 和第三方设备树写成的构建。闪存、网口、启动槽都还没在实机上确认，欢迎能接 TTL 的人做 RAM 试跑并反馈。"
-brief: "启动槽机制没有来源，要试跑确认"
-artifact: ipq5018_cmcc_rax3000q-untested
+summary: "中国移动 RAX3000QY 已实机刷入：Dosilicon 闪存自动识别为 ECC 4 位，BOOTCONFIG 双系统，救援页刷固件，冷启动通过。LED 和按键没有测。"
+brief: "样机是 Dosilicon 闪存（ECC 4 位，自动识别）；LED 和按键没测"
+artifact: ipq5018_cmcc_rax3000q
 hardware:
+  - { label: 闪存, value: "128 MiB NAND，样机为 Dosilicon DS35M1GA（ECC 4 位，U-Boot 自动识别）" }
+  - { label: 内存, value: "256 MiB" }
   - { label: 主板分类, value: "AP-MP02.1" }
-  - { label: 闪存, value: "128 MiB NAND（GD5F1GQ5REYIG，ECC 8 位）" }
   - { label: 网络, value: "QCA8337 交换芯片，复位 GPIO26" }
   - { label: 串口, value: "GPIO28/29" }
-warnings:
-  - "上游 OpenWrt 说 Dosilicon 颗粒的版本不支持，原因不明。如果你的机器是这个版本，RAM 试跑时留意闪存识别那一行。"
-  - "启动槽机制没有来源，我们按同家族机型假设是 BOOTCONFIG，试跑时请先 `bootconfig` 看一眼。"
-  - "ART 里 MAC 的确切位置上游也没有确认，所以救援页不提供写 ART 的入口。"
+  - { label: 安全启动, value: "样机未开启（原厂 `is_sec_boot_enabled`）" }
 tested:
-  - "离线检查：构建通过；设备树与第三方设备树、上游 OpenWrt 的设备树逐项对照过"
+  - "RAM 试跑：串口横幅、闪存识别（DS35M1GA，ECC 4 位）、LAN 口救援页"
+  - "两份 APPSBL 写入，读回与发布文件（补 0xff）一致"
+  - "冷启动多次通过：原厂系统约 40 秒后网页可访问，UBI 无错误"
+  - "救援页「固件更新」写入当前启动区，读回与写入前逐字节一致，原厂 U-Boot 能正常启动"
+  - "救援页识别出两个原厂系统槽（BOOTCONFIG）"
+  - "救援页拒绝其他机型的 U-Boot、旧版本 U-Boot 和厂商升级包"
 not_tested:
-  - "RAM 试跑（串口横幅、网口、救援页）"
-  - "闪存识别和 ECC"
-  - "按键和 LED"
-  - "原厂分区表和启动槽机制"
-  - "安全启动状态"
-  - "ART 里的 MAC 位置"
+  - "LED、Reset 和 WPS 按键"
+  - "GD5F1GQ5REYIG 闪存的版本（理论上同样自动识别 ECC）"
+  - "ART 里的 MAC 位置（样机 ART 开头为空，U-Boot 用默认 MAC，和原厂 U-Boot 相同）"
+warnings:
+  - "U-Boot 刷入前先用救援页「备份」把所有分区存下来。"
+  - "样机 ART 开头没有 MAC，所以救援页不提供写 ART 的入口。"
 slots:
   mechanism: bootconfig
-  note: "假设为 BOOTCONFIG 双系统（同家族机型如此，本机没有来源，待 RAM 试跑确认）。"
+  note: "原厂用 BOOTCONFIG 选 rootfs 槽（样机实测）。"
 install:
   method: ttl
 ttl:
-  pins: GPIO28/29
-notes:
-  fdt: "RAX3000Q 的地址没有人测过，一定要用你自己看到的值。"
-  ramboot: "上游说 Dosilicon 颗粒的版本不支持。试跑时留意闪存识别那一行，把型号写进报告。"
-  rescue: "启动槽机制没有来源。救援页打开后，在网页终端执行 `bootconfig` 看一眼，把输出写进报告。"
+  fdt: "0x4a9c4004"
+  interrupt: 原厂 U-Boot 倒数时按任意键
+  prompt: "IPQ5018# "
+  port: LAN 口
+rescue:
+  how: TTL 截停启动后输入 `httpd`
+  address: 192.168.1.1
+recovery:
+  - 写入前的备份是唯一的退路。救援页「固件更新」可以把备份的分区原样写回。
+  - 启动程序本身损坏时，需要 TTL 加 RAM 试跑包重新进救援页，或者用编程器；先到 QQ 群 1131957442 联系维护者。
 links:
   - { text: IPQ50XX-Uboot 仓库, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot" }
-  - { text: 提交试跑报告, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml" }
+  - { text: 提交测试报告, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml" }

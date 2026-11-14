@@ -137,13 +137,12 @@ config TARGET_IPQ5018_CMCC_PZ_L8
 	  dual system); not verified on hardware.
 
 config TARGET_IPQ5018_CMCC_RAX3000Q
-    bool "CMCC RAX3000Q(Y) board support (untested)"
+    bool "CMCC RAX3000Q(Y) board support"
 	default n
-	select BOARD_UNTESTED
     help
-	  Enable support for CMCC RAX3000Q(Y) board. Built from public
-	  sources only (AP-MP02.1, board ID 0x8040000, QCA8337 on GMAC2);
-	  not verified on hardware.
+	  Enable support for CMCC RAX3000Q(Y) board (AP-MP02.1, board ID
+	  0x8040000, QCA8337 on GMAC2). Verified on a RAX3000QY with a
+	  Dosilicon DS35M1GA NAND (ECC4, detected at boot).
 
 config TARGET_IPQ5018_CUCC_VS010
     bool "CUCC VS010 board support"

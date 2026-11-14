@@ -9,8 +9,8 @@
 | 机型 | 安装方式 |
 |---|---|
 | H3C NX30 / RT3000 / RC3000 / RW3000 | 已验证，[BootBridge 网页版](https://flyfish-go.github.io/H3C-NX30-Uboot/)安装，不用拆机 |
-| 小米 CR8806、领研 LYW-30M（联通 VS010）、TCL T30 Pro、航芯 HW3000B1、锐捷 RG-MA3063、中国移动 MR3000D-CI | 已验证，TTL 串口安装 |
-| 中国移动 RAX3000Q、PZ-L8，锐捷 RG-MA3063 V3 | **未验证，请勿刷入**，只做 RAM 试跑 |
+| 小米 CR8806、领研 LYW-30M（联通 VS010）、TCL T30 Pro、航芯 HW3000B1、锐捷 RG-MA3063、中国移动 MR3000D-CI、中国移动 RAX3000Q(Y) | 已验证，TTL 串口安装 |
+| 中国移动 PZ-L8，锐捷 RG-MA3063 V3 | **未验证，请勿刷入**，只做 RAM 试跑 |
 | 其余大部分 IPQ50xx 机型（小米 AX6000、红米 AX5400、TP-Link、Linksys 等） | 规划中，还没有构建 |
 
 每个机型的安装步骤、下载和验证情况以[安装指南网站](https://flyfish-go.github.io/IPQ50XX-Uboot/devices/)为准，规划中的机型在那里写了现在缺什么。不拆机的「系统内安装（Telnet / SSH）」还在调研。
