@@ -834,10 +834,10 @@ int failsafe_validate_image(upgrade_type_t upgrade_type, const char *filename,
 #else
 	switch (upgrade_type) {
 	case WEBFAILSAFE_UPGRADE_TYPE_FIRMWARE: ret=failsafe_validate_firmware(data_addr,data_size); break;
-	case WEBFAILSAFE_UPGRADE_TYPE_UBOOT: ret=failsafe_validate_uboot(data_addr,data_size); break;
-	case WEBFAILSAFE_UPGRADE_TYPE_ART: ret=failsafe_validate_art(data_addr,data_size); break;
-	case WEBFAILSAFE_UPGRADE_TYPE_CDT: ret=failsafe_validate_cdt(data_addr,data_size); break;
-	case WEBFAILSAFE_UPGRADE_TYPE_PTABLE: ret=failsafe_validate_ptable(data_addr,data_size); break;
+	case WEBFAILSAFE_UPGRADE_TYPE_UBOOT: { int failsafe_uboot_board_check(const void *, ulong), failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_uboot(data_addr,data_size); if (!ret) ret=failsafe_uboot_board_check(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break; /* both at the end of the file */
+	case WEBFAILSAFE_UPGRADE_TYPE_ART: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_art(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
+	case WEBFAILSAFE_UPGRADE_TYPE_CDT: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_cdt(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
+	case WEBFAILSAFE_UPGRADE_TYPE_PTABLE: { int failsafe_pad_tail_ff(const void *, ulong); ret=failsafe_validate_ptable(data_addr,data_size); if (!ret) ret=failsafe_pad_tail_ff(data_addr,data_size); } break;
 	case WEBFAILSAFE_UPGRADE_TYPE_SIMG: ret=failsafe_validate_simg(data_addr,data_size); break;
 	case WEBFAILSAFE_UPGRADE_TYPE_INITRAMFS: ret=failsafe_validate_initramfs(data_addr,data_size); break;
 	default: handle_wrong_upgrade_type(); ret=RET_WRONG_UPGRADE_TYPE; break;
@@ -1426,5 +1426,76 @@ out:
 	free(io.want);
 	free(io.got);
 	return ret;
+}
+#endif
+
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+/*
+ * Non-H3C web U-Boot update: board mark and 0xff page tail. Both are called
+ * from the one-line cases of the non-H3C validate switch above, after the
+ * upload is parsed and before /result writes it, and live here at the end of
+ * the file so no ADD_CMD_TO_LIST above changes its __LINE__ (the H3C builds
+ * stay byte-identical).
+ */
+#include <failsafe_board_mark.h>
+
+/* The only copy of the mark prefix in the image: the check reads the prefix
+ * from this object, sizeof() of the literal emits no second copy. */
+const char failsafe_board_mark[] __attribute__((used)) =
+	FAILSAFE_BOARD_MARK_PREFIX CONFIG_FAILSAFE_BOARD_ID;
+
+int failsafe_uboot_board_check(const void *data_addr, ulong data_size)
+{
+	const size_t plen = sizeof(FAILSAFE_BOARD_MARK_PREFIX) - 1;
+	const char *own = failsafe_board_mark + plen;
+	char found[FAILSAFE_BOARD_MARK_ID_MAX + 1];
+	const char *actual;
+	int r = failsafe_board_mark_check(data_addr, data_size,
+			failsafe_board_mark, plen, own, found, sizeof(found));
+
+	if (r == FAILSAFE_BOARD_MARK_OK)
+		return RET_SUCCESS;
+	switch (r) {
+	case FAILSAFE_BOARD_MARK_UNSET:
+		actual = "(this U-Boot has no board id: install over TTL)"; break;
+	case FAILSAFE_BOARD_MARK_MISSING:
+		actual = "U-Boot ELF without board id (older build or other project)"; break;
+	case FAILSAFE_BOARD_MARK_MULTIPLE:
+		actual = "U-Boot ELF with several board ids"; break;
+	case FAILSAFE_BOARD_MARK_BAD:
+		actual = "U-Boot ELF with a damaged board id"; break;
+	default:
+		actual = found; break;	/* [a-z0-9_] only: JSON safe */
+	}
+	snprintf(info, sizeof(info),
+		 "{\"type\":\"wrong_file_type\",\"expected\":\"U-Boot ELF for %s\",\"actual\":\"%s\"}",
+		 *own ? own : "(none)", actual);
+	printf("Error: U-Boot image is not for this board (expected %s, got %s)\n",
+	       *own ? own : "(none)", actual);
+	return RET_WRONG_FW_TYPE;
+}
+
+/*
+ * "nand write" programs whole pages and reads past the end of the file, so
+ * the tail of the last page would hold whatever follows the upload in RAM
+ * (the multipart boundary). Fill up to 4 KiB (the largest IPQ50xx serial NAND
+ * page; a multiple of the 512 B eMMC block) with 0xff, so the flash holds the
+ * file padded like erased flash.
+ */
+#define FAILSAFE_PAD_ALIGN	4096UL
+
+int failsafe_pad_tail_ff(const void *data_addr, ulong data_size)
+{
+	ulong addr = (ulong)data_addr;
+	ulong padded = (data_size + FAILSAFE_PAD_ALIGN - 1) & ~(FAILSAFE_PAD_ALIGN - 1);
+
+	if (!data_size || padded < data_size ||
+	    !is_memory_region_available(addr, padded)) {
+		strlcpy(info, "{\"type\":\"pad_failed\"}", sizeof(info));
+		puts("Error: no RAM to pad the image to a full flash page\n");
+		return RET_FAILURE;
+	}
+	memset((void *)(addr + data_size), 0xff, padded - data_size);
+	return RET_SUCCESS;
 }
 #endif

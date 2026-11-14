@@ -6,6 +6,27 @@ config FAILSAFE_UBOOT_PRIMARY_ONLY
       Use this on boards whose stock BOOTCONFIG always selects the primary
       APPSBL and whose stock 0:APPSBL_1 is empty.
 
+config FAILSAFE_BOARD_ID
+    string "Board id the web U-Boot update must find in the image"
+    depends on !H3C_IPQ5018_COMMON
+    default "ipq5018_cmcc_mr3000d_ci" if TARGET_IPQ5018_CMCC_MR3000D_CI
+    default "ipq5018_cmcc_pz_l8" if TARGET_IPQ5018_CMCC_PZ_L8
+    default "ipq5018_cmcc_rax3000q" if TARGET_IPQ5018_CMCC_RAX3000Q
+    default "ipq5018_cucc_vs010" if TARGET_IPQ5018_CUCC_VS010
+    default "ipq5018_jdcloud_ax3000" if TARGET_IPQ5018_JDCLOUD_AX3000
+    default "ipq5018_lingyan_lyw_30m" if TARGET_IPQ5018_LINGYAN_LYW_30M
+    default "ipq5018_tcl_t30_pro" if TARGET_IPQ5018_TCL_T30_PRO
+    default "ipq5018_hw3000b1" if TARGET_IPQ5018_HW3000B1
+    default "ipq5018_xiaomi_cr8806" if TARGET_IPQ5018_XIAOMI_CR8806
+    default "ipq5018_ruijie_rg_ma3063" if TARGET_IPQ5018_RUIJIE_RG_MA3063
+    default "ipq5018_ruijie_rg_ma3063_v3" if TARGET_IPQ5018_RUIJIE_RG_MA3063_V3
+    default ""
+    help
+      Every non-H3C build carries "IPQ50XX-UBOOT-BOARD=<id>" exactly once
+      (<id> = the defconfig name). The web U-Boot update installs an ELF
+      only when it holds exactly one mark naming this board. Empty: the
+      web U-Boot update refuses every image (install over TTL instead).
+
 config FAILSAFE_MAC_MANAGEMENT
     bool "Enable Web Failsafe MAC management"
     default n

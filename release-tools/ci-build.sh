@@ -34,6 +34,19 @@ check_paths() {
   done
 }
 
+# Non-H3C images: exactly one "IPQ50XX-UBOOT-BOARD=<defconfig name>" mark, which
+# the web U-Boot update of the running board checks (failsafe_board_mark.h).
+check_board_mark() {
+  python3 -I - "$1" "$2" <<'PYEOF'
+import sys
+d = open(sys.argv[1], "rb").read(); p = b"IPQ50XX-UBOOT-BOARD="
+n = d.count(p)
+if n != 1: sys.exit(f"{sys.argv[1]}: {n} board marks, want 1")
+i = d.index(p) + len(p); j = d.index(b"\0", i)
+if d[i:j] != sys.argv[2].encode(): sys.exit(f"{sys.argv[1]}: board mark {d[i:j]!r}, want {sys.argv[2]}")
+PYEOF
+}
+
 case $kind in
 h3c)
   python3 -I - "$candidates" "$name" <<'PY' |
@@ -106,6 +119,8 @@ PYEOF
     make "${args[@]}" -C "$src/u-boot-2016" O="$out/$name-ram" -j1
     python3 -I "$src/release-tools/mkramuimg.py" "$out/$name-ram/u-boot" "$out/dist/$name$sfx-ram.uimg"
     check_paths "$out/dist/$name$sfx-ram.uimg"
+    check_board_mark "$out/dist/$name$sfx-ram.uimg" "$name"
+    check_board_mark "$out/dist/$name$sfx.mbn" "$name"
   fi
   check_paths "$out/dist/$name$sfx.mbn"
   ;;
