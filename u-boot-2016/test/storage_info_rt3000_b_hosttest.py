@@ -41,6 +41,7 @@ static size_t strlcpy(char *d, const char *s, size_t n)
 ''' + api_chunk + r'''
 struct qpic_serial_nand_params { unsigned char id[4]; const char *name; unsigned int spare_size; };
 struct qpic_nand_model_info { const char *name; unsigned char id[3]; };
+struct qpic_nand_dev { unsigned int spare_size; };
 static struct qpic_serial_nand_params *serial_params;
 ''' + qpic_chunk + r'''
 int main(void)
@@ -57,8 +58,12 @@ int main(void)
  static struct qpic_serial_nand_params model = {{0xc8,0xc2,0,0}, "GD5F1GQ5REYIG", 128};
  serial_params = &model; qpic_serial_model_identified = true;
  if (qpic_nand_get_model_info(&mi) || strcmp(mi.name, "GD5F1GQ5REYIG") || mi.id[0] != 0xc8 || mi.id[1] != 0xc2) return 5;
+ /* The spare the controller runs with (a catalog row may replace the table's 128). */
+ qpic_nand_dev.spare_size = 128; if (h3c_qpic_nand_physical_spare() != 128) return 40;
+ qpic_nand_dev.spare_size = 64; if (h3c_qpic_nand_physical_spare() != 64) return 41;
  qpic_serial_model_identified = false;
  if (!qpic_nand_get_model_info(&mi)) return 6;
+ if (h3c_qpic_nand_physical_spare() != 0) return 42;
  probe_result = NULL;
  detect_flash_device();
  if (probe_calls != 2 || has_spi() || get_detected_spi_flash() != NULL || !has_nand()) return 7;
