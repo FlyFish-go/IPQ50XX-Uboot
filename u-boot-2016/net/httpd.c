@@ -79,6 +79,7 @@ struct httpd_tcp_pdata {
 
 	int is_uploading;
 	int body_dropped;	/* rest of the body dropped: never parse it */
+	int body_shared;	/* body lives in the shared upload RAM */
 	char *upload_ptr;
 	u32 payload_size;
 	u32 upload_size;
@@ -683,6 +684,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 				/* This body now owns the shared RAM: anything validated in
 				 * it before is stale (failsafe upgrade checks the generation). */
 				pdata->request.upload_gen = ++upload_buffer_gen;
+				pdata->body_shared = 1;
 #endif
 				memcpy(pdata->upload_ptr, pdata->buf + hdr_size, pdata->upload_size);
 			} else {
@@ -708,6 +710,7 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 			}
 #ifndef CONFIG_H3C_IPQ5018_COMMON
 			pdata->request.upload_gen = ++upload_buffer_gen;
+			pdata->body_shared = 1;
 #endif
 
 			pdata->upload_size = cbd->datalen - hdr_size;
@@ -763,7 +766,7 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 	/* The shared RAM was claimed or clobbered since this body started:
 	 * drop the rest instead of writing over the newer owner. The handler
 	 * reports upload_interrupted for the generation mismatch. */
-	stale = pdata->request.upload_gen != upload_buffer_gen;
+	stale = pdata->body_shared && pdata->request.upload_gen != upload_buffer_gen;
 	if (stale)
 		pdata->body_dropped = 1;
 	else
@@ -856,6 +859,14 @@ static int httpd_parse_post_data(struct tcp_cb_data *cbd)
 		return 0;
 	/* Partly dropped body (the RAM went to a newer owner): no form values;
 	 * the handler reports the interrupted upload. */
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* The shared RAM went to a newer owner after this body arrived (the
+	 * parse of /upload is deferred until its header is acknowledged): it
+	 * now holds someone else's bytes, which must not be scanned or
+	 * rewritten in place. */
+	if (pdata->body_shared && req->upload_gen != upload_buffer_gen)
+		pdata->body_dropped = 1;
+#endif
 	if (pdata->body_dropped)
 		return 0;
 
