@@ -652,7 +652,10 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 		 * arriving, for the small (one packet) and the large path alike. */
 		pdata->request.upload_gen = upload_buffer_gen;
 
-		if (hdr_size + pdata->payload_size < sizeof(pdata->buf)) {
+		/* Subtract instead of add: a huge Content-Length must not wrap
+		 * into the small (one packet) branch. */
+		if (hdr_size < sizeof(pdata->buf) &&
+		    pdata->payload_size < sizeof(pdata->buf) - hdr_size) {
 			pdata->upload_size = pdata->bufsize - hdr_size;
 			if (!strcmp(pdata->uri, "/upload") ||
 				!strcmp(pdata->uri, "/console/upload") ||
@@ -661,6 +664,15 @@ static int httpd_recv_hdr(struct httpd_instance *inst,
 #endif
 				0) {
 				/* 需要保存到空闲内存区域的数据 */
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+				/* A large upload still owns the shared RAM: a small one
+				 * must not overwrite it (nor be overwritten by it later). */
+				if (is_uploading) {
+					printf("Only one upload can be performed\n");
+					tcp_close_conn(cbd->conn, 1);
+					return 1;
+				}
+#endif
 				pdata->upload_ptr = httpd_get_upload_buffer_for_uri(pdata->uri, pdata->payload_size);
 				if (pdata->upload_ptr == NULL) {
 					tcp_close_conn(cbd->conn, 1);
@@ -741,8 +753,18 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 {
 	struct httpd_tcp_pdata *pdata = cbd->pdata;
 	u32 size_recv;
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	int stale;
+#endif
 
 	size_recv = min(pdata->payload_size - pdata->upload_size, cbd->datalen);
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* The shared RAM was claimed or clobbered since this body started:
+	 * drop the rest instead of writing over the newer owner. The handler
+	 * reports upload_interrupted for the generation mismatch. */
+	stale = pdata->request.upload_gen != upload_buffer_gen;
+	if (!stale)
+#endif
 	memcpy(pdata->upload_ptr + pdata->upload_size, cbd->data, size_recv);
 	pdata->upload_size += size_recv;
 
@@ -755,6 +777,9 @@ static int httpd_recv_payload(struct httpd_instance *inst,
 		}
 #endif
 		flush_cache((ulong)pdata->upload_ptr, pdata->payload_size);
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+		if (!stale)
+#endif
 		pdata->upload_ptr[pdata->payload_size] = 0;
 		pdata->status = HTTPD_S_FULL_RCVD;
 		/* remove uploading mark */

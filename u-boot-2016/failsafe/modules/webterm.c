@@ -272,6 +272,14 @@ static void webterm_upload_handler(enum httpd_uri_handler_status status,
 		handle_response_message(response, 400, "no file", -1, NULL);
 		return;
 	}
+#ifndef CONFIG_H3C_IPQ5018_COMMON
+	/* Part of the body was dropped because the shared RAM was claimed or
+	 * clobbered while it arrived: do not publish fileaddr/filesize. */
+	if (request->upload_gen != httpd_upload_buffer_gen()) {
+		handle_response_message(response, 409, "upload interrupted, upload again", -1, NULL);
+		return;
+	}
+#endif
 
 	set_file_info_env((ulong)file->data, (ulong)file->size);
 
