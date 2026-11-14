@@ -887,10 +887,16 @@ int qpic_nand_get_model_info(struct qpic_nand_model_info *info)
 	info->id[2] = serial_params->id[2];
 	return 0;
 }
+static struct qpic_nand_dev qpic_nand_dev;
+/* The spare size the controller runs with. It is the QPIC table value unless
+ * a catalog row (build pin or NAND auto) replaced it in
+ * qpic_serial_update_dev_params(): FM25LS01 runs sp64 rows on a 128-byte
+ * table entry and DS35M1GA an sp128 row on a 64-byte one. Comparing a row
+ * against the table value refused those NANDs even after the row applied. */
 unsigned int h3c_qpic_nand_physical_spare(void)
 {
 	return qpic_serial_model_identified && serial_params ?
-		serial_params->spare_size : 0;
+		qpic_nand_dev.spare_size : 0;
 }
 #endif
 #define MICRON_DEVICE_ID	0x152c152c
