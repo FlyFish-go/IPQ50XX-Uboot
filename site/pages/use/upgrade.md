@@ -11,14 +11,21 @@ description: 在救援页里升级 IPQ50XX-Uboot，以及怎么回到原厂系�
 
 ### H3C NX30 家族
 
-1. 进救援页，在「系统信息」里看「硬件系列」（HW-A、B、C、D）；
-2. 到 [v0.1.0 发布页](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases/tag/uboot-v0.1.0)下载对应的 `uboot-v0.1.0-HW-X.zip`；
-3. 压缩包里按闪存型号分了文件夹。v0.1.0 的救援页会直接告诉你该选哪个 `appsbl.mbn`；从更早的版本升级时，按发布说明「升级」一节找文件；
-4. 在「U-Boot 更新」上传，等写完，断电重启。
+从 v0.2.0 起，每个硬件组只有一个文件，U-Boot 启动时自己识别闪存型号，不用再按闪存型号挑文件夹。
 
-::: note HW-D 的旧版本
-HW-D 上 ECC 8 位的机器，如果还在 pre.5 或更早的版本，直接「U-Boot 更新」会失败，要先用 RAM 救援版过渡。步骤见 [pre.7 说明](https://github.com/FlyFish-go/H3C-NX30-Uboot/blob/main/releases/uboot-v0.1.0-pre.7.md#从-pre3pre6-升级)。
-:::
+先进救援页，在「系统信息」里看「硬件系列」（HW-A、B、C、D），再到 [v0.2.0 发布页](https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0)下载这一组的两个文件：`h3c-hw-x.mbn` 和 `h3c-hw-x-ram-rescue.elf`（x 换成 a、b、c、d）。
+
+**已经是 v0.2.0 或更新的**：在「U-Boot 更新」上传 `h3c-hw-x.mbn`，等写完，断电重启。
+
+**还是 v0.1.0、BootBridge 装的 pre.5 或更早的版本**：旧版的「U-Boot 更新」只认按闪存型号分的旧文件，会拒绝新文件，要先用 RAM 救援版过渡一次：
+
+1. 打开「网页终端」，点「上传文件」，选 `h3c-hw-x-ram-rescue.elf`；
+2. 上传完在命令框输入 `bootelf ${fileaddr}`，回车。页面会断开，这是正常的；
+3. 等 10 秒左右，重新打开 `http://192.168.10.1`。「系统信息」里写着「RAM 救援版（未写入闪存）」就对了。这时什么都还没写；
+4. 在这个新页面的「U-Boot 更新」上传 `h3c-hw-x.mbn`，两份 APPSBL 一起写入、读回核对；
+5. 断电重启，「系统信息」里的版本带 `v0.2.0`。
+
+第 2 步之后如果页面一直打不开，断电重启就回到原来的版本，什么都没变，重新来一次即可。
 
 ### 其他机型
 

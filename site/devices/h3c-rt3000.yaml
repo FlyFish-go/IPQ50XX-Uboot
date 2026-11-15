@@ -6,7 +6,7 @@ aliases: [RT3000]
 soc: IPQ5018
 status: verified
 family: H3C NX30 家族
-summary: H3C NX30 家族，U-Boot 已发布正式版 v0.1.0。不用拆机，在浏览器里用 BootBridge 网页工具安装。
+summary: H3C NX30 家族，U-Boot 已发布 v0.2.0，每个硬件组一个文件，闪存型号自动识别。不用拆机，在浏览器里用 BootBridge 网页工具安装。
 hardware:
   - { label: 硬件组, value: "HW-B 或 HW-C（BootBridge 自动识别）" }
   - { label: 闪存, value: "NAND（多种型号，U-Boot 自动识别 ECC）" }
@@ -28,7 +28,7 @@ recovery:
   - 已装本项目 U-Boot 的，救援页里可以写回备份的分区。
   - 万一启动程序本身损坏，需要 TTL 串口或编程器，请先到 QQ 群 1131957442 联系维护者。
 links:
-  - { text: H3C-NX30-Uboot 仓库（BootBridge 与 v0.1.0）, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot" }
-  - { text: v0.1.0 发布说明, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot/releases/tag/uboot-v0.1.0" }
+  - { text: H3C-NX30-Uboot 仓库（BootBridge 与旧版 v0.1.0）, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot" }
+  - { text: v0.2.0 发布说明, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0" }
   - { text: 配套固件：QSDK 11.5, url: "https://github.com/FlyFish-go/H3C-RT3000-Product-R1/releases" }
   - { text: 配套固件：OpenWrt + NSS, url: "https://github.com/FlyFish-go/H3C-Magic-NSS/releases" }

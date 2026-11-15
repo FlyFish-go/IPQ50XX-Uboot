@@ -70,7 +70,7 @@ LINKS = {
     'report': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml',
     'ci': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess',
     'bootbridge': 'https://flyfish-go.github.io/H3C-NX30-Uboot/',
-    'h3c_release': 'https://github.com/FlyFish-go/H3C-NX30-Uboot/releases/tag/uboot-v0.1.0',
+    'h3c_release': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0',
     'sponsor': 'https://ifdian.net/a/FlyFish-go',
 }
 QQ = '1131957442'
@@ -525,12 +525,12 @@ def web_steps(d):
                  '- **打不开 `192.168.10.1`**：看电脑有没有拿到 `192.168.10.x` 的地址；换一个 LAN 口；等一分钟再刷新。',
                  '- **识别不通过**：不要换别的机型的文件硬装，截图到 QQ 群或 Issue。',
              ])),
-        dict(id='upgrade', title='升级到 U-Boot v0.1.0', note=n.get('upgrade'),
+        dict(id='upgrade', title='升级到 U-Boot v0.2.0', note=n.get('upgrade'),
              body='BootBridge 装的是较早的 U-Boot（pre.5）。断电，按住 Reset 再通电，约 3 秒后松开，'
-                  '打开 `http://192.168.10.1` 进救援页。在「系统信息」看「硬件系列」（HW-A、B、C、D），'
-                  '下载对应的 `uboot-v0.1.0-HW-X.zip`，按 '
-                  f'[v0.1.0 发布说明]({LINKS["h3c_release"]})「升级」一节，在「U-Boot 更新」里写入。',
-             check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.1.0`。'),
+                  '打开 `http://192.168.10.1` 进救援页，在「系统信息」看「硬件系列」（HW-A、B、C、D）。'
+                  f'到 [v0.2.0 发布页]({LINKS["h3c_release"]})下载这一组的 `h3c-hw-x.mbn` 和 `h3c-hw-x-ram-rescue.elf`，'
+                  '按[升级 U-Boot](/use/upgrade#h3c-nx30-家族)里「还是 v0.1.0、pre.5」的步骤写入。',
+             check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.2.0`。'),
         dict(id='verify', title='记住怎么进救援页', note=n.get('verify'),
              body=f'以后进救援页：{r.get("how", "按住 Reset 通电")}，打开 `http://{r.get("address", "192.168.10.1")}`。'
                   + (f'\n\n用按键切换系统：{d["slot_select"]}' if d.get('slot_select') else '')
@@ -577,8 +577,8 @@ def render_steps(steps):
 def download_cell(d, route, releases):
     if route == 'web':
         return (f'安装不用单独下载，BootBridge 会写入 U-Boot。以后升级用 '
-                f'<a href="{LINKS["h3c_release"]}">v0.1.0 发布页</a>里的 '
-                '<code>uboot-v0.1.0-HW-X.zip</code>，X 是救援页「系统信息」里的硬件系列。')
+                f'<a href="{LINKS["h3c_release"]}">v0.2.0 发布页</a>里的 '
+                '<code>h3c-hw-x.mbn</code>，x 是救援页「系统信息」里的硬件系列；每组一个文件，闪存型号自动识别。')
     a = d['artifact']
     files = f'<code>{esc(a)}-ram.uimg</code>' + ('' if route == 'trial' else f' 和 <code>{esc(a)}.mbn</code>')
     rel = releases.get(a)
