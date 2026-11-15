@@ -7,6 +7,7 @@
 #include <nand.h>
 #include <asm/arch-qca-common/smem.h>
 #include <rt3000_b_layout.h>
+#include <h3c_layout_profile.h>
 
 #define RT3_SMEM_MAGIC1 0x55ee73aaU
 #define RT3_SMEM_MAGIC2 0xe35ebddbU
@@ -21,15 +22,16 @@
 #define RT3_NAND_WRITESIZE 0x00000800U
 #define RT3_NAND_SIZE 0x08000000ULL
 #define RT3_ROOTFS_OFFSET 0x00900000ULL
-#define RT3_DUAL_SIZE 0x02800000ULL
-#define RT3_SINGLE_SIZE 0x05000000ULL
-/* Extra-large single layout: rootfs runs from 0x900000 to the end of the
- * OEM data partitions (0x7d00000); pdt_data, pdt_data_1, exp and plugin
- * are gone. The last 3 MiB of the chip stay outside every partition. */
-#define RT3_SINGLE_XL_SIZE 0x07400000ULL
-#define RT3_SINGLE_SIZE_OK(s) ((s) == RT3_SINGLE_SIZE || (s) == RT3_SINGLE_XL_SIZE)
+/* Slot size, single layouts and the OEM data partitions behind the slots
+ * come from the model's partition scheme (h3c_layout_profile.h). In the
+ * NX30 extra-large single layout the rootfs runs from 0x900000 to the end
+ * of the OEM data partitions (0x7d00000) and they are gone; the last 3 MiB
+ * of the chip stay outside every partition. */
+#define RT3_DUAL_SIZE H3C_LAYOUT_DUAL_SIZE
+#define RT3_SINGLE_SIZE H3C_LAYOUT_SINGLE_SIZE
+#define RT3_SINGLE_SIZE_OK(s) H3C_LAYOUT_SINGLE_SIZE_OK(s)
 #define RT3_PREFIX_COUNT 15U
-#define RT3_SUFFIX_COUNT 4U
+#define RT3_SUFFIX_COUNT H3C_LAYOUT_SUFFIX_COUNT
 
 /* Private SMEM ABI declarations matching smem.c's packed table. */
 struct rt3_smem_part {
@@ -71,10 +73,7 @@ static const struct rt3_protected_part boot_prefix[RT3_PREFIX_COUNT] = {
 };
 
 static const struct rt3_protected_part trailing_parts[RT3_SUFFIX_COUNT] = {
-	{ "pdt_data",   0x05900000ULL, 0x00600000ULL },
-	{ "pdt_data_1", 0x05f00000ULL, 0x00600000ULL },
-	{ "exp",        0x06500000ULL, 0x00100000ULL },
-	{ "plugin",     0x06600000ULL, 0x01700000ULL },
+	H3C_LAYOUT_SUFFIX_PARTS
 };
 
 extern unsigned int is_spi_nand_available(void);

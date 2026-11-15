@@ -247,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("input_elf", type=pathlib.Path)
     parser.add_argument("output_mbn", type=pathlib.Path)
     parser.add_argument("--partition", type=pathlib.Path, help="also write a 0x140000-byte FF-padded partition image")
-    parser.add_argument("--board", choices=("A", "B", "C", "D"), required=True,
+    parser.add_argument("--board", choices=("A", "B", "C", "D", "NX54"), required=True,
                         help="release label recorded for the caller; board identity must be verified from build provenance")
     args = parser.parse_args(argv)
     try:

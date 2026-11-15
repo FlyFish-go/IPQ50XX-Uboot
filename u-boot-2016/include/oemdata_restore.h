@@ -22,23 +22,23 @@
 #include <stdint.h>
 #include <string.h>
 #endif
+#include <h3c_layout_profile.h>
 
 struct oemdata_part {
 	const char *name;
 	uint64_t off, size;
 };
 
+/* The model's OEM data extents (h3c_layout_profile.h). */
 static const struct oemdata_part oemdata_parts[] = {
-	{ "pdt_data",   0x05900000ULL, 0x00600000ULL },
-	{ "pdt_data_1", 0x05f00000ULL, 0x00600000ULL },
-	{ "exp",        0x06500000ULL, 0x00100000ULL },
-	{ "plugin",     0x06600000ULL, 0x01700000ULL },
+	H3C_LAYOUT_SUFFIX_PARTS
 };
 #define OEMDATA_NPARTS	(sizeof(oemdata_parts) / sizeof(oemdata_parts[0]))
 
-/* rootfs of the extra-large single layout: 0x900000 .. 0x7d00000 */
+/* rootfs of the extra-large single layout: 0x900000 .. 0x7d00000 (NX30
+ * family only; a model without it has size 0, which no rootfs matches). */
 #define OEMDATA_XL_ROOTFS_OFF	0x00900000ULL
-#define OEMDATA_XL_ROOTFS_SIZE	0x07400000ULL
+#define OEMDATA_XL_ROOTFS_SIZE	H3C_LAYOUT_SINGLE_XL_SIZE
 
 /* "<dir>/smem_pdt_data.bin", "pdt_data.2.bin", ...; anything else is NULL. */
 static inline const struct oemdata_part *oemdata_find(const char *filename)
@@ -111,7 +111,8 @@ static inline int oemdata_window(const struct oemdata_part *p,
 		w->size = p->size;
 		return OEMDATA_OK;
 	}
-	if (!single || !rootfs->have || rootfs->off != OEMDATA_XL_ROOTFS_OFF ||
+	if (!single || !OEMDATA_XL_ROOTFS_SIZE || !rootfs->have ||
+	    rootfs->off != OEMDATA_XL_ROOTFS_OFF ||
 	    rootfs->size != OEMDATA_XL_ROOTFS_SIZE ||
 	    p->off < rootfs->off || p->off + p->size > rootfs->off + rootfs->size)
 		return OEMDATA_EXDEV;

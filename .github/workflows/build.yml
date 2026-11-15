@@ -96,6 +96,7 @@ jobs:
           - { kind: h3c-auto, name: B }
           - { kind: h3c-auto, name: C }
           - { kind: h3c-auto, name: D }
+          - { kind: h3c-auto, name: NX54 }
           - { kind: defconfig, name: ipq5018_lingyan_lyw_30m }
           - { kind: defconfig, name: ipq5018_tcl_t30_pro }
           - { kind: defconfig, name: ipq5018_xiaomi_cr8806 }
@@ -129,5 +130,5 @@ jobs:
       - if: matrix.kind != 'h3c'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.kind == 'h3c-auto' && format('h3c-hw-{0}', matrix.name) || matrix.name }}
+          name: ${{ matrix.kind == 'h3c-auto' && (matrix.name == 'NX54' && 'h3c-nx54' || format('h3c-hw-{0}', matrix.name)) || matrix.name }}
           path: ${{ runner.temp }}/out/dist/

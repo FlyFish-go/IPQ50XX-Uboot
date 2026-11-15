@@ -5,7 +5,7 @@ set -euo pipefail
 umask 077
 
 if [[ $# != 2 ]]; then
-  echo "Usage: CROSS_COMPILE=/absolute/toolchain/bin/arm-linux-gnueabi- $0 A|B|C|D /absolute/new-output-dir" >&2
+  echo "Usage: CROSS_COMPILE=/absolute/toolchain/bin/arm-linux-gnueabi- $0 A|B|C|D|NX54 /absolute/new-output-dir" >&2
   exit 2
 fi
 board="${1^^}"
@@ -19,6 +19,8 @@ case "$board" in
   B) name="ipq5018-h3c_rt3000-b"; config="ipq5018_h3c_rt3000_b_defconfig"; target="CONFIG_TARGET_IPQ5018_H3C_RT3000_B"; machid="0x08040000" ;;
   C) name="ipq5018-h3c-hw-c"; config="ipq5018_h3c_hw_c_production_defconfig"; target="CONFIG_TARGET_IPQ5018_H3C_HW_C"; machid="0x08040101" ;;
   D) name="ipq5018-h3c-hw-d"; config="ipq5018_h3c_hw_d_production_defconfig"; target="CONFIG_TARGET_IPQ5018_H3C_HW_D"; machid="0x08040000" ;;
+  # NX54: HW-A hardware with its own OEM table (CONFIG_H3C_LAYOUT_NX54).
+  NX54) name="ipq5018-h3c-nx54"; config="ipq5018_h3c_nx54_defconfig"; target="CONFIG_TARGET_IPQ5018_H3C_HW_A"; machid="0x08040001" ;;
   *) echo "Unsupported board: $board" >&2; exit 2 ;;
 esac
 
@@ -147,6 +149,11 @@ grep -Fxq 'CONFIG_H3C_RELEASE_SYSTEM_DEFAULT=y' "$build/.config"
 [[ -z "$H3C_RELEASE_LABEL" ]] || grep -q "^CONFIG_LOCALVERSION=\"-h3c-common4.*-$H3C_RELEASE_LABEL\"\$" "$build/.config"
 grep -Fxq "$target=y" "$build/.config"
 grep -Fxq 'CONFIG_H3C_IPQ5018_COMMON=y' "$build/.config"
+if [[ "$board" == NX54 ]]; then
+  grep -Fxq 'CONFIG_H3C_LAYOUT_NX54=y' "$build/.config"
+else
+  ! grep -q '^CONFIG_H3C_LAYOUT_NX54=y' "$build/.config"
+fi
 grep -Fq "CONFIG_DEFAULT_DEVICE_TREE=\"$name\"" "$build/.config"
 grep -Fq "$name" "$uboot/arch/arm/dts/Makefile"
 
@@ -178,11 +185,14 @@ Path(sys.argv[2]).write_bytes(blob[offset:offset + size])
 PYDTB
 
 label="${board,,}"
-stem="h3c-hw-$label-common-release"
+# NX30-family groups are h3c-hw-<x>; a model of its own is h3c-<model>.
+prefix="h3c-hw-$label"
+[[ ${#board} == 1 ]] || prefix="h3c-$label"
+stem="$prefix-common-release"
 images=(appsbl.mbn appsbl.partition.bin)
 profile=release
 if [[ "${H3C_RAM_RESCUE:-0}" == 1 ]]; then
-  stem="h3c-hw-$label-ram-rescue"; images=(); profile=ram-rescue
+  stem="$prefix-ram-rescue"; images=(); profile=ram-rescue
 fi
 cp -- "$build/u-boot" "$out/$stem.elf"
 "${CROSS_COMPILE}strip" "$out/$stem.elf" -o "$out/$stem.strip.elf"

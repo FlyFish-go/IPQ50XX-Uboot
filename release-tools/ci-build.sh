@@ -3,7 +3,7 @@
 # Compile one device the way a release would. CROSS_COMPILE must be set.
 #
 #   ci-build.sh h3c A|B|C|D <output-dir>      pinned NAND builds, every ECC and rescue variant
-#   ci-build.sh h3c-auto A|B|C|D <output-dir> the release build: NAND detected at boot
+#   ci-build.sh h3c-auto A|B|C|D|NX54 <output-dir> the release build: NAND detected at boot
 #   ci-build.sh defconfig <name> <output-dir> one U-Boot defconfig
 #
 # RELEASE_LABEL (e.g. v0.2.0) goes into the version string. Build paths are
@@ -72,17 +72,20 @@ h3c-auto)
   # One U-Boot per board for every catalog NAND: h3c-hw-<x>.mbn for the
   # APPSBL partitions and h3c-hw-<x>-ram-rescue.elf, loaded from an older
   # rescue page's web terminal (bootelf) to install the .mbn.
-  [[ $name =~ ^[ABCD]$ ]] || { echo "h3c-auto takes A, B, C or D" >&2; exit 2; }
+  [[ $name =~ ^([ABCD]|NX54)$ ]] || { echo "h3c-auto takes A, B, C, D or NX54" >&2; exit 2; }
   b=${name,,}
+  # NX30-family groups are h3c-hw-<x>; a model of its own is h3c-<model>.
+  stem=h3c-hw-$b
+  [[ ${#name} == 1 ]] || stem=h3c-$b
   for rescue in 0 1; do
     echo "== $name auto rescue=$rescue"
     H3C_NAND_AUTO=1 H3C_RAM_RESCUE=$rescue H3C_RELEASE_LABEL=$label \
       "$src/build-release.sh" "$name" "$out/$name-auto-r$rescue"
   done
   mkdir -p "$out/dist"
-  cp -- "$out/$name-auto-r0/appsbl.mbn" "$out/dist/h3c-hw-$b.mbn"
-  cp -- "$out/$name-auto-r1/h3c-hw-$b-ram-rescue.strip.elf" "$out/dist/h3c-hw-$b-ram-rescue.elf"
-  check_paths "$out/dist/h3c-hw-$b.mbn" "$out/dist/h3c-hw-$b-ram-rescue.elf"
+  cp -- "$out/$name-auto-r0/appsbl.mbn" "$out/dist/$stem.mbn"
+  cp -- "$out/$name-auto-r1/$stem-ram-rescue.strip.elf" "$out/dist/$stem-ram-rescue.elf"
+  check_paths "$out/dist/$stem.mbn" "$out/dist/$stem-ram-rescue.elf"
   ;;
 defconfig)
   export ARCH=arm

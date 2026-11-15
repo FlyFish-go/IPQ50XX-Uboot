@@ -145,6 +145,13 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
 #endif
 
 #ifdef CONFIG_H3C_BOARD
+    /* NX30-family groups are one letter (HW-A .. HW-D); a model of its own
+     * (NX54) is named as it is. */
+#ifdef CONFIG_H3C_LAYOUT_NX54
+#define H3C_GROUP_PFX ""
+#else
+#define H3C_GROUP_PFX "HW-"
+#endif
     /* The U-Boot package folder that matches this build exactly:
      * HW-<board>/<NAND model>-ECC<load ECC>, as in the release zips. */
     {
@@ -166,12 +173,12 @@ static void sysinfo_handler(enum httpd_uri_handler_status status,
                 }
             }
             model[n] = 0;
-            snprintf(folder, sizeof(folder), "HW-%s/%s-ECC%s", h3c_build_board(), model, ecc);
+            snprintf(folder, sizeof(folder), H3C_GROUP_PFX "%s/%s-ECC%s", h3c_build_board(), model, ecc);
         }
         /* An auto build ships as one file per board (h3c-hw-<x>.mbn); the
          * folder above then names the matching pinned v0.1.0 file, which
          * it also accepts. */
-        APPEND_JSON_TO_BUF("\"uboot_build\":{\"board\":\"HW-%s\",\"nand_model\":\"%s\",\"ecc\":\"%s\",\"folder\":\"%s\",\"auto\":%s},",
+        APPEND_JSON_TO_BUF("\"uboot_build\":{\"board\":\"" H3C_GROUP_PFX "%s\",\"nand_model\":\"%s\",\"ecc\":\"%s\",\"folder\":\"%s\",\"auto\":%s},",
             h3c_build_board(), model, ecc, folder,
             IS_ENABLED(CONFIG_H3C_NAND_AUTO_PROFILE) ? "true" : "false");
 

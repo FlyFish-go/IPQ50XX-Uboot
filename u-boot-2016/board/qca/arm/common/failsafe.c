@@ -1250,7 +1250,7 @@ int failsafe_validate_oemdata(const char *filename, const void *data, ulong size
 	memset(&oemdata_pending, 0, sizeof(oemdata_pending));
 	RETURN_IF_NAND_FLASH_NOT_FOUND;
 	if (!p) {
-		handle_wrong_fw_type("smem_pdt_data.bin, smem_pdt_data_1.bin, smem_exp.bin or smem_plugin.bin");
+		handle_wrong_fw_type(H3C_LAYOUT_OEMDATA_NAMES);
 		return RET_WRONG_FW_TYPE;
 	}
 	if (!size || size > p->size) {

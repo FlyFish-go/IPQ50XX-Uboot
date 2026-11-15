@@ -118,6 +118,15 @@ config TARGET_IPQ5018_H3C_HW_D
 
 endchoice
 
+config H3C_LAYOUT_NX54
+    bool "H3C NX54 partition layout"
+    depends on TARGET_IPQ5018_H3C_HW_A
+    help
+      NX54 is HW-A hardware (IPQ5018, QCA8337, machid 0x8040001) with its
+      own OEM table: two 45.25 MiB rootfs slots, then pdt_data, pdt_data_1
+      and exp, no plugin and no single-rootfs layout. The build identity
+      and board name become NX54, so HW-A and NX54 images refuse each other.
+
 config H3C_HW_C_OEM_CNSS_SKIP4
     bool "Default the OEM HW-C CNSS skip mask to skip radio 0x42"
     depends on TARGET_IPQ5018_H3C_HW_C

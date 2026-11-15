@@ -25,7 +25,9 @@ typedef uint8_t u8;
 #define H3C_ID_STR2(x) #x
 #define H3C_ID_STR(x) H3C_ID_STR2(x)
 
-#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
+#if defined(CONFIG_TARGET_IPQ5018_H3C_HW_A) && defined(CONFIG_H3C_LAYOUT_NX54)
+#define H3C_ID_BOARD "NX54"
+#elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_A)
 #define H3C_ID_BOARD "A"
 #elif defined(CONFIG_TARGET_IPQ5018_H3C_HW_C)
 #define H3C_ID_BOARD "C"

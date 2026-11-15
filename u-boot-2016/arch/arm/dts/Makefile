@@ -161,7 +161,12 @@ $(info CONFIG_TARGET_IPQ807x_XIAOMI_AX9000     = $(CONFIG_TARGET_IPQ807x_XIAOMI_
 
 dtb-$(CONFIG_TARGET_IPQ5018_CMCC_MR3000D_CI)   += ipq5018-cmcc_mr3000d-ci.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_H3C_RT3000_B) += ipq5018-h3c_rt3000-b.dtb
+# NX54 builds the HW-A target with its own layout and DTS (one DTB only).
+ifeq ($(CONFIG_H3C_LAYOUT_NX54),y)
+dtb-y += ipq5018-h3c-nx54.dtb
+else
 dtb-$(CONFIG_TARGET_IPQ5018_H3C_HW_A) += ipq5018-h3c-hw-a.dtb
+endif
 dtb-$(CONFIG_TARGET_IPQ5018_H3C_HW_C) += ipq5018-h3c-hw-c.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_H3C_HW_D) += ipq5018-h3c-hw-d.dtb
 dtb-$(CONFIG_TARGET_IPQ5018_CMCC_PZ_L8)        += ipq5018-cmcc_pz-l8.dtb
