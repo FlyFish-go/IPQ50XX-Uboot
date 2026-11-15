@@ -26,6 +26,10 @@
 #ifdef CONFIG_TARGET_IPQ5018_H3C_HW_D
 #define RT3_METADATA_HW_D 1
 #endif
+/* NX54 runs the HW-A target; its DTB says "H3C NX54" / "h3c,nx54" (board 8). */
+#if defined(CONFIG_H3C_LAYOUT_NX54) || defined(RT3_METADATA_HOST_TEST_NX54)
+#define RT3_METADATA_NX54 1
+#endif
 #define SDRAM_LOAD 0x4a920000U
 #define MBN_HASH_OFFSET 0x1000U
 #define MBN_HASH_SIZE 0xa8U
@@ -113,6 +117,9 @@ static int fdt_board(const rt3_md_u8*f,rt3_md_u32 av)
      if(len==sizeof("H3C HW-A")&&!memcmp(q,"H3C HW-A",len))board=1;
      else if(len==sizeof("H3C HW-B")&&!memcmp(q,"H3C HW-B",len))board=2;
      else if(len==sizeof("H3C HW-C")&&!memcmp(q,"H3C HW-C",len))board=4;
+#ifdef RT3_METADATA_NX54
+     else if(len==sizeof("H3C NX54")&&!memcmp(q,"H3C NX54",len))board=8;
+#endif
 #if !defined(RT3_METADATA_HW_A) && !defined(RT3_METADATA_HW_C)
      else if(len==sizeof("H3C RT3000-B stage0")&&!memcmp(q,"H3C RT3000-B stage0",len))board=2;
 #endif
@@ -126,6 +133,9 @@ static int fdt_board(const rt3_md_u8*f,rt3_md_u32 av)
       if(z-k==8&&!memcmp(q+k,"h3c,hw-a",8))y=1;
       else if(z-k==12&&!memcmp(q+k,"h3c,rt3000-b",12))y=2;
       else if(z-k==8&&!memcmp(q+k,"h3c,hw-c",8))y=4;
+#ifdef RT3_METADATA_NX54
+      else if(z-k==8&&!memcmp(q+k,"h3c,nx54",8))y=8;
+#endif
       if(y&&cb&&y!=cb)return -1;
       if(y)cb=y;
       k=z+1;
@@ -139,6 +149,9 @@ static int fdt_board(const rt3_md_u8*f,rt3_md_u32 av)
    if(!board||!cb||board!=cb||!machid_seen)return -1;
    if((board==1&&machid!=0x08040001U)||(board==2&&machid!=0x08040000U)||
       (board==4&&machid!=0x08040101U))return -1;
+#ifdef RT3_METADATA_NX54
+   if(board==8&&machid!=0x08040001U)return -1;
+#endif
    return board;
   }else return -1;
  }
@@ -163,10 +176,12 @@ static void fdt_scan(const rt3_md_u8*b,rt3_md_u32 n,int*m,int*bad)
  }
 }
 static int gzip_header_ok(const rt3_md_u8*s,rt3_md_u32 n){rt3_md_u32 i=10;rt3_md_u8 f;if(n<18||s[0]!=0x1f||s[1]!=0x8b||s[2]!=8)return 0;f=s[3];if(f&0xe0)return 0;if(f&4){rt3_md_u32 z;if(i+2>n)return 0;z=(rt3_md_u32)s[i]|((rt3_md_u32)s[i+1]<<8);i+=2;if(z>n-i)return 0;i+=z;}if(f&8){while(i<n&&s[i])i++;if(i==n)return 0;i++;}if(f&16){while(i<n&&s[i])i++;if(i==n)return 0;i++;}if(f&2){if(i+2>n)return 0;i+=2;}return i<n-8;}
-static int __attribute__((unused)) embedded_fdt_identity(const rt3_md_u8*load,rt3_md_u32 size,const char*model,const char*compatible){rt3_md_u8*out;rt3_md_u32 i;int m=0,bad=0,target;(void)compatible;target=!strcmp(model,"H3C HW-A")?1:(!strcmp(model,"H3C HW-B")?2:4);fdt_scan(load,size,&m,&bad);out=malloc(RT3_MD_APPSBL_SIZE);if(!out)return 0;for(i=0;i+3<=size;i++)if(load[i]==0x1f&&load[i+1]==0x8b&&load[i+2]==8&&gzip_header_ok(load+i,size-i)){unsigned long z=size-i;if(!metadata_gunzip(out,RT3_MD_APPSBL_SIZE,(rt3_md_u8*)(load+i),&z)&&z<=RT3_MD_APPSBL_SIZE){fdt_scan(out,(rt3_md_u32)z,&m,&bad);memset(out,0,(rt3_md_u32)z);}}memset(out,0,RT3_MD_APPSBL_SIZE);free(out);return !bad&&m==target;}
+static int __attribute__((unused)) embedded_fdt_identity(const rt3_md_u8*load,rt3_md_u32 size,const char*model,const char*compatible){rt3_md_u8*out;rt3_md_u32 i;int m=0,bad=0,target;(void)compatible;target=!strcmp(model,"H3C HW-A")?1:(!strcmp(model,"H3C HW-B")?2:(!strcmp(model,"H3C NX54")?8:4));fdt_scan(load,size,&m,&bad);out=malloc(RT3_MD_APPSBL_SIZE);if(!out)return 0;for(i=0;i+3<=size;i++)if(load[i]==0x1f&&load[i+1]==0x8b&&load[i+2]==8&&gzip_header_ok(load+i,size-i)){unsigned long z=size-i;if(!metadata_gunzip(out,RT3_MD_APPSBL_SIZE,(rt3_md_u8*)(load+i),&z)&&z<=RT3_MD_APPSBL_SIZE){fdt_scan(out,(rt3_md_u32)z,&m,&bad);memset(out,0,(rt3_md_u32)z);}}memset(out,0,RT3_MD_APPSBL_SIZE);free(out);return !bad&&m==target;}
 static int target_identity(const rt3_md_u8 *load, rt3_md_u32 size)
 {
-#ifdef RT3_METADATA_HW_A
+#if defined(RT3_METADATA_HW_A) && defined(RT3_METADATA_NX54)
+ return embedded_fdt_identity(load,size,"H3C NX54","h3c,nx54");
+#elif defined(RT3_METADATA_HW_A)
  return embedded_fdt_identity(load,size,"H3C HW-A","h3c,hw-a");
 #elif defined(RT3_METADATA_HW_C)
  return embedded_fdt_identity(load,size,"H3C HW-C","h3c,hw-c");
@@ -283,7 +298,9 @@ int rt3_md_validate_elf(const rt3_md_u8*d,rt3_md_u32 n)
 }
 const char *rt3_md_uboot_board_name(void)
 {
-#ifdef RT3_METADATA_HW_A
+#if defined(RT3_METADATA_HW_A) && defined(RT3_METADATA_NX54)
+ return "H3C NX54 U-Boot ELF";
+#elif defined(RT3_METADATA_HW_A)
  return "H3C HW-A U-Boot ELF";
 #elif defined(RT3_METADATA_HW_C)
  return "H3C HW-C U-Boot ELF";
