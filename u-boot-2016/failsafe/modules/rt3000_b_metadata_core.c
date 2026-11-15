@@ -176,7 +176,11 @@ static void fdt_scan(const rt3_md_u8*b,rt3_md_u32 n,int*m,int*bad)
  }
 }
 static int gzip_header_ok(const rt3_md_u8*s,rt3_md_u32 n){rt3_md_u32 i=10;rt3_md_u8 f;if(n<18||s[0]!=0x1f||s[1]!=0x8b||s[2]!=8)return 0;f=s[3];if(f&0xe0)return 0;if(f&4){rt3_md_u32 z;if(i+2>n)return 0;z=(rt3_md_u32)s[i]|((rt3_md_u32)s[i+1]<<8);i+=2;if(z>n-i)return 0;i+=z;}if(f&8){while(i<n&&s[i])i++;if(i==n)return 0;i++;}if(f&16){while(i<n&&s[i])i++;if(i==n)return 0;i++;}if(f&2){if(i+2>n)return 0;i+=2;}return i<n-8;}
-static int __attribute__((unused)) embedded_fdt_identity(const rt3_md_u8*load,rt3_md_u32 size,const char*model,const char*compatible){rt3_md_u8*out;rt3_md_u32 i;int m=0,bad=0,target;(void)compatible;target=!strcmp(model,"H3C HW-A")?1:(!strcmp(model,"H3C HW-B")?2:(!strcmp(model,"H3C NX54")?8:4));fdt_scan(load,size,&m,&bad);out=malloc(RT3_MD_APPSBL_SIZE);if(!out)return 0;for(i=0;i+3<=size;i++)if(load[i]==0x1f&&load[i+1]==0x8b&&load[i+2]==8&&gzip_header_ok(load+i,size-i)){unsigned long z=size-i;if(!metadata_gunzip(out,RT3_MD_APPSBL_SIZE,(rt3_md_u8*)(load+i),&z)&&z<=RT3_MD_APPSBL_SIZE){fdt_scan(out,(rt3_md_u32)z,&m,&bad);memset(out,0,(rt3_md_u32)z);}}memset(out,0,RT3_MD_APPSBL_SIZE);free(out);return !bad&&m==target;}
+static int __attribute__((unused)) embedded_fdt_identity(const rt3_md_u8*load,rt3_md_u32 size,const char*model,const char*compatible){rt3_md_u8*out;rt3_md_u32 i;int m=0,bad=0,target;(void)compatible;target=!strcmp(model,"H3C HW-A")?1:(!strcmp(model,"H3C HW-B")?2:4);
+#ifdef RT3_METADATA_NX54
+ if(!strcmp(model,"H3C NX54"))target=8;
+#endif
+fdt_scan(load,size,&m,&bad);out=malloc(RT3_MD_APPSBL_SIZE);if(!out)return 0;for(i=0;i+3<=size;i++)if(load[i]==0x1f&&load[i+1]==0x8b&&load[i+2]==8&&gzip_header_ok(load+i,size-i)){unsigned long z=size-i;if(!metadata_gunzip(out,RT3_MD_APPSBL_SIZE,(rt3_md_u8*)(load+i),&z)&&z<=RT3_MD_APPSBL_SIZE){fdt_scan(out,(rt3_md_u32)z,&m,&bad);memset(out,0,(rt3_md_u32)z);}}memset(out,0,RT3_MD_APPSBL_SIZE);free(out);return !bad&&m==target;}
 static int target_identity(const rt3_md_u8 *load, rt3_md_u32 size)
 {
 #if defined(RT3_METADATA_HW_A) && defined(RT3_METADATA_NX54)
