@@ -32,6 +32,14 @@ int main(int argc, char **argv)
 	nand_info[0].size = 0x08000000ULL; nand_info[0].erasesize = ERASE;
 	nand_info[0].writesize = 2048; nand_info[0].oobsize = 64;
 	qca_smem_flash_info.flash_type = 11; qca_smem_flash_info.flash_block_size = ERASE;
+#ifdef CONFIG_H3C_LAYOUT_NX54
+	/* NX54 profile: its own OEM dual table resolves, the NX30 one does not. */
+	if (argc != 3) return 9;
+	if ((r = check(argv[1], RT3_LAYOUT_DUAL, 0x2d40000))) { printf("NX54 dual preset FAIL %d\n", r); return 1; }
+	if (check(argv[2], RT3_LAYOUT_DUAL, 0x2800000) != 3) { puts("NX30 dual table not refused by the NX54 profile"); return 1; }
+	puts("MIBIB presets: NX54 dual resolves, NX30 table refused PASS");
+	return 0;
+#endif
 	if (argc != 4) return 9;
 	if ((r = check(argv[1], RT3_LAYOUT_DUAL, 0x2800000))) { printf("dual preset FAIL %d\n", r); return 1; }
 	if ((r = check(argv[2], RT3_LAYOUT_SINGLE, 0x5000000))) { printf("single preset FAIL %d\n", r); return 1; }

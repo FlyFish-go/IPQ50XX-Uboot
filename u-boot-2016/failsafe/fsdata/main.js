@@ -1602,13 +1602,25 @@ const RT3_MIBIB_ROWS = [
     ['plugin', 0x6600000, 0x1700000, 0x5800, 0x400]
 ];
 
+// NX54: the same boot prefix, then two 45.25 MiB rootfs slots, pdt_data,
+// pdt_data_1 and exp, no plugin (its factory MIBIB, sha256 008d80a5...).
+// The NX54 has no single-rootfs layout, so it only gets the OEM dual table.
+const RT3_MIBIB_ROWS_NX54 = RT3_MIBIB_ROWS.slice(0, 15).concat([
+    ['rootfs', 0x900000, 0x2d40000, 0xb400, 0x100],
+    ['rootfs_1', 0x3640000, 0x2d40000, 0xb400, 0x100],
+    ['pdt_data', 0x6380000, 0x900000, 0x1fc0, 0x400],
+    ['pdt_data_1', 0x6c80000, 0x900000, 0x1fc0, 0x400],
+    ['exp', 0x7580000, 0x100000, 0x200, 0x200]
+]);
+
 const RT3_MIBIB_XL_DROP = ['rootfs_1', 'pdt_data', 'pdt_data_1', 'exp', 'plugin'];
 
 // single: false = OEM dual, true = 80 MiB big partition, 'xl' = 116 MiB.
-function rt3BuildMibib(single) {
+// baseRows: the OEM table of the model (RT3_MIBIB_ROWS by default).
+function rt3BuildMibib(single, baseRows) {
     const BLOCK = 0x20000, PAGE = 0x800;
     const xl = single === 'xl';
-    const rows = RT3_MIBIB_ROWS
+    const rows = (baseRows || RT3_MIBIB_ROWS)
         .filter(r => !(single && r[0] === 'rootfs_1') && !(xl && RT3_MIBIB_XL_DROP.includes(r[0])))
         .map(r => (single && r[0] === 'rootfs') ?
             (xl ? ['rootfs', 0x900000, 0x7400000, 0x1cf00, 0x100] : ['rootfs', 0x900000, 0x5000000, 0x13f00, 0x100]) : r);
@@ -1653,6 +1665,11 @@ function rt3BuildMibib(single) {
 }
 
 // ==============================
+function rt3IsNx54() {
+    return typeof APP_STATE !== 'undefined' && !!APP_STATE.sysinfo && !!APP_STATE.sysinfo.board &&
+        APP_STATE.sysinfo.board.family === 'NX54';
+}
+
 // 文件上传组件类
 // ==============================
 
@@ -1701,10 +1718,11 @@ class FileUploadComponent {
                                     <p id="mibibLayoutNow"></p>
                                     <p>${APP_STATE.lang === 'zh-cn' ? '可直接生成分区表，无需自备文件：' : 'Generate a partition table here instead of choosing a file:'}</p>
                                     <button type="button" class="button" id="mibibPresetDual">${APP_STATE.lang === 'zh-cn' ? '原厂双系统' : 'OEM dual system'}</button>
+                                    ${rt3IsNx54() ? `                                    <p>${APP_STATE.lang === 'zh-cn' ? 'NX54 只有原厂双系统分区表（两个 45.25 MiB rootfs）。写入后 rootfs 区域里的现有系统可能失效：请先在“闪存备份”中导出 rootfs / rootfs_1。写入分区表后须重启，然后再写入系统。' : 'The NX54 only has the OEM dual table (two 45.25 MiB rootfs slots). Writing it may invalidate the systems in the rootfs area: export rootfs / rootfs_1 from Flash Backup first. Reboot after writing the table, then write a system.'}</p>` : `
                                     <button type="button" class="button" id="mibibPresetSingle">${APP_STATE.lang === 'zh-cn' ? '大分区（单 rootfs 80 MiB）' : 'Big partition (one 80 MiB rootfs)'}</button>
                                     <button type="button" class="button" id="mibibPresetSingleXl">${APP_STATE.lang === 'zh-cn' ? '超大分区（单 rootfs 116 MiB）' : 'Extra-large partition (one 116 MiB rootfs)'}</button>
                                     <p>${APP_STATE.lang === 'zh-cn' ? '超大分区还会占用原厂的 pdt_data、pdt_data_1、exp、plugin 分区（原厂配置和插件）。想回原厂固件，请先在“闪存备份”中导出这四个分区。' : 'The extra-large partition also takes the OEM pdt_data, pdt_data_1, exp and plugin partitions (OEM settings and plugins). To return to OEM firmware later, export these four partitions in Flash Backup first.'}</p>
-                                    <p>${APP_STATE.lang === 'zh-cn' ? '切换后，rootfs 区域里现有的系统都会失效：请先在“闪存备份”中导出 rootfs / rootfs_1。切换到大分区前，默认启动槽必须是物理第1区（0x900000）。大分区只接受第三方系统，原厂固件请切回原厂双系统分区表后再写。写入分区表后须重启，然后再写入系统。' : 'Switching invalidates every system in the rootfs area: export rootfs / rootfs_1 from Flash Backup first. Before switching to the big partition the default boot slot must be physical slot 1 (0x900000). The big partition accepts third-party systems only; restore the OEM dual table to write OEM firmware. Reboot after writing the table, then write a system.'}</p>
+                                    <p>${APP_STATE.lang === 'zh-cn' ? '切换后，rootfs 区域里现有的系统都会失效：请先在“闪存备份”中导出 rootfs / rootfs_1。切换到大分区前，默认启动槽必须是物理第1区（0x900000）。大分区只接受第三方系统，原厂固件请切回原厂双系统分区表后再写。写入分区表后须重启，然后再写入系统。' : 'Switching invalidates every system in the rootfs area: export rootfs / rootfs_1 from Flash Backup first. Before switching to the big partition the default boot slot must be physical slot 1 (0x900000). The big partition accepts third-party systems only; restore the OEM dual table to write OEM firmware. Reboot after writing the table, then write a system.'}</p>`}
                                 </div>` : ''}
                                 ${pageName === 'uboot' ? `<div class="card-hint-section">
                                     <p id="ubootBuildNow"></p>
@@ -1993,14 +2011,16 @@ class FileUploadComponent {
                 now.textContent = (zh ? '当前分区表：' : 'Current table: ') + (names[layout.mode] || layout.mode || '?') + mib;
             }).catch(() => {});
         }
-        const presets = { mibibPresetDual: [false, 'mibib-oem-dual.bin'], mibibPresetSingle: [true, 'mibib-big-rootfs.bin'], mibibPresetSingleXl: ['xl', 'mibib-xl-rootfs.bin'] };
+        const presets = rt3IsNx54() ? { mibibPresetDual: [false, 'mibib-nx54-oem-dual.bin'] } :
+            { mibibPresetDual: [false, 'mibib-oem-dual.bin'], mibibPresetSingle: [true, 'mibib-big-rootfs.bin'], mibibPresetSingleXl: ['xl', 'mibib-xl-rootfs.bin'] };
+        const baseRows = rt3IsNx54() ? RT3_MIBIB_ROWS_NX54 : RT3_MIBIB_ROWS;
         Object.keys(presets).forEach(id => {
             const button = document.getElementById(id);
             if (!button) return;
             button.addEventListener('click', () => {
                 if (this.isUploading) return;
                 const [single, name] = presets[id];
-                this.handleFileSelect(new File([rt3BuildMibib(single)], name, { type: 'application/octet-stream' }));
+                this.handleFileSelect(new File([rt3BuildMibib(single, baseRows)], name, { type: 'application/octet-stream' }));
             });
         });
     }
@@ -2254,7 +2274,7 @@ class FileUploadComponent {
         const isMibibPage = pageName === 'mibib';
         const isInitramfsPage = pageName === 'initramfs';
         const family = typeof APP_STATE !== 'undefined' && APP_STATE.sysinfo && APP_STATE.sysinfo.board && APP_STATE.sysinfo.board.family;
-        if (['HW-A', 'HW-B', 'HW-C', 'HW-D'].includes(family) && ['uboot', 'art', 'cdt', 'ptable'].includes(pageName) && !this.commitToken) return;
+        if (['HW-A', 'HW-B', 'HW-C', 'HW-D', 'NX54'].includes(family) && ['uboot', 'art', 'cdt', 'ptable'].includes(pageName) && !this.commitToken) return;
 
         if (isMibibPage) {
             window.location.href = '/';

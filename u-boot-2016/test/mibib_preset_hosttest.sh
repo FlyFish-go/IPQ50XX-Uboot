@@ -9,3 +9,6 @@ node test/mibib_preset_gen.js failsafe/fsdata/main.js "$dir"
 gcc -std=gnu99 -Wall -Wextra -DRT3_MIBIB_HOST_TEST -Itest/rt3000_b_layout_stubs -Iinclude -Itest \
   -o "$dir/t" test/mibib_preset_hosttest.c failsafe/modules/rt3000_mibib.c
 "$dir/t" "$dir/dual.bin" "$dir/single.bin" "$dir/xl.bin"
+gcc -std=gnu99 -Wall -Wextra -DRT3_MIBIB_HOST_TEST -DCONFIG_H3C_LAYOUT_NX54 -Itest/rt3000_b_layout_stubs -Iinclude -Itest \
+  -o "$dir/t54" test/mibib_preset_hosttest.c failsafe/modules/rt3000_mibib.c
+"$dir/t54" "$dir/nx54-dual.bin" "$dir/dual.bin"
