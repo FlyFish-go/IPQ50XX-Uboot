@@ -5,6 +5,21 @@
 #include <string.h>
 
 #define H3C_HW_A_BUTTONS_HOST_TEST 1
+#ifdef H3C_HW_A_BUTTONS_HOST_TEST_NX54
+#define T_RESET 38
+#define T_WPS 27
+#define T_RESET_S "38"
+#define T_WPS_S "27"
+#define T_WPS_NAME "WPS/MESH"
+#define T_LABEL "NX54"
+#else
+#define T_RESET 27
+#define T_WPS 38
+#define T_RESET_S "27"
+#define T_WPS_S "38"
+#define T_WPS_NAME "WPS/MESH"
+#define T_LABEL "HW-A"
+#endif
 typedef uint32_t u32;
 #define GPIO_CONFIG_ADDR(gpio) (0x1000U + (gpio) * 0x10U)
 #define GPIO_IN_OUT_ADDR(gpio) (0x2000U + (gpio) * 0x10U)
@@ -60,10 +75,10 @@ static void writel(uint32_t value, void *address)
 {
 	uintptr_t index = (uintptr_t)address;
 	assert(index < sizeof(registers) / sizeof(registers[0]));
-	if (index == GPIO_IN_OUT_ADDR(27) || index == GPIO_IN_OUT_ADDR(38))
+	if (index == GPIO_IN_OUT_ADDR(T_RESET) || index == GPIO_IN_OUT_ADDR(T_WPS))
 		output_writes++;
-	else if (index == GPIO_CONFIG_ADDR(27) ||
-		 index == GPIO_CONFIG_ADDR(38))
+	else if (index == GPIO_CONFIG_ADDR(T_RESET) ||
+		 index == GPIO_CONFIG_ADDR(T_WPS))
 		config_writes++;
 	registers[index] = value;
 }
@@ -104,7 +119,7 @@ static void udelay(unsigned int usec)
 		led_trace[delay_calls - 1] = (led_red ? 1U : 0U) |
 			(led_green ? 2U : 0U);
 	if (release_after && delay_calls == release_after)
-		registers[GPIO_IN_OUT_ADDR(27)] = 1;
+		registers[GPIO_IN_OUT_ADDR(T_RESET)] = 1;
 }
 
 static void httpd_register_uri_handler(struct httpd_instance *inst,
@@ -127,10 +142,10 @@ static void run_get(int reset_level, int wps_level)
 	unsigned int reads_before = input_reads;
 
 	memset(&response, 0, sizeof(response));
-	registers[GPIO_IN_OUT_ADDR(27)] = reset_level;
-	registers[GPIO_IN_OUT_ADDR(38)] = wps_level;
-	registers[GPIO_CONFIG_ADDR(27)] = 0xc1U | (1U << 20);
-	registers[GPIO_CONFIG_ADDR(38)] = 0xc1U | (1U << 21);
+	registers[GPIO_IN_OUT_ADDR(T_RESET)] = reset_level;
+	registers[GPIO_IN_OUT_ADDR(T_WPS)] = wps_level;
+	registers[GPIO_CONFIG_ADDR(T_RESET)] = 0xc1U | (1U << 20);
+	registers[GPIO_CONFIG_ADDR(T_WPS)] = 0xc1U | (1U << 21);
 
 	registered_handler(HTTP_CB_NEW, &request, &response);
 
@@ -142,25 +157,25 @@ static void run_get(int reset_level, int wps_level)
 	assert(config_writes == writes_before + 2);
 	assert(input_reads == reads_before + 2);
 	assert(output_writes == 0);
-	assert((registers[GPIO_CONFIG_ADDR(27)] & 0x3U) == GPIO_PULL_UP);
-	assert((registers[GPIO_CONFIG_ADDR(38)] & 0x3U) == GPIO_PULL_UP);
-	assert((registers[GPIO_CONFIG_ADDR(27)] & ((1U << 9) | (0xfU << 2))) == 0);
-	assert((registers[GPIO_CONFIG_ADDR(38)] & ((1U << 9) | (0xfU << 2))) == 0);
-	assert(((registers[GPIO_CONFIG_ADDR(27)] >> 6) & 0x7U) == GPIO_8MA);
-	assert(((registers[GPIO_CONFIG_ADDR(38)] >> 6) & 0x7U) == GPIO_8MA);
+	assert((registers[GPIO_CONFIG_ADDR(T_RESET)] & 0x3U) == GPIO_PULL_UP);
+	assert((registers[GPIO_CONFIG_ADDR(T_WPS)] & 0x3U) == GPIO_PULL_UP);
+	assert((registers[GPIO_CONFIG_ADDR(T_RESET)] & ((1U << 9) | (0xfU << 2))) == 0);
+	assert((registers[GPIO_CONFIG_ADDR(T_WPS)] & ((1U << 9) | (0xfU << 2))) == 0);
+	assert(((registers[GPIO_CONFIG_ADDR(T_RESET)] >> 6) & 0x7U) == GPIO_8MA);
+	assert(((registers[GPIO_CONFIG_ADDR(T_WPS)] >> 6) & 0x7U) == GPIO_8MA);
 	assert(strstr(response.data, "\"read_only\":true"));
 	assert(strstr(response.data, "\"action_taken\":false"));
-	assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":27"));
-	assert(strstr(response.data, "\"name\":\"WPS/MESH\",\"gpio\":38"));
+	assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":" T_RESET_S ""));
+	assert(strstr(response.data, "\"name\":\"" T_WPS_NAME "\",\"gpio\":" T_WPS_S ""));
 	assert(strstr(response.data, "\"active_low\":true"));
 	if (reset_level == 0)
-		assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":27,\"level\":0,\"active_low\":true,\"pressed\":true"));
+		assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":" T_RESET_S ",\"level\":0,\"active_low\":true,\"pressed\":true"));
 	else
-		assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":27,\"level\":1,\"active_low\":true,\"pressed\":false"));
+		assert(strstr(response.data, "\"name\":\"RESET\",\"gpio\":" T_RESET_S ",\"level\":1,\"active_low\":true,\"pressed\":false"));
 	if (wps_level == 0)
-		assert(strstr(response.data, "\"name\":\"WPS/MESH\",\"gpio\":38,\"level\":0,\"active_low\":true,\"pressed\":true"));
+		assert(strstr(response.data, "\"name\":\"" T_WPS_NAME "\",\"gpio\":" T_WPS_S ",\"level\":0,\"active_low\":true,\"pressed\":true"));
 	else
-		assert(strstr(response.data, "\"name\":\"WPS/MESH\",\"gpio\":38,\"level\":1,\"active_low\":true,\"pressed\":false"));
+		assert(strstr(response.data, "\"name\":\"" T_WPS_NAME "\",\"gpio\":" T_WPS_S ",\"level\":1,\"active_low\":true,\"pressed\":false"));
 }
 
 int main(void)
@@ -184,24 +199,24 @@ int main(void)
 	assert(output_writes == 0);
 	/* No press does not flash or disturb the initialized steady-green state. */
 	led_green = 1; led_red = 0; delay_calls = 0; trace_led = 1;
-	registers[GPIO_IN_OUT_ADDR(27)] = 1;
+	registers[GPIO_IN_OUT_ADDR(T_RESET)] = 1;
 	assert(h3c_hw_a_reset_held_3s() == 0);
 	assert(delay_calls == 0 && led_green && !led_red);
 
 	/* Early release cancels and restores steady green after a partial pattern. */
-	registers[GPIO_IN_OUT_ADDR(27)] = 0; delay_calls = 0; release_after = 75;
+	registers[GPIO_IN_OUT_ADDR(T_RESET)] = 0; delay_calls = 0; release_after = 75;
 	assert(h3c_hw_a_reset_held_3s() == 0);
 	assert(delay_calls == 75 && led_green && !led_red);
 	for (unsigned int i = 0; i < 75; i++)
 		assert(led_trace[i] == (i % 100 < 50 ? 1U : 0U));
 
 	/* Full hold gives exactly three 0.5s red pulses, then green and a latched decision. */
-	registers[GPIO_IN_OUT_ADDR(27)] = 0; delay_calls = 0; release_after = 0;
+	registers[GPIO_IN_OUT_ADDR(T_RESET)] = 0; delay_calls = 0; release_after = 0;
 	assert(h3c_hw_a_reset_held_3s() == 1);
 	assert(delay_calls == 300 && led_green && !led_red);
 	for (unsigned int i = 0; i < 300; i++)
 		assert(led_trace[i] == (i % 100 < 50 ? 1U : 0U));
 	assert(output_writes == 0);
-	puts("HW-A buttons observation and RESET hold host tests: PASS");
+	puts(T_LABEL " buttons observation and RESET hold host tests: PASS");
 	return 0;
 }

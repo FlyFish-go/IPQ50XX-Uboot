@@ -14,8 +14,21 @@
 #include <string.h>
 #endif
 
+#if defined(CONFIG_H3C_LAYOUT_NX54) || defined(H3C_HW_A_BUTTONS_HOST_TEST_NX54)
+/* NX54 swaps the two HW-A pins: RESET GPIO38, WPS/MESH GPIO27 (both active-low;
+ * from the Art-Chen NX54 OpenWrt DTS, to be press-tested). */
+#define H3C_HW_A_RESET_GPIO 38
+#define H3C_HW_A_WPS_GPIO 27
+#define H3C_HW_A_RESET_GPIO_STR "38"
+#define H3C_HW_A_WPS_GPIO_STR "27"
+#define H3C_HW_A_WPS_NAME "WPS/MESH"
+#else
 #define H3C_HW_A_RESET_GPIO 27
 #define H3C_HW_A_WPS_GPIO 38
+#define H3C_HW_A_RESET_GPIO_STR "27"
+#define H3C_HW_A_WPS_GPIO_STR "38"
+#define H3C_HW_A_WPS_NAME "WPS/MESH"
+#endif
 
 #define H3C_TLMM_PULL_MASK	(0x3U)
 #define H3C_TLMM_FUNC_MASK	(0xfU << 2)
@@ -102,9 +115,10 @@ static void buttons_h3c_hw_a_handler(enum httpd_uri_handler_status status,
 	h3c_hw_a_sample_buttons(&reset_level, &wps_level);
 	snprintf(h3c_hw_a_buttons_json, sizeof(h3c_hw_a_buttons_json),
 		 "{\"read_only\":true,\"action_taken\":false,\"buttons\":["
-		 "{\"name\":\"RESET\",\"gpio\":27,\"level\":%d,"
-		 "\"active_low\":true,\"pressed\":%s},"
-		 "{\"name\":\"WPS/MESH\",\"gpio\":38,\"level\":%d,"
+		 "{\"name\":\"RESET\",\"gpio\":" H3C_HW_A_RESET_GPIO_STR
+		 ",\"level\":%d,\"active_low\":true,\"pressed\":%s},"
+		 "{\"name\":\"" H3C_HW_A_WPS_NAME "\",\"gpio\":"
+		 H3C_HW_A_WPS_GPIO_STR ",\"level\":%d,"
 		 "\"active_low\":true,\"pressed\":%s}]}",
 		 reset_level, reset_level == GPIO_OUT_LOW ? "true" : "false",
 		 wps_level, wps_level == GPIO_OUT_LOW ? "true" : "false");

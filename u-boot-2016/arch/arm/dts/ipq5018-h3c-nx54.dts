@@ -95,7 +95,8 @@
 		};
 	};
 
-	/* As HW-A: green GPIO24 and red GPIO23, active-high (to be confirmed on NX54). */
+	/* Status LED as HW-A: green GPIO24, red GPIO23, active-high. The WAN LED
+	 * (green GPIO46) belongs to the OS and is left untouched here. */
 	leds {
 		compatible = "gpio-leds";
 		status-green {
