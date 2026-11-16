@@ -67,7 +67,7 @@ U-Boot 源码继续使用上游的 `u-boot-2016/` 位置，便于比较和整理
 
 ## 配套工具目录
 
-新版 BootBridge 位于 `tools/bootbridge2/`，旧版 `tools/bootbridge/` 仅供历史追溯。`site/build.py` 将新版生成器构建到 `site/dist/bootbridge/`，由 `.github/workflows/pages.yml` 与指南站一并部署，不再使用旧仓库的 `gh-pages`。私有固件生成的公开计划、规则包、来源审计和 SHA256SUMS 在 `tools/bootbridge2/web/release/BB2-R6/`；完整基础镜像、官方包和样机备份不进入仓库或 Pages。固件拆包工具的页面也放在同一站点的「工具」导航。
+新版 BootBridge 位于 `tools/bootbridge2/`，旧版 `tools/bootbridge/` 仅供历史追溯。`site/build.py` 将新版生成器构建到 `site/dist/bootbridge/`，由 `.github/workflows/pages.yml` 与指南站一并部署，不再使用旧仓库的 `gh-pages`。私有固件生成的公开计划、规则包、来源审计和 SHA256SUMS 在 `tools/bootbridge2/web/release/BB2-R7/`；完整基础镜像、官方包和样机备份不进入仓库或 Pages。固件拆包工具的页面也放在同一站点的「工具」导航。
 
 安装规则、U-Boot 候选和共享 NAND 信息通过精确版本与摘要清单关联。同仓便于同时审阅这些变化，工具版本仍可独立推进。
 

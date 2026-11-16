@@ -42,7 +42,7 @@ python3 -m http.server -d site/dist 8000
 
 浏览器打开 <http://localhost:8000/>。构建时会检查所有站内链接和锚点，坏了就报错。
 
-BootBridge 与固件拆包工具共用本站的「工具」入口。BootBridge 的公开发布输入在 `tools/bootbridge2/web/release/BB2-R6/`，附 SHA256SUMS；构建站点不需要厂商固件、ARM 工具链或私有目录。NX54 当前显示为“测试中”（`site/data/bootbridge.json` 的 `nx54`：`hidden` 隐藏，`testing` 测试中）。发布输入的来源审计与更新方法见 [BootBridge v2](tools/bootbridge2/README.md)。
+BootBridge 与固件拆包工具共用本站的「工具」入口。BootBridge 的公开发布输入在 `tools/bootbridge2/web/release/BB2-R7/`，附 SHA256SUMS；构建站点不需要厂商固件、ARM 工具链或私有目录。NX54 当前显示为“测试中”（`site/data/bootbridge.json` 的 `nx54`：`hidden` 隐藏，`testing` 测试中）。发布输入的来源审计与更新方法见 [BootBridge v2](tools/bootbridge2/README.md)。
 
 ## 添加一个机型
 
