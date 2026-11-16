@@ -165,10 +165,16 @@ with tempfile.TemporaryDirectory(prefix='h3c-boot-runtime-') as td:
   'B':['CONFIG_TARGET_IPQ5018_H3C_RT3000_B'],
   'C':['CONFIG_TARGET_IPQ5018_H3C_HW_C'],
   'D':['CONFIG_TARGET_IPQ5018_H3C_HW_D'],
+  'NX54':['CONFIG_TARGET_IPQ5018_H3C_HW_A','CONFIG_H3C_LAYOUT_NX54'],
  }
  for name,defs in profiles.items():
   cmd=['cc','-std=c99','-Wall','-Wextra','-Werror','-DCONFIG_H3C_RELEASE_SYSTEM_DEFAULT','-DCONFIG_H3C_NAND_ECC_COMPAT','-DCONFIG_DISABLE_SIGNED_BOOT']+['-D'+v for v in defs]+['-I'+str(p),'-I'+str(r/'include'),str(r/'lib/h3c_boot_policy.c'),str(r/'lib/h3c_boot_policy_core.c'),str(p/'driver.c'),'-o',str(p/'test')]
   subprocess.run(cmd,check=True)
   out=subprocess.run([str(p/'test')],check=True,capture_output=True,text=True)
+  if name == 'NX54':
+   assert 'MESH/WPS flash 1' in out.stdout
+   assert 'MESH/WPS released after 1 flash(es)' in out.stdout
+   assert 'RESET flash 1' in out.stdout
+   assert 'RESET released after 1 flash(es)' in out.stdout
   results.append({'profile':name,'status':'PASS','stdout':out.stdout})
 print(json.dumps(results,indent=2))

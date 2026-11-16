@@ -19,6 +19,13 @@ static int release_dispatch_active;
 static int release_dispatch_recovered;
 static int requested_blinks;
 
+#ifdef CONFIG_H3C_LAYOUT_NX54
+#define SELECTOR_LABEL "RESET/MESH"
+static const char *selector_key = "RESET/MESH";
+#else
+#define SELECTOR_LABEL "RESET"
+#endif
+
 void h3c_boot_request_blinks(int blinks)
 {
  requested_blinks = blinks;
@@ -40,35 +47,35 @@ static int release_blink_command(int blinks, char *cmd, size_t size)
  switch (h3c_boot_blink_action(blinks, dual, single)) {
  case H3C_BLINK_DEFAULT:
   if (single)
-   puts("H3C RESET: single-rootfs layout; booting the only system\n");
+   puts("H3C " SELECTOR_LABEL ": single-rootfs layout; booting the only system\n");
   snprintf(cmd, size, "%s", "bootipq");
   return 0;
  case H3C_BLINK_WEB:
   if (single)
-   puts("H3C RESET: single-rootfs layout has no slot 2; enter web recovery\n");
+   puts("H3C " SELECTOR_LABEL ": single-rootfs layout has no slot 2; enter web recovery\n");
   else if (!dual)
-   puts("H3C RESET: unsupported rootfs layout; enter web recovery\n");
+   puts("H3C " SELECTOR_LABEL ": unsupported rootfs layout; enter web recovery\n");
   return -1;
  default:
   break;
  }
  if (rt3_layout_default_target(&layout, blinks - 1, &part)) {
-  puts("H3C RESET: physical slot not resolvable; enter web recovery\n");
+  puts("H3C " SELECTOR_LABEL ": physical slot not resolvable; enter web recovery\n");
   return -1;
  }
- printf("H3C RESET: physical slot %d = %s at 0x%llx\n", blinks, part->name,
+ printf("H3C " SELECTOR_LABEL ": physical slot %d = %s at 0x%llx\n", blinks, part->name,
         (unsigned long long)part->offset);
  r = rt3_boot_default_set_physical(blinks - 1, name);
  if (r < 0) {
-  puts("H3C RESET: BOOTCONFIG write incomplete; enter web recovery\n");
+  puts("H3C " SELECTOR_LABEL ": BOOTCONFIG write incomplete; enter web recovery\n");
   return -1;
  }
  if (r == 0)
-  printf("H3C RESET: default is now physical slot %d\n", blinks);
+  printf("H3C " SELECTOR_LABEL ": default is now physical slot %d\n", blinks);
  else if (r == 2)
-  printf("H3C RESET: physical slot %d was already the default\n", blinks);
+  printf("H3C " SELECTOR_LABEL ": physical slot %d was already the default\n", blinks);
  else
-  puts("H3C RESET: default not changed (refused before any write); booting this slot once\n");
+  puts("H3C " SELECTOR_LABEL ": default not changed (refused before any write); booting this slot once\n");
  snprintf(cmd, size, "bootipq %s", part->name);
  return 0;
 #else
@@ -119,10 +126,21 @@ static int buttons_level(enum h3c_boot_board board)
 {
  int reset = h3c_boot_reset_gpio(board), mesh = h3c_boot_mesh_gpio(board);
  int level = gpio_get_value(reset);
+#ifdef CONFIG_H3C_LAYOUT_NX54
+ /* On NX54 GPIO27 is MESH/WPS and GPIO38 is RESET. Record the key
+  * already sampled; do not introduce another GPIO read or alter priority. */
+ if (level == 0)
+  selector_key = "MESH/WPS";
+#endif
  /* Only a clean "released" RESET consults Mesh; an invalid read must
   * reach the sampler unchanged so it fails closed to web rescue. */
- if (mesh >= 0 && level == 1)
+ if (mesh >= 0 && level == 1) {
   level = gpio_get_value(mesh);
+#ifdef CONFIG_H3C_LAYOUT_NX54
+  if (level == 0)
+   selector_key = "RESET";
+#endif
+ }
  return level;
 }
 
@@ -184,7 +202,11 @@ static int release_reset_blinks(enum h3c_boot_board board)
   if (t >= (ulong)(blinks + 1) * 1000UL) {
    blinks++;
    led_on("power_led");
-   printf("RESET flash %d\n", blinks);
+#ifdef CONFIG_H3C_LAYOUT_NX54
+   printf("%s flash %d\n", selector_key, blinks);
+#else
+   printf(SELECTOR_LABEL " flash %d\n", blinks);
+#endif
    if (blinks >= 3) {
     /* Show the third flash in full: web rescue lights green at once
      * and would hide a red that stays on. */
@@ -206,9 +228,15 @@ static int release_reset_blinks(enum h3c_boot_board board)
   led_off("system_led"); mdelay(200);
   led_on("system_led"); mdelay(200);
  }
- if (blinks)
-  printf("RESET released after %d flash(es): physical slot %d requested\n",
+ if (blinks) {
+#ifdef CONFIG_H3C_LAYOUT_NX54
+  printf("%s released after %d flash(es): physical slot %d requested\n",
+         selector_key, blinks, blinks);
+#else
+  printf(SELECTOR_LABEL " released after %d flash(es): physical slot %d requested\n",
          blinks, blinks);
+#endif
+ }
  return blinks;
 }
 
