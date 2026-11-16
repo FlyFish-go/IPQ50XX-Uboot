@@ -1,0 +1,41 @@
+vendor: Ruijie
+family: Ruijie RG-MA3063
+summary: Hardware version 3.00 (stock CDT AP-MP03.5-C1). There is only one third-party device tree and confidence is low. Nothing was verified on real hardware.
+brief: Only one third-party device tree, low confidence
+hardware:
+- label: Board class
+  value: AP-MP03.5-C1, machid `0x8040004`
+- label: Flash
+  value: 128 MiB NAND (three types seen)
+- label: Network
+  value: GE port (LAN) + QCA8337 switch, reset GPIO26
+- label: Serial console
+  value: GPIO20/21 (different from GPIO28/29 on V1.00)
+warnings:
+- 'Low confidence: the device tree comes from a single third-party file and we have not seen the stock device tree for this version.'
+- 'The LED GPIOs are suspect: the third-party file uses GPIO38 for an LED, while V1.00 uses 19/17/22/20 on real hardware.'
+- The hardware version is determined by the machid in the CDT, not by the label on the bottom of the router or by productid. Only machid `0x8040004` is this page. V4 and RG-MA3064 (`0x8040104`) have no device tree and no build yet (listed as planned).
+- 'As on the verified V1.00: stock U-Boot has an `ipqboot_num` boot counter that this U-Boot does not reproduce. Never run `bootconfig set all`.'
+tested:
+- 'Offline checks: build succeeds; the device tree was compared item by item with the third-party device tree and the upstream OpenWrt device tree'
+not_tested:
+- RAM trial (serial banner, network port, rescue page)
+- Flash detection and ECC
+- Buttons and LEDs
+- Stock partition table and boot slot mechanism
+- Secure boot state
+- Whether `ipqboot_num` is present as well
+- Whether MIBIB / the partition table is the same as on V1.00
+slots:
+  note: 'Assumed to be the same as the verified V1.00: BOOTCONFIG dual system. There is no source for V3 itself.'
+ttl:
+  pins: GPIO20/21 (different from GPIO28/29 on V1.00)
+notes:
+  prepare: 'Confirm that your unit is V3: the hardware version is determined by the machid in the CDT (it should be `0x8040004`), not by the label on the bottom of the router. V4 and RG-MA3064 do not apply.'
+  rescue: '**Do not** run `bootconfig set all`. The LED GPIOs are suspect; record what each LED actually does.'
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+- text: Submit a trial report
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml
+aliases: [RG-MA3063 hardware version 3.00, mp03.5-c1]

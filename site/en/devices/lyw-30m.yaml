@@ -1,0 +1,40 @@
+vendor: LYW (China Unicom)
+family: China Unicom / LYW LYW-30M
+summary: Stock hardware of the China Unicom VS010 family, flashed on a real unit and passed cold boot; LEDs and buttons were not tested item by item.
+brief: VS010 and other same-hardware models were not verified unit by unit
+hardware:
+- label: Flash
+  value: NAND (DS35M1GA, ECC 4 bits, detected automatically by U-Boot)
+- label: Board class
+  value: AP-MP03.3, machid `0x8040002`
+- label: Network
+  value: GE port (LAN) + QCA8337 switch (WAN and remaining LAN ports)
+- label: Secure boot
+  value: Not enabled on the test unit
+tested:
+- Both APPSBL copies written with the rescue page and read back identically
+- Passed 10 cold boots; after fixing LED initialisation and reflashing, passed another 5 cold boots
+- 'Network ports: the rescue page opens on both the GE port and the switch ports'
+- Booted from the second boot chain (APPSBL_1) twice, then twice after setting the flag back to 0
+- 'BOOTCONFIG protection: refused to switch when the target copy was empty'
+not_tested:
+- Reset and WPS buttons
+- Item-by-item check of LED colours and blink patterns
+- One-click install from the stock system over SSH
+warnings:
+- 'Same hardware but not verified unit by unit: China Unicom VS010, VS010 MAX and China Telecom CMLYQ706X. These models use the same hardware as the LYW-30M, **not verified on a real unit**. No hardware information at all is available for the China Telecom CMLYQ706X yet; only the model name matches, and this is not confirmed.'
+- Some VS010 MAX batches may use an RTL8366 / RTL8367 series switch instead of the QCA8337. In that case the network port will not work with this U-Boot. Always run a RAM trial before flashing and check that the network port and rescue page work.
+- A China Unicom VS010 whose CDT was changed by a third-party tool (such as uBootKit) may not have board ID `0x8040002` and is not supported by this build.
+slots:
+  note: Stock uses BOOTCONFIG to select the boot slot. On the test unit the second boot chain is empty and U-Boot refuses to point the flag at an empty copy, so in practice only the first chain runs.
+ttl:
+  port: Stock LAN port (either the GE port or a switch port)
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+aliases: [LYW-30M, China Unicom VS010, China Unicom VS010 MAX, China Telecom CMLYQ706X]

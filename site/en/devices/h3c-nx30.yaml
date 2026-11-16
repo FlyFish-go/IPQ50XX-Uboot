@@ -1,0 +1,35 @@
+family: H3C NX30 family
+summary: 'H3C NX30 family. U-Boot v0.2.0 is released, with one file per hardware group and automatic flash type detection. No disassembly is needed: install with the BootBridge web tool in your browser.'
+hardware:
+- label: Hardware group
+  value: HW-D
+- label: Flash
+  value: NAND (several types, ECC detected automatically by U-Boot)
+- label: Tested on real hardware
+  value: 'NX30: full procedure'
+slots:
+  capacities:
+  - name: Dual system, per slot
+    bytes: 41943040
+  - name: Single system, large partition
+    bytes: 83886080
+  - name: Single system, extra-large partition
+    bytes: 121634816
+  capacity_source: The 40 / 80 / 116 MiB layouts come from u-boot-2016/lib/rt3000_b_layout.c. Check the current layout on the rescue page.
+  note: Stock dual system, with BOOTCONFIG selecting the boot slot. You can optionally merge the two slots into one large partition to give third-party firmware more space.
+rescue:
+  how: Power off, hold Reset and power on, release after the red LED has flashed 3 times
+slot_select: 'Hold Reset or Mesh/WPS while powering on: release after 1 red LED flash to boot slot 1, or after 2 flashes to boot slot 2 and set it as the default.'
+recovery:
+- BootBridge makes a full backup before installation. In the bridge system you can go back to stock at any time.
+- If this project's U-Boot is installed, the rescue page can write backed-up partitions back.
+- If the bootloader itself is damaged, you need a TTL serial console or a programmer. First contact the maintainer in the QQ group 1131957442.
+links:
+- text: New BootBridge (install v0.2.0 directly)
+  url: /bootbridge/
+- text: v0.2.0 release notes
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0
+- text: 'Matching firmware: QSDK 11.5'
+  url: https://github.com/FlyFish-go/H3C-RT3000-Product-R1/releases
+- text: 'Matching firmware: OpenWrt + NSS'
+  url: https://github.com/FlyFish-go/H3C-Magic-NSS/releases

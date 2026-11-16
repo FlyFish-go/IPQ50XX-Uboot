@@ -3,6 +3,9 @@
 // 2. The current heading in the "on this page" list.
 // 3. The model filter on the model list (devices/).
 (function () {
+  var en = document.documentElement.getAttribute('data-site-lang') === 'en';
+  var say = { copy: en ? 'Copy' : '复制', copied: en ? 'Copied' : '已复制',
+              selected: en ? 'Selected, press Ctrl+C' : '已选中，按 Ctrl+C' };
   document.querySelectorAll('.term:not(.out)').forEach(function (term) {
     var pre = term.querySelector('pre');
     var head = term.querySelector('.term-h');
@@ -10,12 +13,12 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'copy';
-    btn.textContent = '复制';
+    btn.textContent = say.copy;
     btn.addEventListener('click', function () {
       var text = pre.innerText.replace(/\n+$/, '');
       var done = function (msg) {
         btn.textContent = msg;
-        setTimeout(function () { btn.textContent = '复制'; }, 2000);
+        setTimeout(function () { btn.textContent = say.copy; }, 2000);
       };
       var select = function () {
         var r = document.createRange();
@@ -23,10 +26,10 @@
         var s = window.getSelection();
         s.removeAllRanges();
         s.addRange(r);
-        done('已选中，按 Ctrl+C');
+        done(say.selected);
       };
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(function () { done('已复制'); }, select);
+        navigator.clipboard.writeText(text).then(function () { done(say.copied); }, select);
       } else {
         select();
       }

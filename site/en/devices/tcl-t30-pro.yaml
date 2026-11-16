@@ -1,0 +1,38 @@
+summary: TCL T30 Pro made for operators. Both the 1A and 1.5A versions were flashed on a real unit with an older build (3bc92a2f). The newest build has not been reflashed and needs retesting.
+brief: One resistor must be removed to allow input; newest build needs retesting
+hardware:
+- label: Flash
+  value: 128 MiB NAND
+- label: Board class
+  value: AP-MP02.1, machid `0x8040000`
+- label: Network
+  value: QCA8337 switch, reset GPIO39
+- label: MAC
+  value: Stock keeps the MAC as text in the `factory` partition; U-Boot does not read or write the MAC in ART
+- label: Serial console
+  value: 1.8 V, GPIO20/21
+tested:
+- 'T30 Pro 1A and 1.5A: both flashed with the older build (3bc92a2f), both APPSBL copies written, cold boot passed'
+- 'Compared item by item with the stock U-Boot device tree: serial console, switch and reset pin match (only this project''s own LED and button nodes are added)'
+not_tested:
+- 'The newest build (LED initialisation and later): neither 1A nor 1.5A has been reflashed; reflash and cold-boot retesting are needed'
+- Reset and WPS buttons and LEDs
+- One-click install from the stock system over SSH
+- How the MAC in the stock `factory` partition is shown on the rescue page
+warnings:
+- 'There is a resistor from serial RX to GND; **remove it to allow input**: R5596 on the 1A version, R5600 on the 1.5A version.'
+- This is an operator-specific model with a different boot chain from a generic IPQ5018 and an extra `factory` partition. Check that the label on the bottom of your router says T30 Pro, and identify the 1A / 1.5A version (the two versions have different stock U-Boot).
+- The serial console is 1.8 V. A 3.3 V TTL adapter will damage the serial pins or even the main chip. Use a 1.8 V logic level or add a level shifter.
+slots:
+  note: Built for BOOTCONFIG; dual-system switching with the T30 stock partition layout was not verified item by item.
+notes:
+  wire: '**A resistor must be removed first to allow input**: a resistor connects serial RX to GND on the T30 Pro, so without removing it the serial console can only show output, not accept typing. **Remove R5596 on the 1A version, R5600 on the 1.5A version.** Check the label on the bottom of the router first to identify the version.'
+  prepare: First check that the label on the bottom of the router says T30 Pro, and note whether it is the 1A or 1.5A version (the two versions have different stock U-Boot; include this in your report).
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot

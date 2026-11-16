@@ -1,0 +1,42 @@
+vendor: China Mobile
+family: China Mobile MR3000D-CI
+summary: China Mobile MR3000D-CI was flashed on a real unit and passed 5 cold boots. LEDs and buttons were not tested.
+brief: Stock U-Boot needs the password `netpower`; LEDs and buttons not tested
+hardware:
+- label: Flash
+  value: 128 MiB NAND (ECC 8 bits, detected automatically by U-Boot)
+- label: Board class
+  value: AP-MP03.3-M1
+- label: Network
+  value: GE port (WAN) + QCA8337 switch (LAN), reset GPIO39
+- label: MAC
+  value: Read from ART, 4 addresses
+- label: Secure boot
+  value: Not enabled on the test unit
+tested:
+- Both APPSBL copies written and read back identically
+- Passed 5 cold boots (serial banner, switch, kernel, rootfs slot and LAN all normal)
+- 'BOOTCONFIG: switched rootfs to 1 and power-cycled, booted from the second slot; switched back to 0 and the bytes matched the backup'
+- Rescue page opens on both the LAN and WAN ports
+- MAC read from ART
+not_tested:
+- LEDs, Reset and WPS buttons
+- Rescue page "Firmware Update" writing rootfs (the new UBI write method is merged in the code but was not tested on a real unit here)
+- One-click install from the stock system over SSH
+warnings:
+- Stock U-Boot needs a space to interrupt autoboot, then enter the password `netpower`.
+slots:
+  note: Stock uses BOOTCONFIG to select the rootfs slot.
+ttl:
+  interrupt: Press **space** first to interrupt autoboot, then enter the password `netpower` and press Enter
+  port: LAN port (the WAN port also opens the rescue page)
+shell:
+  access: The upstream OpenWrt install instructions say the ping function in the stock web admin can be used to inject a command and open telnet. We have not tried this on our test unit.
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot

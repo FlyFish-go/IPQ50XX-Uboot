@@ -1,0 +1,113 @@
+models:
+- name: 小米 AX6000
+  display: Xiaomi AX6000
+  known: Upstream OpenWrt has a device tree. The dual-system method is the same as on the Xiaomi CR8806 and this part of the code is already written. 512 MiB RAM, 1.8 V serial console, and the flash on some units needs ECC 8 bits.
+  missing: The network is a GE PHY plus a QCA8081 connected to a switch chip; this needs to be written. The secure boot state must be checked first.
+- name: 红米 AX5400（RA74）
+  display: Redmi AX5400 (RA74)
+  known: Upstream OpenWrt has a device tree. The dual-system method is the same as on the Xiaomi CR8806. A GE PHY and SGMII are both connected to the QCA8337.
+  missing: Stock U-Boot has `is_sec_boot_enabled`, so the secure boot state must be checked first. No backup from a real unit.
+- name: ELECOM WRC-X3000GS2、WRC-X3000GST2
+  display: ELECOM WRC-X3000GS2, WRC-X3000GST2
+  known: 'Upstream OpenWrt has a device tree. The partition table is almost the same as on the China Mobile PZ-L8: BOOTCONFIG dual system plus a QCA8337.'
+  missing: 'Hardware information from a real unit: stock U-Boot environment, machid, serial console.'
+- name: I-O DATA WN-DAX3000GR
+  display: I-O DATA WN-DAX3000GR
+  known: Same as the ELECOM WRC-X3000GS2.
+  missing: Hardware information from a real unit.
+- name: 锐捷 RG-MA3063 V4、RG-MA3064
+  display: Ruijie RG-MA3063 V4, RG-MA3064
+  known: The stock CDT is `AP-MP03.5-C2` (machid `0x8040104`), BOOTCONFIG dual system.
+  missing: No device tree for this version; the serial console, network ports, LEDs and buttons are all unknown.
+- name: 中国移动 MR3000D-04
+  display: China Mobile MR3000D-04
+  known: Only one third-party device tree, which says it is "derived from the MR3000D-CI".
+  missing: How exactly it differs from the MR3000D-CI; a backup from a real unit.
+- name: 京东云 AX3000
+  display: JDCloud AX3000
+  known: The flash is eMMC (GPT partitioning), not NAND.
+  missing: All our write procedures are based on NAND; eMMC needs separate work. Environment variable location, partition table and a backup from a real unit.
+- name: 中国电信 AP301-L
+  display: China Telecom AP301-L
+  known: Same machid as the LYW LYW-30M, but a different network chip (NAPA PHY), so its network configuration cannot be copied.
+  missing: There is no hardware evidence for the RAM, flash, dual-system method or environment variable location.
+- name: SKSPRUCE AP8330C
+  display: SKSPRUCE AP8330C
+  known: Similar to the China Telecom AP301-L, but the gmac direction of the network port is the reverse of other models.
+  missing: RAM, flash, dual-system method, environment variable location.
+- name: TP-Link Archer AX55 v1
+  display: TP-Link Archer AX55 v1
+  known: Upstream OpenWrt has a device tree. Stock uses the environment variable `tp_boot_idx` to switch between the two systems.
+  missing: The code to switch based on `tp_boot_idx` is not written yet; it will be written when testers are available.
+- name: TP-Link EAP650-Outdoor v1
+  display: TP-Link EAP650-Outdoor v1
+  known: Same as the Archer AX55, uses `tp_boot_idx`.
+  missing: Same as above.
+- name: TP-Link RE700X v1
+  display: TP-Link RE700X v1
+  known: Same as the Archer AX55, uses `tp_boot_idx`.
+  missing: Same as above.
+- name: Mercusys MR80X v2
+  display: Mercusys MR80X v2
+  known: Same as the Archer AX55, uses `tp_boot_idx`.
+  missing: Same as above.
+- name: Linksys MR2000、MR5500、MX2000、MX5500、SPNMX56
+  display: Linksys MR2000, MR5500, MX2000, MX5500, SPNMX56
+  known: Upstream OpenWrt has a device tree. Stock uses the environment variable `boot_part` to switch between the two systems.
+  missing: The code to switch based on `boot_part` is not written yet.
+- name: Netgear WAX630E
+  display: Netgear WAX630E
+  known: Stock switches systems based on `boot_count`.
+  missing: The code to switch based on `boot_count` is not written yet.
+- name: 小米 CR8812、CR8816、CR8818
+  display: Xiaomi CR8812, CR8816, CR8818
+  known: The switch chip is a YT9215S.
+  missing: U-Boot has no YT9215S driver; the driver must be written first.
+- name: 小米 AX3000T v2
+  display: Xiaomi AX3000T v2
+  known: The switch chip is an AN8855.
+  missing: U-Boot has no AN8855 driver.
+- name: Lite-On WPX8324
+  display: Lite-On WPX8324
+  known: Boots from SPI NOR flash.
+  missing: All our procedures are based on NAND; NOR needs separate work.
+- name: 中兴 T5400
+  display: ZTE T5400
+  known: Upstream OpenWrt has a device tree and there is a `rootfs_1` partition.
+  missing: Almost all hardware information from a real unit.
+- name: Zyxel SCR50AXE
+  display: Zyxel SCR50AXE
+  known: Upstream OpenWrt has a device tree.
+  missing: Almost all hardware information from a real unit.
+- name: Xunison Exigo Hub D50 5G
+  display: Xunison Exigo Hub D50 5G
+  known: Upstream OpenWrt has a device tree.
+  missing: Almost all hardware information from a real unit.
+- name: GL.iNet GL-X2000
+  display: GL.iNet GL-X2000
+  known: Upstream OpenWrt has a device tree.
+  missing: Almost all hardware information from a real unit.
+- name: Yuncore AX830、AX850
+  display: Yuncore AX830, AX850
+  known: Upstream OpenWrt has a device tree and the network uses a QCA8081.
+  missing: Almost all hardware information from a real unit.
+- name: Wallys DR5018S
+  display: Wallys DR5018S
+  known: Upstream OpenWrt has a device tree and the network uses a QCA8081.
+  missing: Almost all hardware information from a real unit.
+- name: Davolink DVW-632X
+  display: Davolink DVW-632X
+  known: The method to obtain stock root will not be published until 2027-01-27.
+  missing: Wait for publication.
+- name: Linksys MX6200
+  display: Linksys MX6200
+  reason: Secure boot is enabled, so it can only run vendor-signed bootloaders and U-Boot cannot be replaced.
+- name: AVM FRITZ!Box 4050
+  display: AVM FRITZ!Box 4050
+  reason: It uses the vendor's own bootloader, not a Qualcomm QSDK U-Boot.
+- name: UniFi 6 Pro
+  display: UniFi 6 Pro
+  reason: It uses the vendor's own bootloader, not a Qualcomm QSDK U-Boot.
+- name: GL.iNet GL-B3000
+  display: GL.iNet GL-B3000
+  reason: Stock U-Boot already includes a web rescue page, so replacing it offers little benefit.

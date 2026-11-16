@@ -40,7 +40,9 @@
   function busy() { return S.file.st === 'hashing' || S.file.st === 'downloading' || S.gen.st === 'loading' || S.gen.st === 'running'; }
 
   /* ---------------- state ---------------- */
-  var langPref = store('bb.lang');
+  // Inside the guide site the page language is fixed by the site (/ or /en/).
+  var siteLang = document.documentElement.getAttribute('data-site-lang');
+  var langPref = siteLang || store('bb.lang');
   var S = {
     step: 1,
     lang: langPref === 'zh' || langPref === 'en' ? langPref : 'zh',
@@ -514,13 +516,13 @@
   function render() {
     var l = L(), d = document.documentElement;
     d.setAttribute('data-theme', S.theme); d.lang = S.lang === 'zh' ? 'zh-CN' : 'en';
-    document.title = 'BootBridge - IPQ50XX-Uboot 安装指南';
+    document.title = S.lang === 'zh' ? 'BootBridge - IPQ50XX-Uboot 安装指南' : 'BootBridge - IPQ50XX-Uboot install guide';
     var content = [null, step1, step2, step3, step4, step5, step6][S.step]();
     var keep = rendered === S.step ? window.pageYOffset : -1;
     var ae = document.activeElement, focusId = ae && ae.id, selS = null, selE = null;
     if (focusId === 'sn') { selS = ae.selectionStart; selE = ae.selectionEnd; }
     root.innerHTML = '<p class="crumb">' + l.tools + '</p><h1>BootBridge</h1>' +
-      '<div class="bb-language" role="group" aria-label="Language / 语言"><button class="btn" data-set="lang" data-val="zh" aria-pressed="' + (S.lang === 'zh') + '">中文</button> <button class="btn" data-set="lang" data-val="en" aria-pressed="' + (S.lang === 'en') + '">English</button></div>' +
+      (siteLang ? '' : '<div class="bb-language" role="group" aria-label="Language / 语言"><button class="btn" data-set="lang" data-val="zh" aria-pressed="' + (S.lang === 'zh') + '">中文</button> <button class="btn" data-set="lang" data-val="en" aria-pressed="' + (S.lang === 'en') + '">English</button></div>') +
       '<ol class="steps bb-flow">' + l.steps.map(function (s, i) {
         var n = i + 1;
         return '<li' + (n === S.step ? ' aria-current="step"' : '') + '>' + (n === S.step ? '<section class="bb-current" data-step="' + n + '">' + content + panelFoot() + '</section>' : '<button class="step-link" data-go="' + n + '">' + s[0] + '</button>') + '</li>';

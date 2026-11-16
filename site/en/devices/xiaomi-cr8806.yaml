@@ -1,0 +1,49 @@
+vendor: Xiaomi
+family: Xiaomi CR880x
+summary: 'Xiaomi CR8806 was flashed on a real unit: Xiaomi environment variable dual system, firmware flashed from the web page, passed 10 cold boots. Buttons were not tested. The CR8808, CR8809 and Redmi AX3000 are the same hardware but were not verified on a real unit.'
+brief: CR8808 and other same-hardware models not verified on a real unit; buttons not tested
+hardware:
+- label: Flash
+  value: NAND (ESMT F50D1G41LB, ECC 4 bits; U-Boot does not run serial training for this chip, as stock does)
+- label: Board class
+  value: AP-MP02.1, machid `0x8040000`
+- label: Network
+  value: QCA8337 switch, reset GPIO26
+- label: Secure boot
+  value: Not enabled on the test unit
+- label: Stock LAN address
+  value: '`192.168.31.1`'
+tested:
+- Both APPSBL copies written and read back identically
+- Passed 10 cold boots (using the second rootfs; serial banner, kernel and LAN all normal)
+- 'Xiaomi environment variable dual system: read and wrote stock environment variables, switched rootfs slots, stock system and U-Boot could read each other''s environment'
+- Rescue page "Firmware Update" wrote the other slot and switched to it; the system booted normally afterwards
+- UBI volume written and read back identically, no UBI or ECC errors
+not_tested:
+- Reset and Mesh buttons
+- The path for "mark the failed slot and reboot" on a failed boot (verified by design only)
+- Alias models Redmi / CR8808 / CR8809
+- One-click install from the stock system over SSH
+warnings:
+- 'Same hardware, not verified on a real unit: Xiaomi CR8808, CR8809 and Redmi AX3000 (RA81, M79 / M81 versions). Third-party OpenWrt projects use one device tree for all of these, and the GPIOs are the same as on the CR8806, but we have not seen their boot chains, partition tables or secure boot states. Run a RAM trial before flashing and check the stock `nvram get model`.'
+- Retail versions of some Xiaomi models may have secure boot enabled. Before installing, you must confirm that the fuse is disabled.
+slots:
+  note: Stock uses environment variables such as flag_boot_rootfs to switch between the two rootfs copies. This project's U-Boot reads and writes the same variables as stock, so a slot switch made by either the stock system or U-Boot is seen by the other. Flashing firmware from the web page writes the other slot and then switches to it.
+ttl:
+  port: LAN port
+notes:
+  interrupt: If there is no output on the serial console after power-on, the stock system may have disabled serial output. First use [XMiR-Patcher](https://github.com/openwrt-xiaomi/xmir-patcher) to enable stock SSH, then run `nvram set uart_en=1; nvram set boot_wait=on; nvram commit` and reboot before trying again.
+  verify: After a cold boot it should enter the stock Xiaomi system at `192.168.31.1`.
+shell:
+  access: The stock system has no ready-to-use SSH. The community tool [XMiR-Patcher](https://github.com/openwrt-xiaomi/xmir-patcher) can enable stock SSH.
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+- text: XMiR-Patcher (community tool to enable stock SSH)
+  url: https://github.com/openwrt-xiaomi/xmir-patcher
+aliases: [CR8806, CR8808, CR8809, Redmi AX3000 (RA81)]

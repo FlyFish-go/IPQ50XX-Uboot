@@ -1,0 +1,46 @@
+vendor: China Mobile
+family: China Mobile RAX3000Q
+summary: 'China Mobile RAX3000QY was flashed on a real unit: Dosilicon flash is detected as ECC 4 bits automatically, BOOTCONFIG dual system, firmware flashed from the rescue page, cold boot passed. LEDs and buttons were not tested.'
+brief: The test unit has Dosilicon flash (ECC 4 bits, detected automatically); LEDs and buttons not tested
+hardware:
+- label: Flash
+  value: 128 MiB NAND, test unit has Dosilicon DS35M1GA (ECC 4 bits, detected automatically by U-Boot)
+- label: RAM
+  value: 256 MiB
+- label: Board class
+  value: AP-MP02.1
+- label: Network
+  value: QCA8337 switch, reset GPIO26
+- label: Serial console
+  value: GPIO28/29
+- label: Secure boot
+  value: Not enabled on the test unit (stock `is_sec_boot_enabled`)
+tested:
+- 'RAM trial: serial banner, flash detection (DS35M1GA, ECC 4 bits), LAN port rescue page'
+- Both APPSBL copies written and read back identically to the release files (with 0xff padding)
+- 'Passed multiple cold boots: the stock web admin is reachable after about 40 s, no UBI errors'
+- Rescue page "Firmware Update" wrote the current boot slot; readback matched byte for byte and stock U-Boot still boots normally
+- Rescue page recognised both stock system slots (BOOTCONFIG)
+- Rescue page rejected U-Boot for other models, older U-Boot and vendor upgrade packages
+not_tested:
+- LEDs, Reset and WPS buttons
+- The GD5F1GQ5REYIG flash variant (ECC should be detected automatically as well)
+- MAC location in ART (the test unit has empty space at the start of ART, so U-Boot uses the default MAC, as stock U-Boot does)
+warnings:
+- Before flashing U-Boot, use the rescue page "Flash Backup" to save all partitions.
+- The test unit has no MAC at the start of ART, so the rescue page does not offer an entry for writing ART.
+slots:
+  note: Stock uses BOOTCONFIG to select the rootfs slot (measured on the test unit).
+ttl:
+  interrupt: Press any key during the stock U-Boot countdown
+  port: LAN port
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+- text: Submit a test report
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml

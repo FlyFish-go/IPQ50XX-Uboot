@@ -1,0 +1,38 @@
+summary: 'H3C Magic NX54 (VER.A), U-Boot test build nx54-test.1. No disassembly is needed: install with the BootBridge web tool. Download the official firmware from H3C using the router SN. BX54E is not supported.'
+brief: Test build, fully tested on a single NX54 only
+hardware:
+- label: Hardware
+  value: IPQ5018, 512 MB RAM, PCIe QCN9074 (5 GHz), QCA8337 switch
+- label: Flash
+  value: SPI-NAND, 17 types supported per the stock NAND table (same as the NX30 family); test unit has ESMT F50D1G41LB 128 MiB
+- label: Hardware group
+  value: NX54 (its own group)
+- label: Tested on real hardware
+  value: 'One NX54 VER.A: full BootBridge procedure, cold boot, OpenWrt + NSS'
+slots:
+  capacities:
+  - name: Dual system, per slot
+    bytes: 47448064
+  capacity_source: 'NX54 stock partition table: two system slots of 0x2d40000 each.'
+  note: Stock dual system, with BOOTCONFIG selecting the boot slot. The stock system is in one slot; third-party firmware can be installed in the other.
+notes:
+  oem: H3C has not published a download link for R014. In BootBridge step 2, enter the SN from the bottom of the router; the web page gives you a command to run on your own computer to download R014 from H3C and verify it.
+rescue:
+  how: Power off, hold Reset and power on, release after the LED has flashed 3 times
+slot_select: 'Hold Reset or Mesh while powering on: release after 1 LED flash to boot slot 1, or after 2 flashes to boot slot 2 and set it as the default.'
+warnings:
+- 'Test build: fully tested on a single NX54 VER.A only. Generate and download a full backup before installing.'
+- BX54E is not supported; BootBridge will reject it.
+not_tested:
+- Long-pressing Mesh in the bridge system to go back to stock (use the "Go back to stock" button on the web page instead)
+recovery:
+- BootBridge makes a full backup before installation. In the bridge system you can go back to stock at any time.
+- If this project's U-Boot is installed, the rescue page can write backed-up partitions back.
+- If the bootloader itself is damaged, you need a TTL serial console or a programmer. First contact the maintainer in the QQ group 1131957442.
+links:
+- text: BootBridge web version (NX54 under test)
+  url: /bootbridge/
+- text: nx54-test.1 release notes
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/nx54-test.1
+- text: 'Matching firmware: OpenWrt + NSS v0.1.0-pre.6'
+  url: https://github.com/FlyFish-go/H3C-Magic-NSS/releases/tag/v0.1.0-pre.6

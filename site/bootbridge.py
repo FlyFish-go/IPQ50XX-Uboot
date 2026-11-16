@@ -9,12 +9,13 @@ SITE = Path(__file__).resolve().parent
 WEB = SITE.parent / 'tools' / 'bootbridge2' / 'web'
 
 
-def build_bootbridge(out, layout, fix_links):
+def build_bootbridge(out, layout, fix_links, lang='zh'):
     # Use the same frame as every guide page. The web builder inserts its own
     # body/assets before calculating SHA256SUMS (also for the standalone ZIP).
     page = 'bootbridge/index.html'
     shell = layout(page, 'BootBridge', '__BOOTBRIDGE_BODY__',
-                   '在浏览器本地用 H3C 官方固件生成 BootBridge 桥接包，不上传文件。')
+                   'Build a BootBridge package from the official H3C firmware locally in the browser; nothing is uploaded.'
+                   if lang == 'en' else '在浏览器本地用 H3C 官方固件生成 BootBridge 桥接包，不上传文件。')
     shell = shell.replace('</head>', '__BOOTBRIDGE_HEAD__\n</head>')
     with tempfile.TemporaryDirectory(prefix='bootbridge-frame-') as tmp:
         frame = Path(tmp) / 'frame.html'
@@ -23,6 +24,7 @@ def build_bootbridge(out, layout, fix_links):
                         '--release-dir', os.environ.get('BB_PUBLIC_RELEASE', str(WEB / 'release' / 'BB2-R8')),
                         '--config', str(SITE / 'data' / 'bootbridge.json'),
                         '--repo-url', 'https://github.com/FlyFish-go/IPQ50XX-Uboot',
-                        '--build-label', 'NX30 家族直接安装 U-Boot v0.2.0',
+                        '--build-label', 'NX30 family: installs U-Boot v0.2.0 directly' if lang == 'en'
+                        else 'NX30 家族直接安装 U-Boot v0.2.0',
                         '--guide-frame', str(frame),
                         '--out', str(out)] + (['--nx54', os.environ['BB_NX54_MODE']] if os.environ.get('BB_NX54_MODE') else []), check=True)

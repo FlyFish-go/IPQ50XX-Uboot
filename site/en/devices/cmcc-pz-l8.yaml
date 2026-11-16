@@ -1,0 +1,39 @@
+vendor: China Mobile
+family: China Mobile PZ-L8
+summary: Build written from upstream OpenWrt and third-party device trees. Flash, network ports and boot slots are not confirmed on a real unit yet. If you can use TTL, please run a RAM trial and send a report.
+brief: One flash variant (FM25SL01) is not supported
+hardware:
+- label: Board class
+  value: AP-MP02.1
+- label: Flash
+  value: 128 MiB NAND (ESMT F50D1G41LB)
+- label: Network
+  value: Built-in GE PHY connected directly to one port of the QCA8337 (PHY-to-PHY CPU link), switch reset GPIO26
+- label: Serial console
+  value: GPIO28/29, 4-pin vias on the PCB (3.3 V, GND, TX, RX)
+warnings:
+- There is another flash variant (FM25SL01) that upstream does not support and that is not in our flash table. Do not flash if your unit has this variant.
+- Whether the GE PHY to switch link needs special handling in the U-Boot driver was not verified. During the RAM trial, check in particular whether the network port works.
+- The serial console pads are in the middle of the black heatsink on the PCB. The 3.3 V, GND, TX, RX order is from upstream information; check it yourself with a multimeter before wiring.
+tested:
+- 'Offline checks: build succeeds; the device tree was compared item by item with the third-party device tree and the upstream OpenWrt device tree'
+not_tested:
+- RAM trial (serial banner, network port, rescue page)
+- Flash detection and ECC
+- Buttons and LEDs
+- Stock partition table and boot slot mechanism
+- Secure boot state
+- GE PHY to switch CPU link
+slots:
+  note: The stock partition table contains BOOTCONFIG and rootfs / rootfs_1 (upstream information); the build uses BOOTCONFIG dual system.
+notes:
+  wire: The serial console pads are the 4 vias in the middle of the black heatsink on the PCB (3.3 V, GND, TX, RX, order from upstream information). Check them yourself with a multimeter before wiring; do not connect the 3.3 V via.
+  ramboot: This model has a variant with FM25SL01 flash that is not in our flash table. If the flash detection line shows this part, stop here and do not continue.
+  rescue: The GE PHY to switch link was not verified. Check whether the rescue page opens on each network port.
+shell:
+  access: Upstream OpenWrt information says that holding Reset for 20–30 s after power-on makes the stock system open a root shell on port 56781. This was not verified.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+- text: Submit a trial report
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml

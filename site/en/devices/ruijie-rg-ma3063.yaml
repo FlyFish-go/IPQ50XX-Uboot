@@ -1,0 +1,52 @@
+vendor: Ruijie
+family: Ruijie RG-MA3063
+summary: Ruijie RG-MA3063 (hardware 1.00) was flashed on a real unit and passed 10 cold boots. LEDs and buttons were not tested. One difference from stock is that this U-Boot does not automatically fall back to the other slot.
+brief: Hardware version 1.00; no automatic fallback like stock
+hardware:
+- label: Flash
+  value: NAND (several types, detected automatically by U-Boot)
+- label: Board class
+  value: AP-MP02.1, machid `0x8040000`
+- label: Network
+  value: QCA8337 switch
+- label: Secure boot
+  value: Not enabled on the test unit
+- label: Stock LAN address
+  value: '`192.168.10.1`'
+tested:
+- Both APPSBL copies written and read back identically
+- Passed 10 cold boots (serial banner, switch, kernel, rootfs slot and LAN all normal)
+- 'BOOTCONFIG: switched rootfs to 1 and power-cycled, booted from the second slot; switched back to 0 and the bytes matched the backup'
+- 'Rescue page: port 1 (GE port, LAN) opens it; for port 4 you must set `ethact` to `eth1` in U-Boot, and only one port can be connected at a time'
+not_tested:
+- LEDs, Reset and Mesh buttons
+- Automatic port switching on the rescue page after unplugging the network cable
+- The path for reading the MAC from ART (the test unit already has a MAC in its environment variables)
+- 'Hardware versions V3 / V4 / MA3064: see their own pages'
+- One-click install from the stock system over SSH
+differences:
+- '**No automatic fallback to the other slot.** On every uninterrupted autoboot, stock U-Boot increments and saves the environment variable `ipqboot_num`. If there is still no healthy boot after more than 5 attempts, it switches to the other system slot and reboots; stock Linux clears the counter after a normal boot. This U-Boot neither reads nor writes `ipqboot_num`, so after installing it, a system that boots but is never healthy will not fall back automatically and a kernel panic will not recover automatically. Use the rescue page instead.'
+- 'Benefit: the environment partition is no longer rewritten at every boot, reducing flash wear and the risk of a power cut during the write. The script that clears the counter in the stock system still runs but has no effect; leftover old values above 5 in the environment are ignored.'
+- '**Do not run `bootconfig set all` on this machine**: the second set of QSEE, DEVCFG and CDT is empty on the test unit, so switching all of them over would prevent it from booting.'
+- At boot this U-Boot writes default network variables to the environment partition (IP `192.168.1.1`). Stock also writes them at every boot.
+slots:
+  capacities:
+  - name: Stock system slot
+    bytes: 52428800
+  capacity_source: 50 MiB comes from the system write range in the stock MA3063 FIT flash.scr (0x900000 + 0x3200000). Use the partition table shown on the rescue page as the authority.
+  note: Stock uses BOOTCONFIG to select the rootfs slot. Switching slots takes effect only after a power cycle (SBL has to read SMEM again).
+ttl:
+  port: Port 1 (GE port)
+notes:
+  interrupt: The stock U-Boot countdown is only 1 s. You can hold Enter before powering on and release it when the prompt appears.
+  rescue: The rescue page uses port 1 by default. To use port 4, first run `setenv ethact eth1` in U-Boot. Connect only one network cable at a time.
+  verify: '**Do not** run `bootconfig set all` on this machine: the second set of QSEE, DEVCFG and CDT is empty on the test unit, so switching all of them over would prevent it from booting.'
+rescue:
+  how: Interrupt boot with TTL, then enter `httpd`
+recovery:
+- The backup made before writing is the only way back. The rescue page "Firmware Update" can write a backed-up partition back unchanged.
+- If the bootloader itself is damaged, use TTL and a RAM trial package to get back to the rescue page, or use a programmer; first contact the maintainer in the QQ group 1131957442.
+links:
+- text: IPQ50XX-Uboot repository
+  url: https://github.com/FlyFish-go/IPQ50XX-Uboot
+aliases: [RG-MA3063, RG-MA3063 hardware version 1.00]
