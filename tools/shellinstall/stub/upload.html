@@ -1,0 +1,9 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width"><title>IPQ50XX-Uboot 安装</title>
+<style>body{font:16px sans-serif;max-width:36em;margin:2em auto;padding:0 1em}</style>
+<h1>上传安装包</h1><p>选择从 GitHub Releases 下载的安装包，上传后自动校验。</p>
+<input type=file id=f><p id=m></p>
+<script>
+f.onchange=async()=>{m.textContent='上传中…';try{let r=await(await fetch('/cgi-bin/up',{method:'POST',body:f.files[0]})).text();
+if(r.trim()!='ok'){m.textContent=r;return}m.textContent='校验通过，正在启动安装程序…';
+for(;;){await new Promise(z=>setTimeout(z,1500));try{let a=await fetch('/api/state');if(a.ok&&/json/.test(a.headers.get('content-type')))return location.reload()}catch(e){}}}catch(e){m.textContent='上传失败：'+e}}
+</script>

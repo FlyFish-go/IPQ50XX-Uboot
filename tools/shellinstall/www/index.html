@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPQ50XX-Uboot 安装</title>
+<style>
+:root{--fg:#1d1d1f;--mute:#6b6b70;--line:#d9d9de;--bad:#b3261e;--ok:#1b6e3a;--bg:#fff;--code:#f4f4f6}
+@media (prefers-color-scheme:dark){:root{--fg:#e8e8ea;--mute:#9a9aa0;--line:#3a3a40;--bad:#ff8a80;--ok:#7fd49b;--bg:#16161a;--code:#222228}}
+body{font:16px/1.6 system-ui,sans-serif;color:var(--fg);background:var(--bg);max-width:42em;margin:0 auto;padding:1.5em 16px}
+h1{font-size:1.4em;margin:0 0 .2em}h2{font-size:1.1em;margin:1.8em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:.2em}
+.mute{color:var(--mute)}table{border-collapse:collapse;width:100%}td{padding:.35em .4em;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child{white-space:nowrap;width:1%}.ok{color:var(--ok)}.bad{color:var(--bad)}
+button{font:inherit;padding:.4em 1.1em;margin:.2em .4em .2em 0}pre{background:var(--code);padding:.6em .8em;overflow-x:auto;font-size:.9em}
+#msg{min-height:1.6em;font-weight:600}
+</style></head><body>
+<h1>IPQ50XX-Uboot 系统内安装</h1>
+<p class="mute" id="ver"></p>
+<p id="msg"></p>
+
+<h2>1. 核对这台机器</h2>
+<table id="checks"></table>
+<p><button id="recheck">重新检查</button></p>
+
+<h2>2. 备份</h2>
+<p>写入前先把启动相关的分区备份到电脑上。备份里有这台机器的校准数据和 MAC，只留给自己，不要上传到网上。</p>
+<p><button id="backup">生成备份</button> <a id="dl" href="/backup.zip" hidden>下载备份</a></p>
+<pre id="binfo" hidden></pre>
+
+<h2>3. 写入 U-Boot</h2>
+<p>先写备用的那份，读回核对通过后再写正在用的那份。写入过程中不要断电、不要关这个页面。</p>
+<p><button id="install" disabled>写入</button></p>
+
+<h2>4. 完成</h2>
+<p><button id="reboot" disabled>重启</button> <button id="quit">退出安装程序</button></p>
+
+<script>
+const $=id=>document.getElementById(id);let st=null;
+async function api(p,post){const r=await fetch(p,post?{method:'POST',headers:{'X-IPQI':'1'}}:{});return r.json()}
+function show(s){st=s;$('ver').textContent='安装包 '+s.version+(s.sim?'（模拟设备）':'');
+ $('checks').innerHTML='';for(const c of s.checks){const tr=document.createElement('tr');
+  tr.innerHTML='<td></td><td></td>';tr.cells[0].textContent=(c.ok?'通过 ':'未通过 ')+c.label;
+  tr.cells[0].className=c.ok?'ok':'bad';tr.cells[1].textContent=c.detail;$('checks').appendChild(tr)}
+ $('backup').disabled=!s.ready;$('dl').hidden=!s.backup.ready;
+ $('binfo').hidden=!s.backup.ready;$('binfo').textContent=s.backup.ready?('大小 '+s.backup.bytes+' 字节\nSHA-256 '+s.backup.sha256+'\n'+(s.backup.downloaded?'已下载':'还没下载')):'';
+ $('install').disabled=!(s.ready&&s.backup.downloaded)||s.installed;$('reboot').disabled=!s.installed;
+ const m=s.result.message;$('msg').textContent=m||(s.ready?'检查全部通过。':'有检查没通过，不能安装。');
+ $('msg').className=s.result.code&&s.result.code!=='ok'?'bad':''}
+async function act(p,ask){if(ask&&!confirm(ask))return;document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ $('msg').textContent='处理中…';try{show(await api(p,true))}catch(e){$('msg').textContent='连接断开：'+e}}
+$('recheck').onclick=()=>act('/api/recheck');$('backup').onclick=()=>act('/api/backup');
+$('install').onclick=()=>act('/api/install','确认写入 U-Boot？');$('reboot').onclick=()=>act('/api/reboot','现在重启？');
+$('quit').onclick=()=>act('/api/quit','退出安装程序？没写入的话原厂系统不受影响。');
+$('dl').onclick=()=>setTimeout(async()=>show(await api('/api/state')),1500);
+api('/api/state').then(show);
+</script></body></html>

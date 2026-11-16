@@ -1,0 +1,90 @@
+#!/bin/sh
+# IPQ50XX-Uboot system installer, stage 1. Pasted into the stock root shell as
+#   echo '<base64>' | base64 -d | gunzip | sh
+# Gets the installer package (download, or upload from a browser), checks its
+# SHA-256, then starts it. Writes nothing outside $D.
+V='@VERSION@'; SHA='@SHA256@'; SIZE='@SIZE@'; URLS='@URLS@'
+PORT=${IPQI_PORT:-8088}; D=${IPQI_DIR:-/tmp/ipqi}
+say() { echo "[ipqi] $*"; }
+die() { say "$*"; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+pkg_ok() { [ -f "$1" ] || return 1; set -- $(sha256sum "$1"); [ "$1" = "$SHA" ]; }
+
+case "$(uname -m)" in armv7*|armv8*|aarch64) ;; *) die "不支持的处理器：$(uname -m)" ;; esac
+[ -n "$IPQI_SIM" ] || [ "$(id -u 2>/dev/null)" = 0 ] || die "需要 root"
+have sha256sum || die "缺少命令 sha256sum"
+have setsid || have start-stop-daemon || die "缺少 setsid 和 start-stop-daemon"
+mkdir -p "$D/www/cgi-bin" || die "无法创建 $D"
+cd "$D" || exit 1
+[ -f uhttpd.pid ] && kill "$(cat uhttpd.pid)" 2>/dev/null
+[ -f pkg.pid ] && kill "$(cat pkg.pid)" 2>/dev/null
+rm -f uhttpd.pid pkg.pid pkg.part
+cat > conf <<EOC
+SHA='$SHA'; SIZE='$SIZE'; PORT='$PORT'; D='$D'
+EOC
+env | grep '^IPQI_SIM' | sed "s/=\(.*\)/='\1'/;s/^/export /" >> conf
+# bg <pidfile> <log> cmd...: detached from this shell, survives logout.
+cat > bg <<'EOB'
+#!/bin/sh
+p=$1; l=$2; shift 2
+if command -v setsid >/dev/null 2>&1; then
+	setsid "$@" </dev/null >"$l" 2>&1 &
+	echo $! >"$p"
+else
+	start-stop-daemon -S -b -m -p "$p" -x /bin/sh -- -c 'exec "$@" </dev/null >"$0" 2>&1' "$l" "$@"
+fi
+EOB
+chmod 755 bg
+
+addr() {
+	a=$(ifconfig br-lan 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+	echo "${a:-路由器地址}"
+}
+
+start_pkg() {
+	chmod 755 pkg && ./bg pkg.pid pkg.log "$D/pkg" serve -p "$PORT" -d "$D"
+}
+
+fetch() {
+	for u in $URLS; do
+		rm -f pkg.part
+		if have curl; then
+			curl -kfsSL --connect-timeout 8 -o pkg.part "$u" 2>/dev/null
+		else
+			wget -q --no-check-certificate -T 8 -O pkg.part "$u" 2>/dev/null ||
+				wget -q -O pkg.part "$u" 2>/dev/null
+		fi
+		pkg_ok pkg.part && mv pkg.part pkg && return 0
+	done
+	rm -f pkg.part
+	return 1
+}
+
+if pkg_ok pkg || { [ -z "$IPQI_NO_FETCH" ] && say "下载安装包 $V ..." && fetch; }; then
+	start_pkg
+	say "安装包已就绪。请在浏览器打开 http://$(addr):$PORT/"
+	exit 0
+fi
+
+have uhttpd || die "下载失败，原厂系统也没有 uhttpd，无法开上传页"
+say "下载失败，改用上传：先从 GitHub Releases 下载 $V 的安装包到电脑。"
+cat > www/index.html <<'EOH'
+@UPLOAD_HTML@
+EOH
+cat > www/cgi-bin/up <<'EOC'
+#!/bin/sh
+. /tmp/ipqi-conf 2>/dev/null
+echo "Content-Type: text/plain; charset=utf-8"; echo
+cd "$D" || exit 0
+[ "$CONTENT_LENGTH" = "$SIZE" ] || { cat >/dev/null; echo "文件大小不对：应为 $SIZE 字节"; exit 0; }
+head -c "$SIZE" > pkg.part
+set -- $(sha256sum pkg.part)
+[ "$1" = "$SHA" ] || { rm -f pkg.part; echo "文件校验不对，请下载 @VERSION@ 的安装包"; exit 0; }
+mv pkg.part pkg; chmod 755 pkg
+echo ok
+./bg pkg.pid pkg.log sh -c "sleep 1; kill \$(cat $D/uhttpd.pid) 2>/dev/null; sleep 1; exec $D/pkg serve -p $PORT -d $D"
+EOC
+chmod 755 www/cgi-bin/up
+ln -sf "$D/conf" /tmp/ipqi-conf 2>/dev/null || cp conf /tmp/ipqi-conf
+./bg uhttpd.pid uhttpd.log "$(command -v uhttpd)" -f -p "0.0.0.0:$PORT" -h "$D/www" -x /cgi-bin -t 300
+say "请在浏览器打开 http://$(addr):$PORT/ 上传安装包。"
