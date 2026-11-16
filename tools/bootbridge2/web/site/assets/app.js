@@ -1,4 +1,4 @@
-/* BootBridge web edition: six-step wizard (UI follows design/desktop-offline-ui).
+/* BootBridge web edition: six-step guide (shared guide-site frame and typography).
  * Everything runs locally; the only network requests are the official firmware
  * download (h3c-magic OSS), the NX30 SN pre-check (magic.h3c.com) and this
  * site's own rule data.  SPDX-License-Identifier: GPL-2.0-or-later */
@@ -24,31 +24,6 @@
     if (miss.length) { bootFail('missing: ' + miss.join(', ')); throw new Error('BootBridge: unsupported browser'); }
   })();
 
-  /* ---------------- icons ---------------- */
-  var ICON = {
-    check: '<path d="M5 12.5l4.2 4.2L19 7"/>',
-    router: '<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M11 16.5h.01"/><path d="M8 9.5a6 6 0 0 1 8 0M5.5 7a9.5 9.5 0 0 1 13 0"/>',
-    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/>',
-    upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M5 19h14"/>',
-    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
-    copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
-    ext: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
-    alert: '<path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.5h.01"/>',
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
-    shield: '<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
-    chev: '<path d="M9 6l6 6-6 6"/>',
-    x: '<path d="M6 6l12 12M18 6L6 18"/>',
-    arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-    arrowL: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
-    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
-    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
-    refresh: '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"/>',
-    term: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/>'
-  };
-  function ic(n, cls) { return '<svg class="' + (cls || 'i') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>'; }
-  var LOGO = '<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--teal)"/><path d="M5.5 17.5h15M8 17.5v-4.2a5 5 0 0 1 10 0v4.2" stroke="var(--on-teal)" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="13" cy="8.2" r="1.4" fill="var(--on-teal)"/></svg>';
-
   /* ---------------- helpers ---------------- */
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fmt(s, v) { return String(s).replace(/\{(\w+)\}/g, function (m, k) { return v && v[k] != null ? v[k] : m; }); }
@@ -61,16 +36,15 @@
   function outName(g) { return g.primary + '-' + g.version + '-BootBridge.bin'; }
   function mb(n) { return (n / 1048576).toFixed(1); }
   function fmtSize(n) { return S.lang === 'zh' ? mb(n) + ' MB（' + n.toLocaleString('en-US') + ' 字节）' : mb(n) + ' MB (' + n.toLocaleString('en-US') + ' bytes)'; }
-  function shortSha(s) { return s.slice(0, 16) + '…' + s.slice(-8); }
   function err(code, extra) { var e = new Error(code); e.code = code; if (extra != null) e.detail = extra; return e; }
   function busy() { return S.file.st === 'hashing' || S.file.st === 'downloading' || S.gen.st === 'loading' || S.gen.st === 'running'; }
 
   /* ---------------- state ---------------- */
-  var langPref = store('bb.lang'), themePref = store('bb.theme');
+  var langPref = store('bb.lang');
   var S = {
     step: 1,
-    lang: langPref === 'zh' || langPref === 'en' ? langPref : (/^zh/i.test(navigator.language || 'zh') ? 'zh' : 'en'),
-    theme: themePref === 'light' || themePref === 'dark' ? themePref : 'auto',
+    lang: langPref === 'zh' || langPref === 'en' ? langPref : 'zh',
+    theme: 'auto',
     model: CAT.guide[0].id, modal: false, toast: '',
     rules: 'ok', rulesWhy: '',
     file: { st: 'empty' }, upgraded: false,
@@ -348,84 +322,62 @@
   }
 
   /* ---------------- views ---------------- */
-  function stepDone(n) {
-    if (n === 1) return S.step > 1;
-    if (n === 2) return S.file.st === 'matched';
-    if (n === 3) return S.upgraded;
-    if (n === 4) return S.gen.st === 'done';
-    if (n === 5) return S.step > 5;
-    return false;
-  }
-  function stepper() {
-    var l = L();
-    return '<nav class="stepper" aria-label="steps"><div class="wrap"><ol class="hsteps">' + l.steps.map(function (s, i) {
-      var n = i + 1, a = S.step === n, d = !a && stepDone(n);
-      return '<li class="' + (a ? 'cur' : '') + (n <= S.step ? ' reached' : '') + '"><button class="hs' + (a ? ' active' : '') + (d ? ' done' : '') + '" data-go="' + n + '"' + (a ? ' aria-current="step"' : '') + ' title="' + esc(s[0]) + '"><span class="dot">' + (d ? ic('check') : n) + '</span><span class="tx"><b>' + s[0] + '</b><span>' + s[1] + '</span></span></button></li>';
-    }).join('') + '</ol></div></nav>';
-  }
-  function aside() {
+  function statusTable() {
     var l = L(), g = G(), f = S.file, gs = S.gen;
-    function chk(on, t, sub) { return '<li' + (on ? ' class="on"' : '') + '><span class="cd">' + (on ? ic('check') : '') + '</span><span class="ct"><b>' + t + '</b><span>' + sub + '</span></span></li>'; }
-    var fw = f.st === 'matched' ? esc(f.name) : f.st === 'downloading' ? l.stDl : f.st === 'hashing' ? l.stHash : l.stFwTodo;
+    function row(k, v) { return '<tr><th scope="row">' + k + '</th><td>' + v + '</td></tr>'; }
+    var fw = f.st === 'matched' ? esc(f.name) + ' · ' + l.verified : f.st === 'downloading' ? l.stDl : f.st === 'hashing' ? l.stHash : l.stFwTodo;
     var br = gs.st === 'done' ? esc(gs.name) : gs.st === 'loading' || gs.st === 'running' ? l.stBrBusy : l.stBrTodo;
-    return '<aside class="aside" aria-label="' + esc(l.sumT) + '">' +
-      '<div class="box"><h2>' + l.sumT + '</h2>' +
-      '<div class="sumrow"><span class="k">' + l.sumModel + '</span><span class="v">' + esc(mname(g)) + '</span></div>' +
-      '<div class="sumrow"><span class="k">' + l.sumVer + '</span><span class="v mono">' + esc(g.version) + '</span></div>' +
-      '<ul class="checks">' + chk(stepDone(2), l.sumFw, fw) + chk(stepDone(3), l.sumUp, S.upgraded ? fmt(l.stUpOk, { v: esc(g.version) }) : l.stUpTodo) + chk(stepDone(4), l.sumBridge, br) + '</ul></div>' +
-      '<div class="box"><h2>' + l.trustT + '</h2><div class="trust">' +
-      (S.rules === 'ok' ? '<div class="row"><span class="gd"></span><span>' + l.rulesOk + '<br><span class="muted">' + fmt(l.rulesOff, { rs: esc(CAT.meta.release) }) + '</span></span></div>'
-        : '<div class="row bad">' + ic('alert') + '<span>' + l.rulesBadT + '</span></div>') +
-      '<div class="row">' + ic('shield') + '<span>' + l.privacyLine + '</span></div>' +
-      '<div class="row">' + ic('info') + '<span>' + l.diagNoSn + '</span></div></div></div>' +
-      '<div class="box"><h2>' + l.helpT + '</h2><div class="trust"><span>' + l.diagS + '</span></div><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div>' +
-      '</aside>';
+    return '<section class="bb-status" aria-labelledby="bb-status-title"><h2 id="bb-status-title">' + l.sumT + '</h2><table class="kv">' +
+      row(l.release, '<code>' + esc(CAT.meta.release) + '</code> · ' + (S.rules === 'ok' ? l.rulesOk : l.rulesBadT)) +
+      row(l.sumModel, esc(mname(g))) + row(l.sumVer, '<code>' + esc(g.version) + '</code>') +
+      row(l.sumFw, fw) + (f.sha ? row(l.kSha, '<span class="mono">' + f.sha + '</span>') : '') +
+      row(l.sumUp, S.upgraded ? fmt(l.stUpOk, { v: esc(g.version) }) : l.stUpTodo) + row(l.sumBridge, '<span class="mono">' + br + '</span>') +
+      '</table><p class="bb-detail">' + l.privacyLine + ' · ' + l.diagNoSn + '</p><p><button class="btn" data-copy="diag">' + l.copyDiag + '</button> <button class="btn" data-act="open-modal" aria-expanded="' + S.modal + '">' + l.settings + '</button></p></section>';
   }
   function pageFoot() {
     var l = L(), m = CAT.meta;
-    return '<footer class="pagefoot"><div class="wrap"><span>' + l.title + ' ' + fmt(l.version, { v: esc(m.web) }) + '</span><span>' + l.release + ' <span class="mono">' + esc(m.release) + '</span></span><span class="sp"></span>' +
-      '<a href="SHA256SUMS" target="_blank" rel="noopener">SHA256SUMS</a>' + (m.repo ? '<a href="' + esc(m.repo) + '" target="_blank" rel="noopener noreferrer">' + l.source + '</a>' : '') +
-      '<button class="btn link" data-act="open-modal">' + l.settings + '</button></div></footer>';
+    return '<p class="bb-detail">' + l.title + ' ' + fmt(l.version, { v: esc(m.web) }) + ' · <a href="SHA256SUMS" target="_blank" rel="noopener">SHA256SUMS</a>' +
+      (m.repo ? ' · <a href="' + esc(m.repo) + '" target="_blank" rel="noopener noreferrer">' + l.source + '</a>' : '') + '</p>';
   }
-  function shaDd(sha, key) { return '<dd><span class="mono" title="' + sha + '">' + shortSha(sha) + '</span><button class="btn link" data-copy="' + key + '" aria-label="copy">' + ic('copy') + '</button></dd>'; }
+  function shaDd(sha, key) { return '<dd><span class="mono">' + sha + '</span> <button class="btn" data-copy="' + key + '">' + L().copy + '</button></dd>'; }
   function olist(items, vars) {
-    return '<ol class="olist">' + items.map(function (it, i) {
+    return '<ol class="steps">' + items.map(function (it, i) {
       var tx = it[1].replace('{v}', '<code>' + esc(vars.v || '') + '</code>').replace('{f}', '<code>' + esc(vars.f || '') + '</code>').replace('192.168.10.1', '<code>192.168.10.1</code>');
-      return '<li><span class="n">' + (i + 1) + '</span><span class="tx"><b>' + it[0] + '</b><span>' + tx + '</span>' + (vars.extra && vars.extra[i] || '') + '</span></li>';
+      return '<li><h3>' + it[0] + '</h3><p>' + tx + '</p>' + (vars.extra && vars.extra[i] || '') + '</li>';
     }).join('') + '</ol>';
   }
 
-  function head(n, t, lead) { var l = L(); return '<div class="eyebrow">' + fmt(l.stepOf, { n: n }) + '</div><h1>' + t + '</h1><p class="lead">' + lead + '</p>' + (G().testing ? '<p class="soft-note">' + l.testingNote + '</p>' : ''); }
+  function head(n, t, lead) { return '<h3 id="bb-current" tabindex="-1">' + t + '</h3><p>' + lead + '</p>' + (G().testing ? '<p class="testing-note">' + L().testingNote + '</p>' : ''); }
 
   function step1() {
     var l = L();
-    return head(1, l.s1t, l.s1l) + '<div class="mgrid" role="radiogroup">' + CAT.guide.map(function (g) {
+    return head(1, l.s1t, l.s1l) + '<div class="model-list" role="radiogroup" aria-label="' + esc(l.s1t) + '">' + CAT.guide.map(function (g) {
       var sel = S.model === g.id;
-      return '<button class="mcard' + (sel ? ' sel' : '') + '" data-model="' + esc(g.id) + '" role="radio" aria-checked="' + sel + '"><span class="ic">' + ic('router') + '</span><span class="tx"><b>' + esc(g.primary) + (g.testing ? '<em class="alias">' + l.testing + '</em>' : '') + (g.alias ? '<em class="alias">' + esc(g.alias) + '</em>' : '') + '</b><span>' + fmt(l.needVer, { v: esc(g.version) }) + '</span></span><span class="radio"></span></button>';
-    }).join('') + '</div><div class="fine">' + ic('info') + '<span>' + l.s1fine + '</span></div>';
+      return '<button class="model-option" data-model="' + esc(g.id) + '" role="radio" aria-checked="' + sel + '"><span class="model-name">' + esc(g.primary) + (g.alias ? ' (' + esc(g.alias) + ')' : '') + (g.testing ? ' <span class="testing-text">' + l.testing + '</span>' : '') + '</span><span>' + fmt(l.needVer, { v: esc(g.version) }) + '</span></button>';
+    }).join('') + '</div><p class="fine">' + l.s1fine + '</p>';
   }
 
   function fileZone() {
-    var l = L(), g = G(), f = S.file;
-    if (f.st === 'empty') return '<button class="drop" data-act="pick" id="drop"><span class="big">' + ic('upload') + '</span><b>' + l.dropB + '</b><span>' + l.dropS + '</span><small>' + l.dropN + '</small></button>';
+    var l = L(), f = S.file;
+    if (f.st === 'empty') return '<button class="drop" data-act="pick" id="drop"><b>' + l.dropB + '</b><span>' + l.dropS + '</span><small>' + l.dropN + '</small></button>';
     if (f.st === 'hashing' || f.st === 'downloading') {
       var d = f.st === 'downloading';
-      return '<div class="card mt"><div class="filerow"><span class="fileic">' + ic(d ? 'download' : 'file') + '</span><span class="tx"><b>' + esc(f.name) + '</b><span>' + (d ? l.downloading : l.hashing) + '</span></span>' + (d ? '<button class="btn" data-act="cancel">' + l.cancel + '</button>' : '') + '</div><div class="prog"><i id="pbar"></i></div><div class="progtx"><span>' + (d ? l.dlSrc : l.dropN) + '</span><span id="ptx"></span></div></div>';
+      return '<div class="bb-section mt"><div class="filerow"><span class="tx"><b>' + esc(f.name) + '</b><span>' + (d ? l.downloading : l.hashing) + '</span></span>' + (d ? '<button class="btn" data-act="cancel">' + l.cancel + '</button>' : '') + '</div><div class="prog"><i id="pbar"></i></div><div class="progtx"><span>' + (d ? l.dlSrc : l.dropN) + '</span><span id="ptx"></span></div></div>';
     }
     if (f.st === 'matched') {
       var fg = guideById(f.model), dlSrc = f.source === 'download';
-      return '<div class="result ok mt"><div class="head"><span class="badge">' + ic('check') + '</span><div class="grow"><b>' + fmt(l.okTitle, { m: esc(mname(fg)), v: esc(fg.version) }) + '</b><p>' + (dlSrc ? l.okSubDl : l.okSub) + '</p></div>' + (dlSrc ? '' : '<button class="btn" data-act="reset-file">' + l.another + '</button>') + '</div>' +
-        '<div class="rmeta">' + ic('file') + '<span>' + esc(f.name) + '</span><span class="sep">·</span><span>' + l.sameAs + '</span></div>' +
-        (dlSrc ? '<div class="acts"><button class="btn' + (f.saved ? '' : ' primary') + '" data-act="save-fw">' + ic('download') + l.saveFw + '</button><button class="btn" data-act="reset-file">' + l.another + '</button></div>' : '') + '</div>';
+      return '<div class="result ok mt"><div class="head"><div class="grow"><b>' + fmt(l.okTitle, { m: esc(mname(fg)), v: esc(fg.version) }) + '</b><p>' + (dlSrc ? l.okSubDl : l.okSub) + '</p></div>' + (dlSrc ? '' : '<button class="btn" data-act="reset-file">' + l.another + '</button>') + '</div>' +
+        '<div class="rmeta">' + '<span>' + esc(f.name) + '</span><span class="sep">·</span><span>' + l.sameAs + '</span></div>' +
+        (dlSrc ? '<div class="acts"><button class="btn' + (f.saved ? '' : ' primary') + '" data-act="save-fw">' + l.saveFw + '</button><button class="btn" data-act="reset-file">' + l.another + '</button></div>' : '') + '</div>';
     }
     if (f.st === 'bad') {
-      return '<div class="result warn mt"><div class="head"><span class="badge">' + ic('alert') + '</span><div class="grow"><b>' + l.badTitle + '</b><p>' + (f.why || l.badSub) + '</p></div></div>' +
-        '<div class="rmeta">' + ic('file') + '<span>' + esc(f.name) + '</span><span class="sep">·</span><span>' + mb(f.size) + ' MB</span>' + (f.sha ? '<span class="sep">·</span><span class="mono" title="' + f.sha + '">' + shortSha(f.sha) + '</span>' : '') + '</div>' +
-        '<div class="acts"><button class="btn primary" data-act="reset-file">' + l.another + '</button><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div></div>';
+      return '<div class="result warn mt"><div class="head"><div class="grow"><b>' + l.badTitle + '</b><p>' + (f.why || l.badSub) + '</p></div></div>' +
+        '<div class="rmeta">' + '<span>' + esc(f.name) + '</span><span class="sep">·</span><span>' + mb(f.size) + ' MB</span>' + (f.sha ? '<span class="sep">·</span><span class="mono" title="' + f.sha + '">' + f.sha + '</span>' : '') + '</div>' +
+        '<div class="acts"><button class="btn primary" data-act="reset-file">' + l.another + '</button><button class="btn" data-copy="diag">' + l.copyDiag + '</button></div></div>';
     }
     if (f.st === 'error') {
-      return '<div class="result err mt"><div class="head"><span class="badge">' + ic('alert') + '</span><div class="grow"><b>' + f.title + '</b><p>' + f.msg + (f.hint ? '<br>' + f.hint : '') + '</p></div></div>' +
-        '<div class="acts">' + (G().url && f.hint ? '<button class="btn primary" data-act="dl">' + ic('refresh') + l.retry + '</button>' : '') + '<button class="btn' + (G().url && f.hint ? '' : ' primary') + '" data-act="reset-file">' + l.another + '</button><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div></div>';
+      return '<div class="result err mt"><div class="head"><div class="grow"><b>' + f.title + '</b><p>' + f.msg + (f.hint ? '<br>' + f.hint : '') + '</p></div></div>' +
+        '<div class="acts">' + (G().url && f.hint ? '<button class="btn primary" data-act="dl">' + l.retry + '</button>' : '') + '<button class="btn' + (G().url && f.hint ? '' : ' primary') + '" data-act="reset-file">' + l.another + '</button><button class="btn" data-copy="diag">' + l.copyDiag + '</button></div></div>';
     }
     return '';
   }
@@ -438,28 +390,28 @@
       var bad = sn.length > 0 && (!c.ok && (c.reason === 'chars' || sn.length > 20));
       h += '<label for="sn">' + l.snLabel + '</label><div class="snrow"><input id="sn" class="snin' + (bad ? ' bad' : '') + '" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="' + esc(l.snPh) + '" value="' + esc(S.sn.v) + '">' +
         '<button class="btn primary lg" data-act="sn-check" id="sncheck"' + (c.ok ? '' : ' disabled') + '>' + l.snCheck + '</button></div>' +
-        '<div class="snmeta"><span id="snhint" class="' + (bad ? 'bad' : c.ok ? 'good' : '') + '">' + snHint(sn, c) + '</span><span id="sncount">' + fmt(l.snCount, { n: sn.length }) + '</span></div>';
+        '<div class="snmeta"><span id="snhint" class="' + (bad ? 'bad' : c.ok ? 'good' : '') + '">' + snHint(sn, c) + '</span></div>';
     } else {
       h += '<label>' + l.snLabel + '</label><div class="snfixed"><span class="mono">' + esc(NX.group(sn)) + '</span>' + (st === 'checking' ? '' : '<button class="btn link" data-act="sn-edit">' + l.snEdit + '</button>') + '</div>';
     }
-    h += '</div><div class="privacy">' + ic('shield') + '<span>' + l.snPrivacy + '</span></div>';
-    if (st === 'checking') h += '<div class="status busy"><span class="spin"></span><span>' + l.snChecking + '</span></div>';
-    else if (st === 'ok') h += '<div class="status ok">' + ic('check') + '<span>' + fmt(l.snOk, { v: esc(g.version) }) + '</span></div>';
-    else if (st === 'network') h += '<div class="status warn">' + ic('alert') + '<span>' + fmt(l.snNet, { f: esc(r.detail || '') }) + '</span></div>';
-    else if (st === 'http') h += '<div class="status warn">' + ic('alert') + '<span>' + fmt(l.snHttp, { f: esc(r.status) }) + '</span></div>';
-    else if (st === 'unknown-sn') h += '<div class="status err">' + ic('alert') + '<span>' + l.snUnknown + '</span></div>';
-    else if (st === 'bad-format') h += '<div class="status err">' + ic('alert') + '<span>' + l.snFormat + '</span></div>';
-    else if (st === 'other-version') h += '<div class="status warn">' + ic('alert') + '<span>' + fmt(l.snOther, { f: esc(r.version || '?'), v: esc(g.version) }) + '</span></div>';
-    else if (st === 'rejected') h += '<div class="status err">' + ic('alert') + '<span>' + fmt(l.snRejected, { f: esc(r.code == null ? '?' : r.code) }) + '</span></div>';
-    else if (st === 'bad-response') h += '<div class="status err">' + ic('alert') + '<span>' + l.snBad + '</span></div>';
+    h += '</div><div class="privacy">' + '<span>' + l.snPrivacy + '</span></div>';
+    if (st === 'checking') h += '<div class="status busy"><span>' + l.snChecking + '</span></div>';
+    else if (st === 'ok') h += '<div class="status ok">' + '<span>' + fmt(l.snOk, { v: esc(g.version) }) + '</span></div>';
+    else if (st === 'network') h += '<div class="status warn">' + '<span>' + fmt(l.snNet, { f: esc(r.detail || '') }) + '</span></div>';
+    else if (st === 'http') h += '<div class="status warn">' + '<span>' + fmt(l.snHttp, { f: esc(r.status) }) + '</span></div>';
+    else if (st === 'unknown-sn') h += '<div class="status err">' + '<span>' + l.snUnknown + '</span></div>';
+    else if (st === 'bad-format') h += '<div class="status err">' + '<span>' + l.snFormat + '</span></div>';
+    else if (st === 'other-version') h += '<div class="status warn">' + '<span>' + fmt(l.snOther, { f: esc(r.version || '?'), v: esc(g.version) }) + '</span></div>';
+    else if (st === 'rejected') h += '<div class="status err">' + '<span>' + fmt(l.snRejected, { f: esc(r.code == null ? '?' : r.code) }) + '</span></div>';
+    else if (st === 'bad-response') h += '<div class="status err">' + '<span>' + l.snBad + '</span></div>';
     if (commandsAllowed()) {
       var key = S.tab === 'ps51' ? 'ps51' : 'sh', cmd = NX.command(CMDS[key], sn);
-      h += '<div class="divider"></div><h3>' + ic('term') + ' ' + l.cmdT + '</h3>' +
+      h += '<div class="divider"></div><h3>' + ' ' + l.cmdT + '</h3>' +
         '<div class="tabs" role="tablist"><button role="tab" data-tab="ps51" aria-selected="' + (key === 'ps51') + '">' + l.cmdWin + '</button><button role="tab" data-tab="sh" aria-selected="' + (key === 'sh') + '">' + l.cmdSh + '</button></div>' +
         '<p class="how">' + (key === 'ps51' ? l.cmdWinHow : l.cmdShHow) + '</p>' +
         '<div class="cmd"><pre id="cmdtext" tabindex="0">' + esc(cmd) + '</pre></div>' +
-        '<div class="cmdbar"><button class="btn primary" data-copy="cmd">' + ic('copy') + l.cmdCopy + '</button></div>' +
-        '<div class="fine">' + ic('shield') + '<span>' + l.cmdSafe + '</span></div>' +
+        '<div class="cmdbar"><button class="btn primary" data-copy="cmd">' + l.cmdCopy + '</button></div>' +
+        '<div class="fine">' + '<span>' + l.cmdSafe + '</span></div>' +
         '<p class="after">' + fmt(l.cmdAfter, { f: esc(g.version + '.bin') }) + '</p>';
     }
     return h;
@@ -467,7 +419,7 @@
   function snHint(sn, c) {
     var l = L();
     if (!sn.length) return '';
-    if (c.ok) return '✓ ' + esc(NX.group(sn));
+    if (c.ok) return esc(NX.group(sn));
     if (c.reason === 'chars') return l.snChars;
     return fmt(l.snLen, { n: sn.length });
   }
@@ -475,13 +427,13 @@
   function step2() {
     var l = L(), g = G(), dlBusy = S.file.st === 'downloading';
     var h = head(2, l.s2t, fmt(l.s2l, { m: esc(mname(g)) }));
-    h += '<div class="card"><h3>' + l.target + ' · ' + esc(mname(g)) + '</h3><div class="meta"><div><span class="k">' + l.kVer + '</span><span class="v">' + esc(g.version) + '</span></div><div><span class="k">' + l.kSize + '</span><span class="v">' + mb(g.bytes) + ' MB</span></div><div><span class="k">' + l.kSha + '</span><span class="v"><span class="mono" title="' + g.sha + '">' + shortSha(g.sha) + '</span><button class="btn link" data-copy="sha" aria-label="copy">' + ic('copy') + '</button></span></div></div><div class="divider"></div>';
+    h += '<div class="bb-section"><h3>' + l.target + ' · ' + esc(mname(g)) + '</h3><table class="kv"><tr><th scope="row">' + l.kVer + '</th><td><code>' + esc(g.version) + '</code></td></tr><tr><th scope="row">' + l.kSize + '</th><td>' + mb(g.bytes) + ' MB</td></tr><tr><th scope="row">' + l.kSha + '</th><td><span class="mono">' + g.sha + '</span> <button class="btn" data-copy="sha">' + l.copy + '</button></td></tr></table>';
     if (g.url) {
-      h += '<div class="linkrow"><div class="url">' + ic('globe') + '<span class="mono" title="' + esc(g.url) + '">' + esc(g.url) + '</span></div>' +
-        '<button class="btn' + (S.file.st === 'matched' ? '' : ' primary') + '" data-act="dl"' + (busy() ? ' disabled' : '') + '>' + ic('download') + l.directDl + '</button>' +
-        '<a class="btn" href="' + esc(g.url) + '" target="_blank" rel="noopener noreferrer">' + ic('ext') + l.openBrowser + '</a>' +
-        '<button class="btn" data-copy="link" aria-label="' + esc(l.copyLink) + '">' + ic('copy') + '</button></div>' +
-        (dlBusy || S.file.st === 'error' ? '<div class="fine">' + ic('info') + '<span>' + l.dlOpenHint + '</span></div>' : '');
+      h += '<div class="linkrow"><div class="url">' + '<span class="mono" title="' + esc(g.url) + '">' + esc(g.url) + '</span></div>' +
+        '<button class="btn' + (S.file.st === 'matched' ? '' : ' primary') + '" data-act="dl"' + (busy() ? ' disabled' : '') + '>' + l.directDl + '</button>' +
+        '<a class="btn" href="' + esc(g.url) + '" target="_blank" rel="noopener noreferrer">' + l.openBrowser + '</a>' +
+        '<button class="btn" data-copy="link" aria-label="' + esc(l.copyLink) + '">' + l.copyLink + '</button></div>' +
+        (dlBusy || S.file.st === 'error' ? '<div class="fine">' + '<span>' + l.dlOpenHint + '</span></div>' : '');
     } else if (g.download === "manual") {
       h += '<p class="how">' + l.manualFw + '</p>';
     } else {
@@ -493,32 +445,32 @@
 
   function step3() {
     var l = L(), g = G();
-    return head(3, l.s3t, l.s3l) + '<div class="callout amber">' + ic('alert') + '<span>' + fmt(l.s3warn, { v: esc(g.version) }) + '</span></div><div class="card">' + olist(l.s3steps, { v: g.version }) + (g.login === "button" ? '<p class="fine">' + l.buttonLogin + '</p>' : '') + '</div>';
+    return head(3, l.s3t, l.s3l) + '<div class="note">' + '<span>' + fmt(l.s3warn, { v: esc(g.version) }) + '</span></div><div class="bb-section">' + olist(l.s3steps, { v: g.version }) + (g.login === "button" ? '<p class="fine">' + l.buttonLogin + '</p>' : '') + '</div>';
   }
 
   function step4() {
     var l = L(), f = S.file, gs = S.gen, body;
     if (S.rules !== 'ok') {
-      body = '<div class="result err"><div class="head"><span class="badge">' + ic('alert') + '</span><div class="grow"><b>' + l.rulesBadT + '</b><p>' + l.rulesBadS + '</p></div></div><div class="acts"><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div></div>';
+      body = '<div class="result err"><div class="head"><div class="grow"><b>' + l.rulesBadT + '</b><p>' + l.rulesBadS + '</p></div></div><div class="acts"><button class="btn" data-copy="diag">' + l.copyDiag + '</button></div></div>';
     } else if (f.st !== 'matched') {
-      body = '<div class="card empty"><div class="big">' + ic('file') + '</div><b>' + l.noFileT + '</b><p>' + l.noFileP + '</p><button class="btn primary" data-go="2">' + ic('arrowL') + l.goStep2 + '</button></div>';
+      body = '<div class="bb-section empty"><b>' + l.noFileT + '</b><p>' + l.noFileP + '</p><button class="btn primary" data-go="2">' + l.goStep2 + '</button></div>';
     } else {
       var g = guideById(f.model), name = outName(g);
       if (gs.st === 'loading' || gs.st === 'running') {
         var stage = gs.st === 'loading' ? fmt(l.loadingRules, { m: esc(mname(g)) }) : (gs.stage === 'verify' ? l.verifying : l.generating);
-        body = '<div class="card"><div class="filerow"><span class="fileic">' + ic('refresh') + '</span><span class="tx"><b>' + esc(name) + '</b><span id="gstage">' + stage + '</span></span></div><div class="prog"><i id="pbar"></i></div><div class="progtx"><span>' + l.noClose + '</span><span id="ptx"></span></div></div>';
+        body = '<div class="bb-section"><div class="filerow"><span class="tx"><b>' + esc(name) + '</b><span id="gstage">' + stage + '</span></span></div><div class="prog"><i id="pbar"></i></div><div class="progtx"><span>' + l.noClose + '</span><span id="ptx"></span></div></div>';
       } else if (gs.st === 'done') {
-        body = '<div class="result ok"><div class="head"><span class="badge">' + ic('check') + '</span><div class="grow"><b>' + l.doneT + '</b><p>' + l.doneS + '</p></div></div>' +
-          '<dl class="kv"><dt>' + l.kOut + '</dt><dd><span class="mono" title="' + esc(gs.name) + '">' + esc(gs.name) + '</span><button class="btn link" data-copy="outname" aria-label="copy">' + ic('copy') + '</button></dd><dt>' + l.kSha + '</dt>' + shaDd(gs.sha, 'outsha') + '</dl>' +
-          '<div class="acts"><button class="btn primary" data-act="save-out">' + ic('download') + l.saveBridge + '</button></div></div>' +
-          '<div class="soft-note">' + ic('info') + '<span>' + l.noUpgrade + '</span></div>';
+        body = '<div class="result ok"><div class="head"><div class="grow"><b>' + l.doneT + '</b><p>' + l.doneS + '</p></div></div>' +
+          '<dl class="kv"><dt>' + l.kOut + '</dt><dd><span class="mono" title="' + esc(gs.name) + '">' + esc(gs.name) + '</span><button class="btn link" data-copy="outname" aria-label="' + esc(l.copy) + '">' + l.copy + '</button></dd><dt>' + l.kSha + '</dt>' + shaDd(gs.sha, 'outsha') + '</dl>' +
+          '<div class="acts"><button class="btn primary" data-act="save-out">' + l.saveBridge + '</button></div></div>' +
+          '<div class="fine">' + '<span>' + l.noUpgrade + '</span></div>';
       } else if (gs.st === 'error') {
         var e = genError();
-        body = '<div class="result err"><div class="head"><span class="badge">' + ic('alert') + '</span><div class="grow"><b>' + e[0] + '</b><p>' + e[1] + '</p></div></div><div class="acts"><button class="btn primary" data-act="gen">' + ic('refresh') + l.retry + '</button><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div></div>';
+        body = '<div class="result err"><div class="head"><div class="grow"><b>' + e[0] + '</b><p>' + e[1] + '</p></div></div><div class="acts"><button class="btn primary" data-act="gen">' + l.retry + '</button><button class="btn" data-copy="diag">' + l.copyDiag + '</button></div></div>';
       } else {
-        body = '<div class="card"><div class="filerow"><span class="fileic">' + ic('file') + '</span><span class="tx"><b>' + esc(f.name) + '</b><span>' + esc(mname(g)) + ' · ' + esc(g.version) + ' · <span class="ok-ink">✓ ' + l.verified + '</span></span></span><button class="btn link" data-go="2">' + l.change + '</button></div>' +
-          '<div class="lbl">' + l.outFile + '</div><div class="out"><div class="path"><span class="mono">' + esc(name) + '</span></div></div><div class="fine">' + ic('download') + '<span>' + l.outNote + '</span></div></div>' +
-          '<div class="row-end"><button class="btn primary lg" data-act="gen">' + l.gen + '</button><div class="fine">' + ic('shield') + '<span>' + l.genFine + '</span></div></div>';
+        body = '<div class="bb-section"><div class="filerow"><span class="tx"><b>' + esc(f.name) + '</b><span>' + esc(mname(g)) + ' · ' + esc(g.version) + ' · <span class="ok-ink">' + l.verified + '</span></span></span><button class="btn link" data-go="2">' + l.change + '</button></div>' +
+          '<div class="lbl">' + l.outFile + '</div><div class="out"><div class="path"><span class="mono">' + esc(name) + '</span></div></div><div class="fine">' + '<span>' + l.outNote + '</span></div></div>' +
+          '<div class="row-end"><button class="btn primary lg" data-act="gen">' + l.gen + '</button><div class="fine">' + '<span>' + l.genFine + '</span></div></div>';
       }
     }
     return head(4, l.s4t, l.s4l) + body;
@@ -526,65 +478,53 @@
 
   function step5() {
     var l = L(), g = S.file.st === 'matched' ? guideById(S.file.model) : G();
-    return head(5, l.s5t, l.s5l) + '<div class="card">' + olist(l.s5steps, { f: outName(g) }) + '</div><div class="callout info">' + ic('info') + '<span>' + l.s5info + '</span></div>';
+    return head(5, l.s5t, l.s5l) + '<div class="bb-section">' + olist(l.s5steps, { f: outName(g) }) + '</div><div class="note">' + '<span>' + l.s5info + '</span></div>';
   }
 
   function step6() {
     var l = L(), g = G(), maint = 'http://192.168.10.1/';
-    var link = '<span class="linkrow"><span class="url">' + ic('link') + '<span class="mono">' + maint + '</span></span><a class="btn primary" href="' + maint + '" target="_blank" rel="noopener noreferrer">' + ic('ext') + l.openBrowser + '</a><button class="btn" data-copy="maint" aria-label="copy">' + ic('copy') + '</button></span>';
-    return head(6, l.s6t, l.s6l) + '<div class="callout teal">' + ic('shield') + '<span>' + l.s6backup + '</span></div>' +
-      '<div class="card">' + olist(l.s6steps, { extra: [link] }) + '</div>' +
-      '<details class="faq"><summary>' + ic('alert') + '<span>' + l.faqQ + '</span>' + ic('chev', 'i chev') + '</summary><div class="body">' + fmt(l.faqA, { v: esc(g.version) }) + '<ol>' + l.faqSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol></div></details>' +
-      '<div class="callout info" data-k="s6rec">' + ic('info') + '<span><b>' + l.s6recT + '</b> ' + l.s6rec.replace('192.168.10.1', '<code>192.168.10.1</code>') + '</span></div>' +
-      '<div class="soft-note">' + ic('info') + '<span>' + l.noUpgrade + '</span></div>';
+    var link = '<span class="linkrow"><span class="url">' + '<span class="mono">' + maint + '</span></span><a class="btn primary" href="' + maint + '" target="_blank" rel="noopener noreferrer">' + l.openBrowser + '</a><button class="btn" data-copy="maint" aria-label="' + esc(l.copy) + '">' + l.copy + '</button></span>';
+    return head(6, l.s6t, l.s6l) + '<div class="note danger">' + '<span>' + l.s6backup + '</span></div>' +
+      '<div class="bb-section">' + olist(l.s6steps, { extra: [link] }) + '</div>' +
+      '<details class="faq"><summary>' + '<span>' + l.faqQ + '</span>' + '</summary><div class="body">' + fmt(l.faqA, { v: esc(g.version) }) + '<ol>' + l.faqSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol></div></details>' +
+      '<div class="note" data-k="s6rec">' + '<span><b>' + l.s6recT + '</b> ' + l.s6rec.replace('192.168.10.1', '<code>192.168.10.1</code>') + '</span></div>' +
+      '<div class="fine">' + '<span>' + l.noUpgrade + '</span></div>';
   }
 
   function panelFoot() {
     var l = L(), hint = '', nextDis = false;
     if (S.step === 3) {
       nextDis = !S.upgraded;
-      hint = '<span class="check' + (S.upgraded ? ' on' : '') + '" role="checkbox" tabindex="0" aria-checked="' + S.upgraded + '" aria-label="' + esc(fmt(l.s3check, { v: G().version })) + '" data-act="toggle-up"><span class="check-box" aria-hidden="true">' + ic('check') + '</span><span>' + fmt(l.s3check, { v: esc(G().version) }) + '</span></span>';
+      hint = '<label class="upgrade-check"><input type="checkbox" data-act="toggle-up"' + (S.upgraded ? ' checked' : '') + '> <span>' + fmt(l.s3check, { v: esc(G().version) }) + '</span></label>';
     }
     if (S.step === 4 && busy()) nextDis = true;
-    return '<div class="panel-foot"><span class="hint">' + hint + '</span><span class="sp"></span>' +
-      (S.step > 1 ? '<button class="btn" data-act="prev">' + ic('arrowL') + l.prev + '</button>' : '') +
-      (S.step < 6 ? '<button class="btn' + (S.step === 4 && S.gen.st !== 'done' ? '' : ' primary') + '" data-act="next"' + (nextDis ? ' disabled' : '') + '>' + l.next + ic('arrowR') + '</button>' : '') + '</div>';
+    return '<div class="panel-foot">' + hint + '<div class="bb-actions">' +
+      (S.step > 1 ? '<button class="btn" data-act="prev">' + l.prev + '</button>' : '') +
+      (S.step < 6 ? '<button class="btn primary" data-act="next"' + (nextDis ? ' disabled' : '') + '>' + l.next + '</button>' : '') + '</div></div>';
   }
 
   function modal() {
     if (!S.modal) return '';
     var l = L(), m = CAT.meta;
-    function seg(k, opts) { return '<div class="seg">' + opts.map(function (o) { return '<button data-set="' + k + '" data-val="' + o[0] + '" aria-pressed="' + (S[k] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
-    var links = (m.repo ? '<a class="btn" href="' + esc(m.repo) + '" target="_blank" rel="noopener noreferrer">' + ic('ext') + l.source + '</a>' : '') +
-      '<a class="btn" href="SHA256SUMS" target="_blank" rel="noopener">' + ic('file') + 'SHA256SUMS</a>';
-    return '<div class="scrim" data-act="close-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="' + esc(l.settings) + '" data-stop="1">' +
-      '<div class="mh"><b>' + l.settings + '</b><button class="iconbtn" data-act="close-modal" aria-label="close">' + ic('x') + '</button></div><div class="mb">' +
-      '<div class="msec mgrid2"><div><h4>' + l.mLang + '</h4>' + seg('lang', [['zh', '中文'], ['en', 'English']]) + '</div><div><h4>' + l.mTheme + '</h4>' + seg('theme', [['auto', l.themeAuto], ['light', l.themeLight], ['dark', l.themeDark]]) + '</div></div>' +
-      '<div class="msec"><h4>' + l.mUpdate + '</h4><div class="offline-box">' + l.offlineUpd + '</div></div>' +
-      '<div class="msec"><h4>' + l.mDiag + '</h4><div class="mrow"><div class="l"><span>' + l.diagS + ' · ' + l.diagNoSn + '</span></div><button class="btn" data-copy="diag">' + ic('copy') + l.copyDiag + '</button></div></div>' +
-      '<div class="msec"><h4>' + l.mAbout + '</h4><div class="about">' + fmt(l.about, { v: esc(m.web), e: esc(m.engine), rs: esc(m.release) }) + '</div>' +
-      '<dl class="kv compact"><dt>' + l.release + '</dt><dd><span class="mono">' + esc(m.release) + '</span></dd>' + (m.label ? '<dt>Build</dt><dd><span class="mono">' + esc(m.label) + '</span></dd>' : '') + '</dl>' +
-      '<div class="about-links">' + links + '</div><div class="fine">' + ic('info') + '<span>' + l.sumNote + '</span></div></div>' +
-      '</div></div></div>';
+    return '<section class="bb-settings"><h2>' + l.settings + '</h2><p>' + l.offlineUpd + '</p><p class="about">' + fmt(l.about, { v: esc(m.web), e: esc(m.engine), rs: esc(m.release) }) + '</p><p>' + l.sumNote + '</p><button class="btn" data-act="close-modal">' + l.close + '</button></section>';
   }
 
   var rendered = 0;
   function render() {
-    var l = L(), d = document.documentElement, m = CAT.meta;
+    var l = L(), d = document.documentElement;
     d.setAttribute('data-theme', S.theme); d.lang = S.lang === 'zh' ? 'zh-CN' : 'en';
-    document.title = 'BootBridge ' + l.edition;
+    document.title = 'BootBridge - IPQ50XX-Uboot 安装指南';
     var content = [null, step1, step2, step3, step4, step5, step6][S.step]();
     var keep = rendered === S.step ? window.pageYOffset : -1;
     var ae = document.activeElement, focusId = ae && ae.id, selS = null, selE = null;
     if (focusId === 'sn') { selS = ae.selectionStart; selE = ae.selectionEnd; }
-    root.innerHTML = '<div class="page">' +
-      '<header class="topbar"><div class="wrap"><div class="brand">' + LOGO + '<span class="name">' + l.title + '</span><span class="tag">' + l.edition + '</span>' +
-      (m.repo ? '<a class="author" href="' + esc(m.repo) + '" target="_blank" rel="noopener noreferrer" title="FlyFish-go / H3C-NX30-Uboot">' + '<span class="byw">' + esc(l.by) + ' </span>FlyFish-go</a>' : '') + '</div>' +
-      '<div class="right"><div class="seg" role="group" aria-label="language"><button data-set="lang" data-val="zh" aria-pressed="' + (S.lang === 'zh') + '">中文</button><button data-set="lang" data-val="en" aria-pressed="' + (S.lang === 'en') + '">EN</button></div>' +
-      '<button class="iconbtn" data-act="open-modal" title="' + esc(l.settings) + '" aria-label="' + esc(l.settings) + '">' + ic('gear') + '</button></div></div></header>' +
-      stepper() +
-      '<main class="wrap layout"><section class="panel"><div class="panel-body" data-step="' + S.step + '">' + content + '</div>' + panelFoot() + '</section>' + aside() + '</main>' +
-      pageFoot() + '</div>' + modal() + (S.toast ? '<div class="toast" role="status">' + ic('check') + S.toast + '</div>' : '') +
+    root.innerHTML = '<p class="crumb">' + l.tools + '</p><h1>BootBridge</h1>' +
+      '<div class="bb-language" role="group" aria-label="Language / 语言"><button class="btn" data-set="lang" data-val="zh" aria-pressed="' + (S.lang === 'zh') + '">中文</button> <button class="btn" data-set="lang" data-val="en" aria-pressed="' + (S.lang === 'en') + '">English</button></div>' +
+      '<ol class="steps bb-flow">' + l.steps.map(function (s, i) {
+        var n = i + 1;
+        return '<li' + (n === S.step ? ' aria-current="step"' : '') + '>' + (n === S.step ? '<section class="bb-current" data-step="' + n + '">' + content + panelFoot() + '</section>' : '<button class="step-link" data-go="' + n + '">' + s[0] + '</button>') + '</li>';
+      }).join('') + '</ol>' + statusTable() + modal() + pageFoot() +
+      (S.toast ? '<p class="toast" role="status">' + S.toast + '</p>' : '') +
       '<input type="file" id="picker" class="hidden-input" accept=".bin,application/octet-stream">';
     rendered = S.step;
     if (focusId) { var el = document.getElementById(focusId); if (el) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } if (selS != null && el.setSelectionRange) try { el.setSelectionRange(selS, selE); } catch (e) { /* ignore */ } } }
@@ -631,13 +571,21 @@
       case 'toggle-up': S.upgraded = !S.upgraded; return render();
       case 'sn-check': return precheck();
       case 'sn-edit': S.sn.st = 'idle'; S.sn.r = null; render(); var i = document.getElementById('sn'); if (i) i.focus(); return;
-      case 'open-modal': S.modal = true; return render();
+      case 'open-modal': S.modal = !S.modal; return render();
       case 'close-modal': if (ev.target === t || t.tagName === 'BUTTON') { S.modal = false; render(); } return;
     }
   });
   root.addEventListener('keydown', function (ev) {
     var t = ev.target;
     if (t.getAttribute && t.getAttribute('data-act') === 'toggle-up' && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); S.upgraded = !S.upgraded; render(); var c = root.querySelector('[data-act="toggle-up"]'); if (c) c.focus(); }
+    if (t.hasAttribute && t.hasAttribute('data-model') && /^(ArrowDown|ArrowUp|ArrowLeft|ArrowRight|Home|End)$/.test(ev.key)) {
+      ev.preventDefault();
+      var options = Array.prototype.slice.call(root.querySelectorAll('[data-model]')), index = options.indexOf(t);
+      index = ev.key === 'Home' ? 0 : ev.key === 'End' ? options.length - 1 : (index + (/^(ArrowDown|ArrowRight)$/.test(ev.key) ? 1 : -1) + options.length) % options.length;
+      var model = options[index].getAttribute('data-model');
+      root.querySelector('[data-model="' + model + '"]').click();
+      root.querySelector('[data-model="' + model + '"]').focus();
+    }
     if (t.id === 'sn' && ev.key === 'Enter') { ev.preventDefault(); precheck(); }
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && S.modal) { S.modal = false; render(); } });

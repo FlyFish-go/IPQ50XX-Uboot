@@ -1098,7 +1098,7 @@ def build(out):
     shutil.copytree(SITE / 'static', out)
     from bootbridge import build_bootbridge
     try:
-        build_bootbridge(out / 'bootbridge')
+        build_bootbridge(out / 'bootbridge', layout, fix_links)
     except (ValueError, subprocess.CalledProcessError) as e:
         raise BuildError(f'BootBridge: {e}') from e
     (out / 'fwunpack').mkdir()

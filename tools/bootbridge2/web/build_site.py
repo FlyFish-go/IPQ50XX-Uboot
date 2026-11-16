@@ -82,6 +82,7 @@ def main():
     ap.add_argument("--repo-url", default="")
     ap.add_argument("--build-label", default="")
     ap.add_argument("--zip")
+    ap.add_argument("--guide-frame", help="guide layout with body/head insertion markers")
     a = ap.parse_args()
     config = json.load(open(a.config, encoding="utf-8")) if a.config else {}
     a.nx54 = a.nx54 or config.get("nx54", "hidden")
@@ -185,8 +186,25 @@ def main():
         cmds[key] = t
     write(os.path.join(a.out, "assets/commands.js"), js_literal("BB_COMMANDS", cmds))
 
+    # Reuse the guide palette even in the standalone offline page. No runtime
+    # dependency on the guide server: these two assets travel with the ZIP.
+    guide_static = os.path.join(HERE, "..", "..", "..", "site", "static")
+    for source, target in (("style.css", "guide.css"), ("logo.svg", "guide-logo.svg")):
+        shutil.copyfile(os.path.join(guide_static, source), os.path.join(a.out, "assets", target))
+
     idx = os.path.join(a.out, "index.html")
     html = open(idx, encoding="utf-8").read()
+    if a.guide_frame:
+        frame = open(a.guide_frame, encoding="utf-8").read()
+        if frame.count("__BOOTBRIDGE_BODY__") != 1 or frame.count("__BOOTBRIDGE_HEAD__") != 1:
+            die("guide frame must contain exactly one body and head marker")
+        body = re.search(r"<body>(.*?)</body>", html, re.S).group(1)
+        # The shared layout owns <main>, the site title and navigation.
+        body = re.sub(r'<main class="doc">.*?(?=<div id="root")', '', body, count=1, flags=re.S)
+        body = body.replace("</main>", "")
+        head = "\n".join(re.findall(r'<meta (?:http-equiv="Content-Security-Policy"|name="(?:referrer|color-scheme)")[^>]+>', html))
+        head += '\n<link rel="stylesheet" href="assets/app.css?v=__BUILD__">'
+        html = frame.replace("__BOOTBRIDGE_BODY__", body).replace("__BOOTBRIDGE_HEAD__", head)
     h = hashlib.sha256()
     for rel in sorted(re.findall(r'(?:src|href)="(assets/[^"?]+)\?v=__BUILD__"', html)):
         h.update(open(os.path.join(a.out, rel), "rb").read())
