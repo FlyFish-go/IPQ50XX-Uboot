@@ -20,7 +20,7 @@ def build_bootbridge(out, layout, fix_links):
         frame = Path(tmp) / 'frame.html'
         frame.write_text(fix_links(page, shell), encoding='utf-8')
         subprocess.run([sys.executable, str(WEB / 'build_site.py'),
-                        '--release-dir', os.environ.get('BB_PUBLIC_RELEASE', str(WEB / 'release' / 'BB2-R7')),
+                        '--release-dir', os.environ.get('BB_PUBLIC_RELEASE', str(WEB / 'release' / 'BB2-R8')),
                         '--config', str(SITE / 'data' / 'bootbridge.json'),
                         '--repo-url', 'https://github.com/FlyFish-go/IPQ50XX-Uboot',
                         '--build-label', 'NX30 家族直接安装 U-Boot v0.2.0',

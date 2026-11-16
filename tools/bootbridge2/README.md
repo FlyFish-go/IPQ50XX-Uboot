@@ -1,6 +1,6 @@
 # BootBridge v2（开发中）
 
-BootBridge 的重写版本。NX30 家族使用 BB2-R7 直接安装正式 U-Boot v0.2.0；NX54 为测试支持（网页标为测试中）。旧版 `tools/bootbridge/` 仅作历史参考。
+BootBridge 的重写版本。NX30 家族使用 BB2-R8 直接安装正式 U-Boot v0.2.0；NX54 为测试支持（网页标为测试中）。旧版 `tools/bootbridge/` 仅作历史参考。
 
 网页与安装指南共用 IPQ50XX-Uboot 的 GitHub Pages：`/IPQ50XX-Uboot/bootbridge/`。Actions 只使用仓库内固定的规则/计划资产和网页源码，不读取私有官方包，不发布含厂商文件的基础镜像。公开计划采用 `build_bridge.py --public-plan`，每段字面量有来源记录，原厂压缩块全部 COPY，禁止 XOR 掩码。完整发布输入与更新流程见 [web/release/README.md](web/release/README.md)。NX54 的显示/候选开关为 `site/data/bootbridge.json` 的 `nx54=hidden|testing`。
 
