@@ -12,6 +12,11 @@ hardware:
   - { label: 闪存, value: "NAND（多种型号，U-Boot 自动识别 ECC）" }
   - { label: 实机测试, value: "RC3000（512 MB 内存版）：安装与回原厂" }
 slots:
+  capacities:
+    - {name: 双系统每槽, bytes: 41943040}
+    - {name: 单系统大分区, bytes: 83886080}
+    - {name: 单系统超大分区, bytes: 121634816}
+  capacity_source: "40 / 80 / 116 MiB 布局来自 u-boot-2016/lib/rt3000_b_layout.c。请在救援页核对当前布局。"
   mechanism: bootconfig
   note: 原厂双系统，由 BOOTCONFIG 选择启动槽。可选把两个槽合并成一个大分区，给第三方固件更多空间。
 install:
@@ -26,7 +31,7 @@ recovery:
   - 已装本项目 U-Boot 的，救援页里可以写回备份的分区。
   - 万一启动程序本身损坏，需要 TTL 串口或编程器，请先到 QQ 群 1131957442 联系维护者。
 links:
-  - { text: H3C-NX30-Uboot 仓库（BootBridge 与旧版 v0.1.0）, url: "https://github.com/FlyFish-go/H3C-NX30-Uboot" }
+  - { text: 新版 BootBridge（直接安装 v0.2.0）, url: "/bootbridge/" }
   - { text: v0.2.0 发布说明, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0" }
   - { text: 配套固件：QSDK 11.5, url: "https://github.com/FlyFish-go/H3C-RT3000-Product-R1/releases" }
   - { text: 配套固件：OpenWrt + NSS, url: "https://github.com/FlyFish-go/H3C-Magic-NSS/releases" }

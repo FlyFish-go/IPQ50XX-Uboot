@@ -20,3 +20,5 @@ description: IPQ50XX-Uboot 的几种安装方式，以及各自适用的机型�
 - 两份 U-Boot（`APPSBL` 和 `APPSBL_1`）一起写，写完读回核对，对不上就报错。
 
 先去[机型列表](/devices/)找到你的机器。
+
+需要从厂商包或 sysupgrade 取出系统时，先用[离线固件拆包工具](/tools/fwunpack)，再将得到的 `.ubi` 交给救援页「固件更新」。

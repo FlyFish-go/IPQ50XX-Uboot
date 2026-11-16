@@ -32,6 +32,9 @@ differences:
   - "**这台机器上不要执行 `bootconfig set all`**：样机上第二套 QSEE、DEVCFG、CDT 是空的，全部切过去会起不来。"
   - "启动时本 U-Boot 会往环境分区写入默认网络变量（IP `192.168.1.1`）。原厂本来每次开机也会写。"
 slots:
+  capacities:
+    - {name: 原厂系统槽, bytes: 52428800}
+  capacity_source: "50 MiB 来自 MA3063 原厂 FIT flash.scr 的系统写入范围（0x900000 + 0x3200000）；请以救援页实际分区表为准。"
   mechanism: bootconfig
   note: "原厂用 BOOTCONFIG 选 rootfs 槽。切换槽要断电重启后才生效（SBL 到 SMEM 要重新读）。"
 install:

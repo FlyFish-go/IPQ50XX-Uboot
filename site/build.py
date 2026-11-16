@@ -50,9 +50,11 @@ YAML: ttl_steps() / web_steps() below generate them from these fields.
 
 import argparse
 import html
+import json
 import posixpath
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,7 +71,7 @@ LINKS = {
     'issues': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/issues',
     'report': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/new?template=board-report.yml',
     'ci': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess',
-    'bootbridge': 'https://flyfish-go.github.io/H3C-NX30-Uboot/',
+    'bootbridge': '/bootbridge/',
     'h3c_release': 'https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/v0.2.0',
     'sponsor': 'https://ifdian.net/a/FlyFish-go',
 }
@@ -85,6 +87,8 @@ SIDE = [  # (group title or None, [(link, text)])
     ('装好以后', [('/use/rescue', '进入救援页'),
                   ('/use/firmware', '刷固件与切换系统'),
                   ('/use/upgrade', '升级 U-Boot、回原厂')]),
+    ('工具', [('/bootbridge/', 'BootBridge'),
+              ('/tools/fwunpack', '离线固件拆包')]),
     ('帮助', [('/help/', '出问题怎么办'),
               ('/learn/slots', '双系统怎么切换'),
               ('/learn/glossary', '名词解释')]),
@@ -517,19 +521,18 @@ def web_steps(d):
              warn='`appsbl.mbn` 这类 U-Boot 文件不能直接传到原厂升级页。第一次安装只能走 BootBridge。'),
         dict(id='install', title='识别、备份、安装', note=n.get('install'),
              body='电脑用网线接路由器的 LAN 口，网卡设为自动获取地址，浏览器打开 `http://192.168.10.1`，'
-                  '依次点「识别」「备份」「安装」。\n\n'
+                  '确认识别结果，先生成并下载备份，校验文件后再点「安装」。\n\n'
                   '备份文件保存在自己电脑上，里面有本机的校准数据和序列号，不要发给别人。'
-                  '装完路由器会重启，照常进入原厂系统。',
+                  '安装成功后按页面提示重启，照常进入原厂系统。',
              stop='备份文件没保存好之前，不要点「安装」。',
              fail='\n'.join([
                  '- **打不开 `192.168.10.1`**：看电脑有没有拿到 `192.168.10.x` 的地址；换一个 LAN 口；等一分钟再刷新。',
                  '- **识别不通过**：不要换别的机型的文件硬装，截图到 QQ 群或 Issue。',
              ])),
-        dict(id='upgrade', title='升级到 U-Boot v0.2.0', note=n.get('upgrade'),
-             body='BootBridge 装的是较早的 U-Boot（pre.5）。断电，按住 Reset 再通电，约 3 秒后松开，'
-                  '打开 `http://192.168.10.1` 进救援页，在「系统信息」看「硬件系列」（HW-A、B、C、D）。'
-                  f'到 [v0.2.0 发布页]({LINKS["h3c_release"]})下载这一组的 `h3c-hw-x.mbn` 和 `h3c-hw-x-ram-rescue.elf`，'
-                  '按[升级 U-Boot](/use/upgrade#h3c-nx30-家族)里「还是 v0.1.0、pre.5」的步骤写入。',
+        dict(id='upgrade', title='确认 U-Boot v0.2.0', note=n.get('upgrade'),
+             body='新版 BootBridge 直接安装 v0.2.0 正式版，不需要再经过旧版或 RAM 救援版升级。'
+                  '首次启动稳定后，按住 Reset 通电，红灯闪满 3 下后松手，'
+                  '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本和硬件系列。',
              check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.2.0`。'),
         dict(id='verify', title='记住怎么进救援页', note=n.get('verify'),
              body=f'以后进救援页：{r.get("how", "按住 Reset 通电")}，打开 `http://{r.get("address", "192.168.10.1")}`。'
@@ -1034,6 +1037,36 @@ def redirect_page(page, to):
 '''
 
 
+def fwunpack(devices):
+    """One model source: site/devices; config names come from board DTS."""
+    root = SITE.parent
+    targets = []
+    for d in devices:
+        capacities = d.get('slots', {}).get('capacities', [])
+        for c in capacities:
+            if not isinstance(c.get('bytes'), int) or c['bytes'] <= 0 or c['bytes'] % 131072:
+                raise BuildError(f"{d['id']}: invalid slot capacity")
+        if d['id'].startswith('h3c-'):
+            paths = sorted((root / 'u-boot-2016/arch/arm/dts').glob('ipq5018-h3c*.dts'))
+        else:
+            artifact = d.get('artifact', '').removesuffix('-untested').replace('_', '-', 1)
+            paths = [p for p in (root / 'u-boot-2016/arch/arm/dts').glob('*.dts')
+                     if norm(p.stem) == norm(artifact)]
+            if len(paths) != 1:
+                raise BuildError(f"{d['id']}: cannot identify board DTS for unpacker")
+        configs = []
+        for path in paths:
+            if path.is_file():
+                for m in re.finditer(r'config_name\s*=([^;]+);', path.read_text()):
+                    configs.extend(re.findall(r'"([^"\n]+)"', m.group(1)))
+        targets.append({'id': d['id'], 'name': full_name(d), 'slots': capacities,
+                        'source': ('已知系统槽：' + '；'.join(f'{c["name"]} {c["bytes"] / 1048576:g} MiB' for c in capacities) + '。请在救援页核对当前布局。') if capacities else '系统槽大小不确定，请在救援页核对实际分区容量。',
+                        'configs': sorted(set(configs))})
+    options = ''.join(f'<option value="{esc(t["id"])}">{esc(t["name"])}</option>' for t in targets)
+    data = json.dumps(targets, ensure_ascii=False).replace('<', '\\u003c')
+    return (root / 'tools/fwunpack/panel.html').read_text().replace('@@OPTIONS@@', options).replace('@@TARGETS@@', data)
+
+
 def build(out):
     devices = load_devices()
     others = load_others()
@@ -1057,11 +1090,20 @@ def build(out):
         'rescue_table': lambda: rescue_table(devices),
         'shell_table': lambda: shell_table(devices),
         'trial_list': lambda: trial_list(devices),
+        'fwunpack': lambda: fwunpack(devices),
     }
 
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(SITE / 'static', out)
+    from bootbridge import build_bootbridge
+    try:
+        build_bootbridge(out / 'bootbridge')
+    except (ValueError, subprocess.CalledProcessError) as e:
+        raise BuildError(f'BootBridge: {e}') from e
+    (out / 'fwunpack').mkdir()
+    for name in ('core.js', 'app.js'):
+        shutil.copyfile(SITE.parent / 'tools/fwunpack' / name, out / 'fwunpack' / name)
     pages = {}
 
     for src in sorted((SITE / 'pages').rglob('*.md')):

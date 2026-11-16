@@ -532,3 +532,22 @@ tr:target td:first-child { box-shadow: inset 3px 0 0 var(--accent); padding-left
   ul.names { columns: 1; }
   .facts { padding: .2rem .8rem; }
 }
+
+/* Firmware unpacker: use the guide's typography, tables and terminal colours. */
+.fw-field { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem; }
+.fw-field label { font-weight: 600; }
+.fw-field select { max-width: 100%; padding: .4rem .6rem; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; }
+.fw-drop { padding: 1.4rem; margin: 1.2rem 0; border: 1px dashed var(--fg-3); background: var(--bg-soft); }
+.fw-drop.dragover { border-color: var(--accent); background: var(--accent-soft); }
+.fw-drop label { display: block; font-weight: 600; margin-bottom: .7rem; }
+.fw-drop input { max-width: 100%; font: inherit; }
+.fw-drop p { margin: .7rem 0 0; color: var(--fg-2); font-size: .875rem; }
+#fwunpack [hidden] { display: none; }
+#fw-status { overflow-wrap: anywhere; }
+#fw-details td { overflow-wrap: anywhere; }
+#fw-details th { width: 7rem; }
+.fw-terminal { white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem 1.2rem; color: var(--term-fg); background: var(--term-bg); border: 1px solid var(--term-line); }
+.fw-download, #fw-cancel, #fw-browse { display: inline-block; font: inherit; padding: .45rem 1rem; border: 1px solid var(--accent); border-radius: 3px; background: var(--accent-soft); color: var(--link); cursor: pointer; }
+.fw-download:hover { text-decoration: underline; }
+
+#fw-filename { overflow-wrap: anywhere; }

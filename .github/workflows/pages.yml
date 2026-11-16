@@ -3,7 +3,7 @@ name: Deploy site
 on:
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'tools/bootbridge2/web/**', 'tools/fwunpack/**', 'u-boot-2016/arch/arm/dts/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,13 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r site/requirements.txt
+      - run: sudo apt-get update && sudo apt-get install -y mtd-utils gcc
+      - name: Verify public BootBridge inputs
+        run: BB_PUBLIC_RELEASE=tools/bootbridge2/web/release/BB2-R5 python3 tools/bootbridge2/web/tests/test_release.py
+      - name: Test firmware unpacker
+        run: |
+          node --test tools/fwunpack/tests/core.test.cjs
+          python3 -I tools/fwunpack/tests/validator.py
       - run: python3 site/build.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
