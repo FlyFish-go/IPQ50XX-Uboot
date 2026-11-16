@@ -1,6 +1,6 @@
 # BootBridge v2（开发中）
 
-BootBridge 的重写版本。NX30 家族使用 BB2-R6 直接安装正式 U-Boot v0.2.0；NX54 为测试支持（网页标为测试中）。旧版 `tools/bootbridge/` 仅作历史参考。
+BootBridge 的重写版本。NX30 家族使用 BB2-R7 直接安装正式 U-Boot v0.2.0；NX54 为测试支持（网页标为测试中）。旧版 `tools/bootbridge/` 仅作历史参考。
 
 网页与安装指南共用 IPQ50XX-Uboot 的 GitHub Pages：`/IPQ50XX-Uboot/bootbridge/`。Actions 只使用仓库内固定的规则/计划资产和网页源码，不读取私有官方包，不发布含厂商文件的基础镜像。公开计划采用 `build_bridge.py --public-plan`，每段字面量有来源记录，原厂压缩块全部 COPY，禁止 XOR 掩码。完整发布输入与更新流程见 [web/release/README.md](web/release/README.md)。NX54 的显示/候选开关为 `site/data/bootbridge.json` 的 `nx54=hidden|testing`。
 
@@ -55,8 +55,11 @@ make arm ARM_CC=arm-openwrt-linux-gcc
 - NX54 安装要求布局、MP03.1、CDT machid `0x08040001`、有效 ENV 的
   `productname=NX54`、整个 512 KiB SBL1 的 SHA-256 同时匹配。NX30 的板型
   规则另绑定 NX30 布局；安装层也阻止旧规则包把 HW-A 候选写到 NX54 布局。
-- 目前只放行实测的 GigaDevice `c8:11` / `F50D1G41LB(2M)` / ECC4。
-  Micron 版本需要其原厂内核 NAND/ECC 事实和实机验证，暂拒绝安装。
+- NAND/ECC 候选和 NX30 家族一样取自原厂表：NX54 原厂 APPSBL 的 18 行 NAND 表与
+  NX30 原厂表 A1/B 逐字节相同，NX54V100R014 内核的 17 行 NAND ID 表（OOB、ECC）与
+  NX30 R012 相同，因此候选 = `nand_schema.runtime_profiles(["B"])` 的 17 种组合
+  （`pack/make_rules.py` 的 `NX54_NANDS`，自测核对）。每种组合都必须编译在目标 MBN 的
+  NAND 目录里。NX54 不再使用 ECC 实测（evidence）放行；实机验收只覆盖 GigaDevice `c8:11`。
 - NX54 备份要求 20 个分区全部存在、偏移与大小正确：15 个启动区分区、
   两个系统槽、`pdt_data`、`pdt_data_1`、`exp`。ZIP 是 ECC 解码后的主区，
   不含 OOB 和无分区尾部；坏块、不可读块按原格式列出并用 FF 填充。

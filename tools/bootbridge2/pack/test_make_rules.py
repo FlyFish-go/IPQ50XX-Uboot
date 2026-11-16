@@ -20,6 +20,14 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "release-tools"))
 import appsbl_packager as ap  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "..", "bootbridge", "nx30-oem-bridge", "tools"))
+import nand_schema  # noqa: E402
+sys.path.insert(0, HERE)
+from make_rules import NX54_NANDS  # noqa: E402
+
+CATALOG_SET = nand_schema.profiles(os.path.join(HERE, "..", "..", "..", "u-boot-2016", "include",
+                                                "h3c_nand_catalog.h"))
+CATALOG = {p["profile_id"]: p for p in CATALOG_SET["profiles"]}
 
 FLASH = 0x4A920000
 RAM = 0x49A20000
@@ -47,13 +55,17 @@ def ident(board):
     return b"H3C-UBOOT-ID:v1;board=" + board.encode() + b";profile=auto;mask=none;ecc=none;\0"
 
 
-def mbn(board, extra=b""):
+def mbn(board, extra=b"", skip=()):
     payload = b"\x01" * 0x4000 + ident(board) + extra
     if board == "NX54":
-        name = b"h3c-oem-c811-128m-2k-sp64\0"
-        address = FLASH + len(payload)
-        payload += name + struct.pack("<III2B2x5I", address, 0, 0, 0xc8, 0x11,
-                                      134217728, 134217728, 2048, 64, 131072)
+        # One compiled catalog row (name, pointer, ID, geometry) per NX54 profile.
+        for pid in sorted({pid for pid, _ in NX54_NANDS} - set(skip)):
+            c = CATALOG[pid]
+            address = FLASH + len(payload)
+            payload += pid.encode() + b"\0" + struct.pack(
+                "<III2B2x5I", address, 0, 0, c["manufacturer_id"], c["chip_id"],
+                c["capacity_bytes"], c["qpic_capacity_bytes"], c["page_bytes"],
+                c["pages_per_block"], c["erase_bytes"])
     return ap.package_elf(elf(FLASH, payload + b"\x02" * 64))
 
 
@@ -64,7 +76,8 @@ def run(script, *args):
 
 
 def setup(d, images):
-    profiles = {"profiles": [
+    profiles = {"profiles": [dict(CATALOG[pid]) for pid in sorted({p for p, _ in NX54_NANDS})
+                             if pid != "h3c-oem-c811-128m-2k-sp64"] + [
         {"profile_id": "h3c-oem-c811-128m-2k-sp64", "oem_model": "F50D1G41LB(2M)",
          "manufacturer_id": 0xc8, "chip_id": 0x11, "capacity_mib": 128, "page_bytes": 2048,
          "erase_bytes": 131072, "raw_spare_bytes": 64},
@@ -153,14 +166,16 @@ def main():
               "--hold keeps the held profile's nand rule")
 
         rc, out, err = run("make_rules.py", *args, "--nx54")
-        check(rc == 0 and sum(l.startswith("candidate ") for l in out.splitlines()) == 9,
-              "combined dist emits eight NX30 candidates and one NX54 candidate")
+        nx54 = [l for l in out.splitlines() if l.startswith("candidate NX54-")]
+        check(rc == 0 and sum(l.startswith("candidate ") for l in out.splitlines()) == 8 + 17
+              and len(nx54) == 17, f"combined dist emits 8 NX30 and 17 NX54 candidates ({err.strip()})")
         check("product=NX54 sbl1.sha256=36e91952" in out and "layout=nx54" in out,
               "NX54 rule binds product, SBL1 and layout")
-        check("evidence_hold a1:a5" in out and "evidence_hold e5:21" in out,
-              "NX54 evidence always keeps both held NAND IDs")
-        check("evidence_catalog NX54 id=c8:11 ecc=4" in out,
-              "target MBN compiled catalog row is included")
+        check("ecc_evidence" not in out and "evidence_" not in out,
+              "NX54 uses the stock NAND table only, no evidence path")
+        check(any("nand=h3c-oem-2c15-128m-2k-sp128 ecc=8" in l for l in nx54) and
+              any("nand=h3c-oem-c811-128m-2k-sp64 ecc=4" in l for l in nx54),
+              "NX54 candidates include Micron 2c:15 ECC8 and GigaDevice c8:11 ECC4")
         open(rules, "w").write(out)
         rc, _, err = run("make_pack.py", "--rules", rules, "--auto", args[-1],
                          "-o", os.path.join(d, "nx54.bbpack"))
@@ -177,7 +192,13 @@ def main():
             rc, out, err = run("make_rules.py", *setup(d, images))
             check(rc != 0 and "candidate " not in out, f"refused: {what} ({err.strip()})")
 
-    for what, bad in (("wrong NX54 identity", mbn("A")),
+    expect = {(r["profile_id"], r["ecc_bits"]) for r in nand_schema.runtime_profiles(["B"], 0, CATALOG_SET)}
+    check(set(NX54_NANDS) == expect and len(NX54_NANDS) == len(expect),
+          "NX54 NAND list == stock table B + R012/R014 kernel (runtime_profiles(['B']))")
+
+    for what, bad in (("NX54 MBN without the Micron catalog row",
+                       mbn("NX54", skip=("h3c-oem-2c15-128m-2k-sp128",))),
+                      ("wrong NX54 identity", mbn("A")),
                       ("duplicate NX54 identity", mbn("NX54", ident("NX54"))),
                       ("truncated NX54 MBN", mbn("NX54")[:-1])):
         with tempfile.TemporaryDirectory() as d:

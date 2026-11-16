@@ -10,7 +10,7 @@ summary: H3C Magic NX54（VER.A），U-Boot 测试版 nx54-test.1。不用拆机
 brief: 测试版，只在一台 NX54 上完整实测过
 hardware:
   - { label: 硬件, value: "IPQ5018、512 MB 内存、PCIe QCN9074（5 GHz）、QCA8337 交换机" }
-  - { label: 闪存, value: "SPI-NAND 128 MiB（实测 GigaDevice F50D1G41LB；Micron 版本按实测 ECC 实验性放行）" }
+  - { label: 闪存, value: "SPI-NAND，按原厂 NAND 表支持 17 种型号（与 NX30 家族相同）；实机为 GigaDevice F50D1G41LB 128 MiB" }
   - { label: 硬件组, value: "NX54（单独一组）" }
   - { label: 实机测试, value: "一台 NX54 VER.A：BootBridge 全流程、冷启动、OpenWrt + NSS" }
 slots:
@@ -26,7 +26,6 @@ install:
   uboot: nx54-test.1
 notes:
   oem: H3C 没有公开 R014 的下载链接。BootBridge 第 2 步填路由器底部的 SN，网页给出一条命令，在自己电脑上运行，从 H3C 官方下载 R014 并校验。
-  install: 被识别为闪存型号未登记（例如 Micron 版本）时，页面会标「实验性」，只有原厂系统能干净读出引导分区才允许安装。这种情况一定先保存好备份。
 rescue:
   how: 断电，按住 Reset 再通电，指示灯闪满 3 下后松手
   address: 192.168.10.1
@@ -36,7 +35,6 @@ warnings:
   - BX54E 不支持，BootBridge 会拒绝。
 not_tested:
   - 桥接系统里长按 Mesh 键返回原厂（请用网页上的「返回原厂」按钮）
-  - Micron 闪存的 NX54
 recovery:
   - 安装前 BootBridge 会完整备份；桥接系统里随时可以返回原厂。
   - 已装本项目 U-Boot 的，救援页里可以写回备份的分区。
