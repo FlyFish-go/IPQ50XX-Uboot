@@ -43,7 +43,7 @@ U-Boot 是路由器通电后最先运行的程序之一，由它决定启动哪�
 
 | 方式 | 适用机型 | 要拆机吗 |
 |---|---|---|
-| [BootBridge 网页安装](/install/bootbridge) | H3C NX30、RT3000、RC3000、RW3000 | 不用 |
+| [BootBridge 网页安装](/install/bootbridge) | H3C NX30、RT3000、RC3000、RW3000，NX54（测试中） | 不用 |
 | [TTL 串口安装](/install/ttl) | 其他已验证的机型 | 要 |
 | [RAM 试跑](/install/ram-trial) | 未验证的机型，只给测试者 | 要，不写闪存 |
 

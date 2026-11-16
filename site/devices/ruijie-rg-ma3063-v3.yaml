@@ -17,7 +17,7 @@ hardware:
 warnings:
   - "置信度低：设备树只来自一份第三方文件，我们没有看过这个版本的原厂设备树。"
   - "LED 的 GPIO 可疑：第三方文件把 GPIO38 当 LED，而 V1.00 实机是 19/17/22/20。"
-  - "硬件版本由 CDT 里的 machid 决定，不是机身贴纸或 productid。machid 为 `0x8040004` 才是这个页面，V4 和 RG-MA3064（`0x8040104`）没有设备树，不在收录范围。"
+  - "硬件版本由 CDT 里的 machid 决定，不是机身贴纸或 productid。machid 为 `0x8040004` 才是这个页面，V4 和 RG-MA3064（`0x8040104`）没有设备树，还没有构建（列在规划中）。"
   - "和已验证的 V1.00 一样：原厂 U-Boot 有 `ipqboot_num` 开机计数，本 U-Boot 不复现；绝不要执行 `bootconfig set all`。"
 tested:
   - "离线检查：构建通过；设备树与第三方设备树、上游 OpenWrt 的设备树逐项对照过"

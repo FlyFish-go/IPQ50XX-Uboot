@@ -10,7 +10,7 @@ summary: H3C Magic NX54（VER.A），U-Boot 测试版 nx54-test.1。不用拆机
 brief: 测试版，只在一台 NX54 上完整实测过
 hardware:
   - { label: 硬件, value: "IPQ5018、512 MB 内存、PCIe QCN9074（5 GHz）、QCA8337 交换机" }
-  - { label: 闪存, value: "SPI-NAND，按原厂 NAND 表支持 17 种型号（与 NX30 家族相同）；实机为 GigaDevice F50D1G41LB 128 MiB" }
+  - { label: 闪存, value: "SPI-NAND，按原厂 NAND 表支持 17 种型号（与 NX30 家族相同）；实机为 ESMT F50D1G41LB 128 MiB" }
   - { label: 硬件组, value: "NX54（单独一组）" }
   - { label: 实机测试, value: "一台 NX54 VER.A：BootBridge 全流程、冷启动、OpenWrt + NSS" }
 slots:
