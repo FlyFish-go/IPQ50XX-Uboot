@@ -1,0 +1,27 @@
+<div id="fwunpack">
+  <p class="fw-field"><label for="fw-target">目标机型</label><select id="fw-target"><option value="">暂不选择</option>@@OPTIONS@@</select></p>
+  <p id="fw-target-note" class="muted">选择后会核对已知的系统槽容量和内核机型信息。</p>
+  <div id="fw-drop" class="fw-drop">
+    <label for="fw-file">选择固件文件，或拖入这里</label>
+    <input id="fw-file" type="file" aria-describedby="fw-limit" hidden>
+    <button id="fw-browse" type="button">选择文件</button> <span id="fw-filename">未选择文件</span>
+    <p id="fw-limit">单个容器最大 256 MiB；输出 UBI 最大 80 MiB。文件只在本机内存中处理。</p>
+  </div>
+  <p><button id="fw-cancel" type="button" hidden>取消处理</button></p>
+  <p id="fw-status" role="status" aria-live="polite">等待选择文件。</p>
+  <div id="fw-result" hidden>
+    <h3>拆包路径</h3>
+    <pre id="fw-chain" class="fw-terminal"></pre>
+    <div class="tw"><table class="kv"><tbody id="fw-details"></tbody></table></div>
+    <h3>UBI 卷表</h3>
+    <div class="tw"><table><thead><tr><th>卷</th><th>类型</th><th>预留容量</th><th>已写 LEB</th><th>标志</th></tr></thead><tbody id="fw-volumes"></tbody></table></div>
+    <h3>刷入前核对</h3>
+    <ul id="fw-warnings"></ul>
+    <p><a id="fw-download" class="fw-download" download>下载 .ubi</a></p>
+    <p>进入本项目救援页的「固件更新」，选择下载的 <code>.ubi</code>，核对目标系统槽后刷入。原厂升级包到此为止，不要把它交给救援页。</p>
+  </div>
+  <noscript><p>拆包需要浏览器启用 JavaScript；文件仍只在本机处理。</p></noscript>
+</div>
+<script id="fw-target-data" type="application/json">@@TARGETS@@</script>
+<script src="/fwunpack/core.js" defer></script>
+<script src="/fwunpack/app.js" defer></script>

@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'tools/fwunpack/**'
+      - 'site/**'
       - 'u-boot-2016/**'
       - 'build-release.sh'
       - 'release-tools/**'
@@ -11,6 +13,8 @@ on:
       - '.github/workflows/build.yml'
   pull_request:
     paths:
+      - 'tools/fwunpack/**'
+      - 'site/**'
       - 'u-boot-2016/**'
       - 'build-release.sh'
       - 'release-tools/**'
@@ -27,6 +31,38 @@ env:
   SDK_URL: https://downloads.openwrt.org/releases/21.02.7/targets/ipq40xx/generic
 
 jobs:
+  fwunpack:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: sudo apt-get update && sudo apt-get install -y mtd-utils gcc
+      - name: Prepare unpacker tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/fwunpack/results" "$RUNNER_TEMP/fwunpack/tmp"
+          echo "OUT=$RUNNER_TEMP/fwunpack" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP/fwunpack/tmp" >> "$GITHUB_ENV"
+          echo "FWUNPACK_FIXTURES=$RUNNER_TEMP/fwunpack/synthetic" >> "$GITHUB_ENV"
+      - run: node --test tools/fwunpack/tests/core.test.cjs
+      - run: python3 -I tools/fwunpack/tests/validator.py
+      - run: pip install -r site/requirements.txt
+      - run: python3 site/build.py
+      - name: Browser test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/fwunpack-deps" --no-package-lock --ignore-scripts playwright@1.64.1
+          "$RUNNER_TEMP/fwunpack-deps/node_modules/.bin/playwright" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/fwunpack-deps/node_modules" >> "$GITHUB_ENV"
+      - run: node tools/fwunpack/tests/e2e.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fwunpack-tests
+          path: |
+            ${{ runner.temp }}/fwunpack/results
+            ${{ runner.temp }}/fwunpack/screenshots
+
   board-conditionals:
     runs-on: ubuntu-22.04
     steps:
