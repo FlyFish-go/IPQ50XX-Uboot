@@ -27,7 +27,7 @@ description: 给未验证机型的测试者：把 U-Boot 加载到内存里运�
 2. 记下设备树地址：`printenv fdtcontroladdr`，没有这个变量就看 `bdinfo` 的 `fdt_blob` 一行。每种机型不一样，不要照抄别人的地址；
 3. 传文件并启动（最后一行换成你的地址）。这里必须用 `bootm`，原厂 U-Boot 不允许直接跳到内存里的程序；
 4. 看新 U-Boot 起来没有：串口出现本项目的启动信息，并且有一行 `UNTESTED BOARD: not verified on hardware`；
-5. 打开救援页：新 U-Boot 倒计时时再按一次回车，输入 `httpd`，浏览器打开 `http://192.168.1.1`；
+5. 打开救援页：新 U-Boot 倒计时时再按一次回车，输入 `httpd`，浏览器打开 `http://192.168.1.1`（建议用无痕窗口，见[进入救援页](/use/rescue)）；
 6. 断电：重新上电，路由器按原样启动原厂系统。
 
 第 3 步的命令：

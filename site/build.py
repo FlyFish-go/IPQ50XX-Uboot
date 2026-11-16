@@ -450,7 +450,7 @@ def ttl_steps(d, trial):
 
     steps.append(dict(
         id='rescue', title='打开救援页', note=n.get('rescue'),
-        body='新 U-Boot 起来后也会倒计时，再按一次回车截停，然后输入 `httpd`。浏览器打开 `http://192.168.1.1`。'
+        body='新 U-Boot 起来后也会倒计时，再按一次回车截停，然后输入 `httpd`。浏览器打开 `http://192.168.1.1`。' + INCOGNITO
              + ('\n\n**只看，不写**：不要点「写入」「更新」一类的按钮，也不要在串口里执行 `saveenv`、`nand write`、'
                 '`bootconfig set`。逐项记下：每个网口能不能打开救援页、「系统信息」里的闪存型号、各个 LED 和按键的表现。'
                 if trial else ''),
@@ -492,7 +492,7 @@ def ttl_steps(d, trial):
     steps.append(dict(
         id='verify', title='断电重启，确认装好', note=n.get('verify'),
         body='断电，等几秒再通电。串口里应该出现新 U-Boot 的版本信息，然后照常进入原厂系统。'
-             + (f'以后要进救援页：{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`。' if r else ''),
+             + (f'以后要进救援页：{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`{INCOGNITO_SHORT}。' if r else ''),
         expect='U-Boot 2016.01-……',
         expect_note='版本号后面跟着提交号和日期，和第 6 步在内存里运行的那个一样。',
         fail='\n'.join([
@@ -500,6 +500,11 @@ def ttl_steps(d, trial):
             '- **新 U-Boot 起来了，系统起不来**：截停后输入 `httpd` 进救援页，见[出问题怎么办](/help/)。',
         ])))
     return steps
+
+
+# The rescue page has a browser-cache bug: a normal window can show a stale page.
+INCOGNITO = '建议全程用浏览器的无痕（隐私）窗口打开救援页，普通窗口可能读到缓存里的旧页面，见[进入救援页](/use/rescue)。'
+INCOGNITO_SHORT = '（建议用无痕窗口）'
 
 
 def web_steps(d):
@@ -544,11 +549,11 @@ def web_steps(d):
                   + ('首次启动稳定后，按住 Reset 通电，红灯闪满 3 下后松手，'
                      '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本和硬件系列。' if ub == 'v0.2.0' else
                      f'首次启动稳定后，{r.get("how", "按住 Reset 通电")}，'
-                     '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本。'),
+                     '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本。') + INCOGNITO,
              check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.2.0`。' if ub == 'v0.2.0' else
                    f'重启后，救援页「系统信息」里有 U-Boot 版本信息（{ub} 的版本串是 `v0.2.0-1255aa29bb43`）。'),
         dict(id='verify', title='记住怎么进救援页', note=n.get('verify'),
-             body=f'以后进救援页：{r.get("how", "按住 Reset 通电")}，打开 `http://{r.get("address", "192.168.10.1")}`。'
+             body=f'以后进救援页：{r.get("how", "按住 Reset 通电")}，打开 `http://{r.get("address", "192.168.10.1")}`{INCOGNITO_SHORT}。'
                   + (f'\n\n用按键切换系统：{d["slot_select"]}' if d.get('slot_select') else '')
                   + '\n\n要刷第三方固件，见[刷固件与切换系统](/use/firmware)。'),
     ]
@@ -629,7 +634,7 @@ def facts_of(d, route, releases):
                      else inline('没人测过，以 `printenv fdtcontroladdr` 为准')))
     r = d.get('rescue')
     if r:
-        rows.append(('进救援页', inline(f'{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`')))
+        rows.append(('进救援页', inline(f'{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`{INCOGNITO_SHORT}')))
     for h in d.get('hardware') or []:
         if h['label'] == '硬件组':
             rows.append(('硬件组', inline(h['value'])))
@@ -709,7 +714,7 @@ def device_page(d, releases):
         items = []
         if d.get('rescue'):
             r = d['rescue']
-            items.append(f'进救援页：{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`。')
+            items.append(f'进救援页：{r["how"]}，打开 `http://{r.get("address", "192.168.1.1")}`{INCOGNITO_SHORT}。')
         items.append('切换系统：' + (d.get('slot_select') or '在救援页里选这次启动哪个系统、默认启动哪个。'))
         items.append('刷第三方固件：见[刷固件与切换系统](/use/firmware)。')
         items.append('升级 U-Boot、回原厂：见[升级 U-Boot、回原厂](/use/upgrade)。')
