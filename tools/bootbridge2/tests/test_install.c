@@ -235,6 +235,27 @@ int main(void)
 	bb_inst_plan_free(&plan);
 	rig_free(&r);
 
+	/* Field unit after an OEM online upgrade: selector 1 and SBL has swapped
+	 * the names, so "0:APPSBL" is the upper copy (0x640000). BB2-R7 refused
+	 * this with bad_partitions; it must plan the lower copy first. */
+	rig_init(&r);
+	for (int i = 0; i < 2; i++)
+		*(uint32_t *)(r.bc[i]->data + 28 + 20 * 3) = 1;
+	r.appsbl[0]->f.offset = 0x640000;
+	r.appsbl[1]->f.offset = 0x500000;
+	bb_inst_plan(&r.in, cand, mbn, mbn_len, &plan);
+	CHECK(plan.code == BB_INST_READY, "swapped names: %s", bb_inst_code_str(plan.code));
+	CHECK(plan.first == 1 && plan.second == 0, "swapped names: lower 0x500000 first (first=%d)",
+	      plan.first);
+	bb_inst_plan_free(&plan);
+	/* Swapped names with a wrong offset are still refused. */
+	r.appsbl[1]->f.offset = 0x520000;
+	bb_inst_plan(&r.in, cand, mbn, mbn_len, &plan);
+	CHECK(plan.code == BB_INST_PARTITIONS, "swapped names, bad offset: %s",
+	      bb_inst_code_str(plan.code));
+	bb_inst_plan_free(&plan);
+	rig_free(&r);
+
 	/* Invalid and missing APPSBL selectors must not default to zero. */
 	for (int mode = 0; mode < 2; mode++) {
 		rig_init(&r);

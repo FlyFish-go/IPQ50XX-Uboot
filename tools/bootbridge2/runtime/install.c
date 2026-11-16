@@ -73,9 +73,13 @@ void bb_inst_plan(const struct bb_inst_inputs *in, const struct bb_candidate *c,
 	unsigned count = bb_layout_backup(layout, parts, 32);
 	for (unsigned i = 0; i < count; i++)
 		for (unsigned j = 0; j < 2; j++) {
+			/* SBL swaps the 0:APPSBL/0:APPSBL_1 names when the selector is 1,
+			 * e.g. after an OEM online upgrade, on every layout. The physical
+			 * offsets still have to be the reviewed pair; active_copy() picks
+			 * the copy by offset, not by name. */
 			if (!strcmp(parts[i].name, j ? "0:APPSBL_1" : "0:APPSBL") &&
 			    !bb_part_matches(&parts[i], in->appsbl[j]) &&
-			    (!layout->full_backup || !bb_part_matches(&parts[i], in->appsbl[1-j]) ||
+			    (!bb_part_matches(&parts[i], in->appsbl[1-j]) ||
 			     !bb_part_name_ok(&parts[i], in->appsbl[1-j]->name))) return;
 			if (!strcmp(parts[i].name, j ? "0:BOOTCONFIG1" : "0:BOOTCONFIG") &&
 			    !bb_part_matches(&parts[i], in->ret.bc[j])) return;
