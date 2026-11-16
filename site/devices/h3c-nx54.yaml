@@ -1,0 +1,47 @@
+id: h3c-nx54
+order: 5
+vendor: H3C
+name: NX54
+aliases: [NX54, Magic NX54]
+soc: IPQ5018
+status: verified
+family: H3C NX54
+summary: H3C Magic NX54（VER.A），U-Boot 测试版 nx54-test.1。不用拆机，用 BootBridge 网页工具安装；官方固件按路由器 SN 从 H3C 下载。BX54E 不支持。
+brief: 测试版，只在一台 NX54 上完整实测过
+hardware:
+  - { label: 硬件, value: "IPQ5018、512 MB 内存、PCIe QCN9074（5 GHz）、QCA8337 交换机" }
+  - { label: 闪存, value: "SPI-NAND 128 MiB（实测 GigaDevice F50D1G41LB；Micron 版本按实测 ECC 实验性放行）" }
+  - { label: 硬件组, value: "NX54（单独一组）" }
+  - { label: 实机测试, value: "一台 NX54 VER.A：BootBridge 全流程、冷启动、OpenWrt + NSS" }
+slots:
+  capacities:
+    - {name: 双系统每槽, bytes: 47448064}
+  capacity_source: "NX54 原厂分区表：两个系统槽各 0x2d40000。"
+  mechanism: bootconfig
+  note: 原厂双系统，由 BOOTCONFIG 选择启动槽。原厂系统在一个槽里，另一个槽可以装第三方固件。
+install:
+  method: bootbridge
+  oem_firmware: NX54V100R014
+  oem_any: true
+  uboot: nx54-test.1
+notes:
+  oem: H3C 没有公开 R014 的下载链接。BootBridge 第 2 步填路由器底部的 SN，网页给出一条命令，在自己电脑上运行，从 H3C 官方下载 R014 并校验。
+  install: 被识别为闪存型号未登记（例如 Micron 版本）时，页面会标「实验性」，只有原厂系统能干净读出引导分区才允许安装。这种情况一定先保存好备份。
+rescue:
+  how: 断电，按住 Reset 再通电，指示灯闪满 3 下后松手
+  address: 192.168.10.1
+slot_select: 按住 Reset 或 Mesh 键通电：指示灯闪 1 下松手启动一区，闪 2 下松手启动二区，并设为默认。
+warnings:
+  - 测试版：只在一台 NX54 VER.A 上完整实测过。安装前一定生成并下载完整备份。
+  - BX54E 不支持，BootBridge 会拒绝。
+not_tested:
+  - 桥接系统里长按 Mesh 键返回原厂（请用网页上的「返回原厂」按钮）
+  - Micron 闪存的 NX54
+recovery:
+  - 安装前 BootBridge 会完整备份；桥接系统里随时可以返回原厂。
+  - 已装本项目 U-Boot 的，救援页里可以写回备份的分区。
+  - 万一启动程序本身损坏，需要 TTL 串口或编程器，请先到 QQ 群 1131957442 联系维护者。
+links:
+  - { text: BootBridge 网页版（NX54 测试中）, url: "/bootbridge/" }
+  - { text: nx54-test.1 发布说明, url: "https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/nx54-test.1" }
+  - { text: 配套固件：OpenWrt + NSS v0.1.0-pre.6, url: "https://github.com/FlyFish-go/H3C-Magic-NSS/releases/tag/v0.1.0-pre.6" }

@@ -29,6 +29,9 @@ devices/<id>.yaml fields
     status                     verified | community | untested
     install.method             bootbridge | ttl
     install.oem_firmware       bootbridge only: the stock version BootBridge needs
+    install.oem_any            bootbridge only: true = the router may run any stock version;
+                               oem_firmware is only the file the bridge is built from
+    install.uboot              bootbridge only: U-Boot version installed (default v0.2.0)
     artifact                   ttl only: file stem of <artifact>.mbn / <artifact>-ram.uimg;
                                an untested board's artifact ends in -untested
     aliases, soc, family, order, summary
@@ -501,6 +504,7 @@ def ttl_steps(d, trial):
 
 def web_steps(d):
     oem = d['install']['oem_firmware']
+    ub = d['install'].get('uboot', 'v0.2.0')
     n = d.get('notes') or {}
     r = d.get('rescue') or {}
     return [
@@ -508,6 +512,11 @@ def web_steps(d):
              body=f'看路由器底部铭牌，型号是 {d["name"]}'
                   + (f' 或 {"、".join(aliases_of(d))}' if aliases_of(d) else '')
                   + '。全程不用拆机，只要一台有网线口的电脑和一根网线。'),
+        dict(id='oem', title=f'下载官方固件 {oem}', note=n.get('oem'),
+             body=f'BootBridge 用官方固件 `{oem}` 生成桥接包。打开 [BootBridge 网页版]({LINKS["bootbridge"]})，'
+                  '选好机型，按第 2 步取得这个文件。路由器上的原厂系统不用先升级。',
+             check=f'BootBridge 显示官方固件 `{oem}` 校验通过。')
+        if d['install'].get('oem_any') else
         dict(id='oem', title=f'原厂系统升级到 {oem}', note=n.get('oem'),
              body=f'BootBridge 只认这一个官方版本。打开 [BootBridge 网页版]({LINKS["bootbridge"]})，选好机型，'
                   f'第 2 步会给出官方固件的下载地址。登录路由器的原厂后台，在系统升级里先升级到 `{oem}`。'
@@ -529,11 +538,15 @@ def web_steps(d):
                  '- **打不开 `192.168.10.1`**：看电脑有没有拿到 `192.168.10.x` 的地址；换一个 LAN 口；等一分钟再刷新。',
                  '- **识别不通过**：不要换别的机型的文件硬装，截图到 QQ 群或 Issue。',
              ])),
-        dict(id='upgrade', title='确认 U-Boot v0.2.0', note=n.get('upgrade'),
-             body='新版 BootBridge 直接安装 v0.2.0 正式版，不需要再经过旧版或 RAM 救援版升级。'
-                  '首次启动稳定后，按住 Reset 通电，红灯闪满 3 下后松手，'
-                  '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本和硬件系列。',
-             check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.2.0`。'),
+        dict(id='upgrade', title=f'确认 U-Boot {ub}', note=n.get('upgrade'),
+             body=(f'BootBridge 安装的是 U-Boot 测试版 `{ub}`。' if ub != 'v0.2.0' else
+                   '新版 BootBridge 直接安装 v0.2.0 正式版，不需要再经过旧版或 RAM 救援版升级。')
+                  + ('首次启动稳定后，按住 Reset 通电，红灯闪满 3 下后松手，'
+                     '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本和硬件系列。' if ub == 'v0.2.0' else
+                     f'首次启动稳定后，{r.get("how", "按住 Reset 通电")}，'
+                     '打开 `http://192.168.10.1` 进救援页，在「系统信息」核对版本。'),
+             check='重启后，救援页「系统信息」里的 U-Boot 版本带 `v0.2.0`。' if ub == 'v0.2.0' else
+                   f'重启后，救援页「系统信息」里有 U-Boot 版本信息（{ub} 的版本串是 `v0.2.0-1255aa29bb43`）。'),
         dict(id='verify', title='记住怎么进救援页', note=n.get('verify'),
              body=f'以后进救援页：{r.get("how", "按住 Reset 通电")}，打开 `http://{r.get("address", "192.168.10.1")}`。'
                   + (f'\n\n用按键切换系统：{d["slot_select"]}' if d.get('slot_select') else '')
@@ -578,6 +591,11 @@ def render_steps(steps):
 # ---------------------------------------------------------------- device pages
 
 def download_cell(d, route, releases):
+    ub = d['install'].get('uboot', 'v0.2.0')
+    if route == 'web' and ub != 'v0.2.0':
+        url = f'https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/{ub}'
+        return (f'安装不用单独下载，BootBridge 会写入 U-Boot。测试版的 <code>.mbn</code> 在 '
+                f'<a href="{esc(url)}">{esc(ub)} 发布页</a>，只给已有串口或 U-Boot 环境的人手动刷。')
     if route == 'web':
         return (f'安装不用单独下载，BootBridge 会写入 U-Boot。以后升级用 '
                 f'<a href="{LINKS["h3c_release"]}">v0.2.0 发布页</a>里的 '
@@ -598,7 +616,10 @@ def facts_of(d, route, releases):
     rows = []
     if route == 'web':
         rows.append(('安装方式', inline('[BootBridge 网页安装](/install/bootbridge)，不用拆机')))
-        rows.append(('需要的原厂版本', f'<code>{esc(d["install"]["oem_firmware"])}</code>'))
+        if d['install'].get('oem_any'):
+            rows.append(('官方固件', f'<code>{esc(d["install"]["oem_firmware"])}</code>（生成桥接包用，原厂系统不用升级）'))
+        else:
+            rows.append(('需要的原厂版本', f'<code>{esc(d["install"]["oem_firmware"])}</code>'))
     else:
         rows.append(('安装方式', inline('[TTL 串口安装](/install/ttl)，要拆机') if route == 'ttl'
                      else inline('[RAM 试跑](/install/ram-trial)：要拆机接 TTL，不写闪存')))
@@ -836,7 +857,8 @@ def oem_table(devices):
         if d['install']['method'] != 'bootbridge':
             continue
         hw = next((h['value'] for h in d.get('hardware') or [] if h['label'] == '硬件组'), '')
-        rows.append(([name_cell(d), f'<code>{esc(d["install"]["oem_firmware"])}</code>', inline(hw)], ''))
+        ver = f'<code>{esc(d["install"]["oem_firmware"])}</code>' + ('（不用先升级）' if d['install'].get('oem_any') else '')
+        rows.append(([name_cell(d), ver, inline(hw)], ''))
     return table(['机型（铭牌）', '需要的原厂版本', '硬件组'], rows, 'devs')
 
 
