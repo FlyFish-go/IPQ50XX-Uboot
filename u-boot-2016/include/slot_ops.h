@@ -8,7 +8,7 @@
 #ifndef __SLOT_OPS_H__
 #define __SLOT_OPS_H__
 
-#include <linux/errno.h>
+#include <errno.h>
 
 #ifdef CONFIG_SLOT_BACKEND_SINGLE
 
