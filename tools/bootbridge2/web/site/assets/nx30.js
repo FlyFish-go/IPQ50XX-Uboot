@@ -1,4 +1,4 @@
-/* NX30 / RX3000: the reviewed version (NX30V100R012) has no public link.  The page
+/* SN download (NX30 / RX3000 R012, NX54 R014): the reviewed version has no public link.  The page
  * checks the SN with H3C's version API (browser-readable), then builds a download
  * command with the SN embedded; the user's own computer asks H3C for the short-lived
  * signed link (that API is not readable from a browser), downloads and verifies.
@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   var BEST_API = 'https://magic.h3c.com/smarthomeback/rest/ihomers/getGwBestVerNew';
-  var TARGET = 'NX30V100R012', ASK = ['NX30V100R011', TARGET];
+  var TARGET = 'NX30V100R012', ASK = ['NX30V100R011', TARGET];   /* defaults; callers pass the model's */
 
   function normalize(raw) { return String(raw == null ? '' : raw).replace(/[\s-]+/g, '').toUpperCase(); }
   /* H3C: retCode 20 unless the SN is exactly 20 characters of [0-9A-Z]. */
@@ -36,16 +36,24 @@
     opt = opt || {};
     var fetchImpl = opt.fetchImpl || (typeof fetch === 'function' ? fetch.bind(null) : null);
     var timeoutMs = opt.timeoutMs || 15000, i = 0, last = { state: 'rejected', code: null };
+    var target = opt.target || TARGET, ask = opt.ask && opt.ask.length ? opt.ask : ASK;
     if (!check(sn).ok) return Promise.resolve({ state: 'bad-format' });
     if (!fetchImpl) return Promise.resolve({ state: 'network', detail: 'no fetch' });
     function next() {
-      if (i >= ASK.length) return Promise.resolve(last);
-      var gwVer = ASK[i++];
+      if (i >= ask.length) return Promise.resolve(last);
+      var gwVer = ask[i++];
       return post(fetchImpl, { gwVer: gwVer, gwSn: sn }, timeoutMs).then(function (res) {
         if (!res.ok) return { state: 'http', status: res.status };
-        return res.json().then(function (j) {
+        return res.text().then(function (t) {
+          var j;
+          try { j = JSON.parse(t); } catch (e) {
+            /* H3C answers "Blocked by Sentinel (flow limiting)" as plain text when busy:
+             * not a verdict on the SN, the command asks again. */
+            if (/sentinel|flow limit/i.test(t)) return { state: 'network', detail: 'rate-limited' };
+            return { state: 'bad-response' };
+          }
           var code = Number(j && j.retCode), ver = j && j.gwBestVer != null ? String(j.gwBestVer) : '';
-          if (code === 0 && ver === TARGET) return { state: 'ok' };
+          if (code === 0 && ver === target) return { state: 'ok' };
           if (code === 24) return { state: 'unknown-sn' };
           if (code === 20 || code === 18) return { state: 'bad-format' };
           last = code === 0 ? { state: 'other-version', version: ver.slice(0, 40) } : { state: 'rejected', code: isNaN(code) ? null : code };

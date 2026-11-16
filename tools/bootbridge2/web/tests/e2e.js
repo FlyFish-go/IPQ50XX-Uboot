@@ -48,7 +48,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
     if (model === 'NX54') ok('NX54: experimental badge', (await page.locator('[data-model="NX54"]').textContent()).includes('测试中'));
     await page.click('[data-model="' + model + '"]');
     await page.click('[data-act="next"]');
-    if (model === 'NX54') ok('NX54: manual firmware input without NX30 SN query', await page.locator('#sn').count() === 0);
+    if (model === 'NX54') ok('NX54: official firmware by SN (R014 has no public link)', await page.locator('#sn').count() === 1);
     await page.setInputFiles('#picker', path.join(INPUTS, model + '-original.bin'));
     await page.waitForSelector('.result.ok, .result.err', { timeout: 120000 });
     ok(model + ': official firmware accepted', await page.isVisible('.result.ok'));

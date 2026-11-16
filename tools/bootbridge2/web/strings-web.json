@@ -2,7 +2,7 @@
   "_note": "Web-edition overrides and additions merged over design/desktop-offline-ui/strings.json by web/tools/build_site.py. {placeholders} are runtime values; <b>/<u> are emphasis only.",
   "zh": {
     "testing": "测试中",
-    "testingNote": "NX54 测试中：完整 BootBridge 流程尚未实机验收。仅供具备恢复条件的测试者使用；BX54E 不支持。",
+    "testingNote": "NX54 测试中：完整流程只在一台 NX54 上实机验收过。请先生成并下载完整备份，并准备好串口等恢复手段；BX54E 不支持。",
     "s1fine": "NX30 家族直接安装 U-Boot v0.2.0 正式版。生成桥接包时按文件指纹自动识别；这里的选择用于显示下载和说明。",
     "edition": "网页版",
     "version": "网页版 {v}",
@@ -102,7 +102,7 @@
   },
   "en": {
     "testing": "Testing",
-    "testingNote": "NX54 is experimental: the complete BootBridge flow has not passed hardware acceptance. For testers with recovery access only. BX54E is unsupported.",
+    "testingNote": "NX54 is in testing: the complete flow has passed hardware acceptance on one NX54 only. Make and download a full backup first and have a recovery path such as serial ready. BX54E is unsupported.",
     "s1fine": "NX30-family devices install final U-Boot v0.2.0 directly. The bridge is matched by file fingerprint; this choice controls downloads and guidance.",
     "edition": "Web",
     "version": "Web {v}",

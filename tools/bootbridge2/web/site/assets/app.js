@@ -202,7 +202,8 @@
   function precheck() {
     var sn = snValue(); if (!NX.check(sn).ok || S.sn.st === 'checking') return;
     S.sn.st = 'checking'; S.sn.r = null; render();
-    NX.precheck(sn).then(function (r) {
+    var g = G();
+    NX.precheck(sn, { target: g.version, ask: g.ask }).then(function (r) {
       if (snValue() !== sn) return;
       S.sn.st = r.state; S.sn.r = r; render();
     });
@@ -405,7 +406,7 @@
     else if (st === 'rejected') h += '<div class="status err">' + '<span>' + fmt(l.snRejected, { f: esc(r.code == null ? '?' : r.code) }) + '</span></div>';
     else if (st === 'bad-response') h += '<div class="status err">' + '<span>' + l.snBad + '</span></div>';
     if (commandsAllowed()) {
-      var key = S.tab === 'ps51' ? 'ps51' : 'sh', cmd = NX.command(CMDS[key], sn);
+      var key = S.tab === 'ps51' ? 'ps51' : 'sh', cmd = NX.command(CMDS[g.id][key], sn);
       h += '<div class="divider"></div><h3>' + ' ' + l.cmdT + '</h3>' +
         '<div class="tabs" role="tablist"><button role="tab" data-tab="ps51" aria-selected="' + (key === 'ps51') + '">' + l.cmdWin + '</button><button role="tab" data-tab="sh" aria-selected="' + (key === 'sh') + '">' + l.cmdSh + '</button></div>' +
         '<p class="how">' + (key === 'ps51' ? l.cmdWinHow : l.cmdShHow) + '</p>' +

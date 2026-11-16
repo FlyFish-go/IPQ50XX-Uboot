@@ -166,7 +166,8 @@ def main():
     guide_js = [dict(id=g["id"], primary=g["primary"], alias=g.get("alias", ""), products=g.get("products", []),
                      version=g["version"], bytes=g["bytes"], sha=g["sha256"], url=g.get("url", ""),
                      download=g.get("download", "direct" if g.get("url") else "sn"),
-                     login=g.get("login", ""), note=g.get("note", ""), testing=g["id"] == "NX54")
+                     login=g.get("login", ""), note=g.get("note", ""), ask=g.get("sn_ask", []),
+                     testing=g["id"] == "NX54")
                 for g in guide["models"]]
     meta = dict(schema="bootbridge-web-catalog-v2", web=WEB_VERSION, release=rule_set, engine=2,
                 repo=a.repo_url, label=a.build_label, nx54=a.nx54, nx30Uboot="v0.2.0")
@@ -178,12 +179,33 @@ def main():
     w = json.load(open(os.path.join(HERE, "strings-web.json"), encoding="utf-8"))
     write(os.path.join(a.out, "assets/strings.js"),
           js_literal("BB_STRINGS", {lang: merge(s[lang], w.get(lang, {})) for lang in ("zh", "en")}))
-    cmds = {}
+    # One SN download command pair per model whose firmware is fetched by SN.
+    # Only reviewed constants ([0-9A-Za-z] versions, hex SHA, integers) are filled in.
+    tpl = {}
     for key, fn in (("ps51", "ps51.tpl"), ("sh", "sh.tpl")):
         t = open(os.path.join(HERE, "nx30-download", fn), encoding="utf-8").read().rstrip("\n")
         if t.count("__SN__") != 1:
             die("%s must contain exactly one __SN__" % fn)
-        cmds[key] = t
+        tpl[key] = t
+    cmds = {}
+    for g in guide_js:
+        if g["download"] != "sn":
+            continue
+        ask = g["ask"]
+        if not ask or ask[-1] != g["version"] or not all(re.fullmatch(r"[0-9A-Z]+", v) for v in ask + [g["version"]]):
+            die("%s: sn_ask must be [0-9A-Z] versions ending with the target" % g["id"])
+        if not re.fullmatch(r"[0-9a-f]{64}", g["sha"]):
+            die("%s: bad sha" % g["id"])
+        fill = {"__WANT__": g["version"], "__SHA__": g["sha"], "__SIZE__": str(int(g["bytes"])),
+                "__MB__": str(round(g["bytes"] / 1048576)),
+                "__ASK_SH__": " ".join(ask), "__ASK_PS__": ",".join("'%s'" % v for v in ask)}
+        cmds[g["id"]] = {}
+        for key, t in tpl.items():
+            for k, v in fill.items():
+                t = t.replace(k, v)
+            if re.search(r"__(?!SN__)[A-Z_]+__", t):
+                die("%s/%s: unfilled placeholder" % (g["id"], key))
+            cmds[g["id"]][key] = t
     write(os.path.join(a.out, "assets/commands.js"), js_literal("BB_COMMANDS", cmds))
 
     # Reuse the guide palette even in the standalone offline page. No runtime
