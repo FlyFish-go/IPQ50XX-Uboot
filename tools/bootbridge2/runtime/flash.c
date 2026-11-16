@@ -20,8 +20,8 @@ static int all_ff(const uint8_t *p, size_t n)
 	return 1;
 }
 
-int bb_flash_rewrite_block(const struct bb_flash *f, uint32_t block_off,
-			   const uint8_t *data)
+static int rewrite_block(const struct bb_flash *f, uint32_t block_off,
+			 const uint8_t *data, int write_ff)
 {
 	uint8_t *back;
 	int ret;
@@ -40,9 +40,9 @@ int bb_flash_rewrite_block(const struct bb_flash *f, uint32_t block_off,
 	ret = f->erase(f->ctx, block_off);
 	if (ret)
 		goto out;
-	/* Leave empty pages erased: programming all 0xff stores unwanted ECC. */
+	/* Non-boot partitions preserve erased pages; boot partitions need parity. */
 	for (uint32_t p = 0; p < f->erase_size; p += f->page_size) {
-		if (all_ff(data + p, f->page_size))
+		if (!write_ff && all_ff(data + p, f->page_size))
 			continue;
 		ret = f->write_page(f->ctx, block_off + p, data + p);
 		if (ret)
@@ -54,4 +54,14 @@ int bb_flash_rewrite_block(const struct bb_flash *f, uint32_t block_off,
 out:
 	free(back);
 	return ret;
+}
+
+int bb_flash_rewrite_block(const struct bb_flash *f, uint32_t off, const uint8_t *data)
+{
+	return rewrite_block(f, off, data, 0);
+}
+
+int bb_flash_rewrite_boot_block(const struct bb_flash *f, uint32_t off, const uint8_t *data)
+{
+	return rewrite_block(f, off, data, 1);
 }

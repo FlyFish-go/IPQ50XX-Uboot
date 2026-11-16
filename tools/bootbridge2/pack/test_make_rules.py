@@ -48,7 +48,13 @@ def ident(board):
 
 
 def mbn(board, extra=b""):
-    return ap.package_elf(elf(FLASH, b"\x01" * 0x4000 + ident(board) + extra + b"\x02" * 64))
+    payload = b"\x01" * 0x4000 + ident(board) + extra
+    if board == "NX54":
+        name = b"h3c-oem-c811-128m-2k-sp64\0"
+        address = FLASH + len(payload)
+        payload += name + struct.pack("<III2B2x5I", address, 0, 0, 0xc8, 0x11,
+                                      134217728, 134217728, 2048, 64, 131072)
+    return ap.package_elf(elf(FLASH, payload + b"\x02" * 64))
 
 
 def run(script, *args):
@@ -151,6 +157,10 @@ def main():
               "combined dist emits eight NX30 candidates and one NX54 candidate")
         check("product=NX54 sbl1.sha256=36e91952" in out and "layout=nx54" in out,
               "NX54 rule binds product, SBL1 and layout")
+        check("evidence_hold a1:a5" in out and "evidence_hold e5:21" in out,
+              "NX54 evidence always keeps both held NAND IDs")
+        check("evidence_catalog NX54 id=c8:11 ecc=4" in out,
+              "target MBN compiled catalog row is included")
         open(rules, "w").write(out)
         rc, _, err = run("make_pack.py", "--rules", rules, "--auto", args[-1],
                          "-o", os.path.join(d, "nx54.bbpack"))

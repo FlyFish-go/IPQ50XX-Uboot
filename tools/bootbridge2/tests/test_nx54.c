@@ -85,6 +85,15 @@ static void rig(void)
 		CHECK(!strcmp(specs[i].name, parts[i]->f.name), "backup partition name agrees with MIBIB");
 		CHECK(bb_part_matches(&specs[i], &parts[i]->f) && !specs[i].optional, "backup extent agrees with MIBIB and is required");
 	}
+	/* SBL swaps failsafe pair names when the selector is 1 (seen on the bench:
+	 * bridge in 0x3640000 -> "rootfs_1" at 0x900000). */
+	CHECK(bb_part_name_ok(&specs[15], "rootfs_1") && bb_part_name_ok(&specs[16], "rootfs"),
+	      "backup accepts swapped rootfs names at the reviewed offsets");
+	CHECK(bb_part_name_ok(&specs[11], "0:APPSBL_1") && bb_part_name_ok(&specs[12], "0:APPSBL"),
+	      "backup accepts swapped APPSBL names at the reviewed offsets");
+	CHECK(!bb_part_name_ok(&specs[2], "0:BOOTCONFIG1") && !bb_part_name_ok(&specs[11], "0:ART") &&
+	      !bb_part_name_ok(&specs[15], "rootfs_2") && !bb_part_name_ok(&specs[15], "pdt_data"),
+	      "backup rejects names outside the failsafe pair");
 	for (unsigned i = 0; i < 2; i++) {
 		in.appsbl[i] = &parts[11 + i]->f;
 		in.ret.bc[i] = &parts[2 + i]->f;
@@ -137,6 +146,61 @@ static void identify(const struct bb_rules *r, struct bb_facts base)
 	f = base; f.mtd_ecc_strength = 8;
 	bb_rules_decide(r, &f, &d);
 	CHECK(d.code == BB_DEC_NO_CANDIDATE, "unqualified NX54 ECC refused");
+}
+
+
+static unsigned stat_calls[20], injected_corrected[20], injected_failed[20];
+static int fake_stats(void *ctx, uint32_t *failed, uint32_t *corrected)
+{
+ for (unsigned i=0;i<20;i++) if (parts[i]==ctx) {
+  unsigned after=(stat_calls[i]++ % 2);
+  *failed=after?injected_failed[i]:0;
+  *corrected=after?injected_corrected[i]:0;
+  return 0;
+ }
+ return -1;
+}
+static void evidence_tests(struct bb_facts base, const struct bb_candidate *candidate)
+{
+ const struct bb_flash *p[5]={&parts[0]->f,&parts[11]->f,&parts[12]->f,&parts[2]->f,&parts[3]->f};
+ struct bb_evidence ev; struct bb_decision d; struct bb_rules r; char text[4096];
+ snprintf(text,sizeof(text),
+  "bbrules 1\nset TEST\nboard NX54 layout=nx54 route=mp03.1 machid=0x08040001 product=NX54 sbl1.sha256=%s ecc_evidence=1\n"
+  "board A layout=nx30 route=mp03.1 machid=0x08040001\n"
+  "nand known nand.id=c8:11 nand.model=F50D1G41LB(2M) nand.mib=128 nand.page=2048 nand.erase_kib=128 nand.oob=64\n"
+  "candidate nx54 board=NX54 nand=known ecc=4 bytes=%u sha256=%s part_bytes=%u part_sha256=%s file=%s\n"
+  "evidence_catalog NX54 id=2c:15 ecc=8 oob=128 raw=128 target=NX54\n"
+  "evidence_catalog NX54 id=a1:a5 ecc=8 oob=128 raw=128 target=NX54\n"
+  "evidence_catalog NX54 id=e5:21 ecc=8 oob=128 raw=128 target=NX54\n"
+  "evidence_hold a1:a5\nevidence_hold e5:21\n",base.sbl1_sha256,candidate->bytes,candidate->sha256,
+  candidate->part_bytes,candidate->part_sha256,candidate->file);
+ REQUIRE(!bb_rules_load(&r,text,NULL),"evidence rules parsed");
+ bb_rules_decide(&r,&base,&d); CHECK(d.code==BB_DEC_OK && !d.experimental,"registered candidate unchanged");
+ base.nand_mfr=0x2c; base.nand_chip=0x15; base.nand_oob=128; base.mtd_oob=128; base.mtd_ecc_strength=8;
+ snprintf(base.nand_model,sizeof(base.nand_model),"MT29F1G01ABBFDWB-IT");
+ bb_rules_decide(&r,&base,&d); CHECK(d.needs_evidence && d.code!=BB_DEC_OK,"unknown needs sampling");
+ CHECK(!bb_evidence_scan(p,fake_stats,&ev),"real boot chain passes full evidence scan");
+ base.evidence=ev; bb_rules_decide(&r,&base,&d); CHECK(d.code==BB_DEC_OK && d.experimental,"unregistered plus evidence accepted");
+ struct bb_decision first=d; struct bb_facts first_facts=base;
+ parts[11]->unreadable[1]=1;
+ CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0,"EBADMSG refuses evidence");
+ base.evidence=ev; bb_rules_decide(&r,&base,&d); CHECK(d.code!=BB_DEC_OK && !bb_rules_recheck(&first_facts,&first,&base,&d),"second sample changed refuses installation"); parts[11]->unreadable[1]=0;
+ injected_corrected[12]=8; CHECK(!bb_evidence_scan(p,fake_stats,&ev) && ev.part[2].corrected==8,"corrected at limit accepted"); injected_corrected[12]=0;
+ parts[15]->unreadable[0]=1; CHECK(!bb_evidence_scan(p,fake_stats,&ev),"mixed ECC: data area unreadable does not affect boot-chain evidence"); parts[15]->unreadable[0]=0;
+ injected_corrected[12]=9; CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0 && ev.part[2].corrected==9,"corrected above limit refused"); injected_corrected[12]=0;
+ injected_failed[2]=1; CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0 && ev.part[3].failed==1,"failed counter refused"); injected_failed[2]=0;
+ parts[0]->data[0]^=1; CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0,"corrupt SBL1 header refused"); parts[0]->data[0]^=1;
+ parts[11]->data[0]^=1; CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0,"corrupt ELF header refused"); parts[11]->data[0]^=1;
+ uint8_t *saved=malloc(parts[12]->f.size); REQUIRE(saved,"allocate erased test"); memcpy(saved,parts[12]->data,parts[12]->f.size);
+ memset(parts[12]->data,0xff,parts[12]->f.size); CHECK(bb_evidence_scan(p,fake_stats,&ev)!=0 && !ev.part[2].non_ff,"all-erased APPSBL refused");
+ memcpy(parts[12]->data,saved,parts[12]->f.size); free(saved);
+ CHECK(!bb_evidence_scan(p,fake_stats,&ev),"fresh clean boot chain"); base.evidence=ev;
+ base.nand_chip=0x99; bb_rules_decide(&r,&base,&d); CHECK(d.code!=BB_DEC_OK && !d.needs_evidence,"target catalog missing id refused");
+ base.nand_mfr=0xa1; base.nand_chip=0xa5; bb_rules_decide(&r,&base,&d); CHECK(d.code!=BB_DEC_OK && !d.needs_evidence,"hold a1a5 refused");
+ base.nand_mfr=0xe5; base.nand_chip=0x21; bb_rules_decide(&r,&base,&d); CHECK(d.code!=BB_DEC_OK && !d.needs_evidence,"hold e521 refused");
+ base.nand_mfr=0x2c; base.nand_chip=0x15; snprintf(base.layout,sizeof(base.layout),"nx30");
+ bb_rules_decide(&r,&base,&d); CHECK(d.code!=BB_DEC_OK && !d.needs_evidence,"NX30 no evidence fallback");
+ bb_rules_free(&r);
 }
 
 static void reset_boot(unsigned running, unsigned active)
@@ -215,6 +279,13 @@ static void returns(void)
 
 static void installs(const struct bb_candidate *c, const uint8_t *mbn, size_t bytes)
 {
+    reset_boot(1, 0);
+    const struct bb_flash *tmp = in.appsbl[0]; in.appsbl[0] = in.appsbl[1]; in.appsbl[1] = tmp;
+    struct bb_inst_plan swapped;
+    bb_inst_plan(&in, c, mbn, bytes, &swapped);
+    CHECK(swapped.code == BB_INST_READY, "swapped APPSBL names still resolve both physical partitions");
+    bb_inst_plan_free(&swapped);
+    tmp = in.appsbl[0]; in.appsbl[0] = in.appsbl[1]; in.appsbl[1] = tmp;
 	for (unsigned active = 0; active < 2; active++) {
 		for (unsigned failure = 0; failure < 3; failure++) {
 			reset_boot(1, active);
@@ -229,8 +300,11 @@ static void installs(const struct bb_candidate *c, const uint8_t *mbn, size_t by
 			enum bb_inst_code rc = bb_inst_commit(&in, &p);
 			CHECK(rc == (failure == 0 ? BB_INST_DONE : failure == 1 ? BB_INST_WRITE_FIRST : BB_INST_WRITE_SECOND), "install success and first/second copy failures");
 			if (!failure) {
-				for (unsigned i = 0; i < 2; i++)
+				for (unsigned i = 0; i < 2; i++) {
 					CHECK(!memcmp(parts[11+i]->data, p.image, p.image_len), "both complete APPSBL readback incl 0xff tail");
+					for (unsigned pg = 0; pg < p.image_len / parts[11+i]->f.page_size; pg++)
+						CHECK(parts[11+i]->programmed[pg], "APPSBL page programmed, including FF");
+				}
 				for (unsigned i = 0; i < 2; i++) {
 					struct bb_bc bc;
 					CHECK(bb_bc_parse(parts[2+i]->data, parts[2+i]->f.size, &bc) == BB_BC_OK &&
@@ -312,7 +386,7 @@ int main(void)
 	REQUIRE(d.code == BB_DEC_OK && d.cand, "NX54 candidate present");
 	uint8_t *mbn = NULL; size_t mbn_len;
 	REQUIRE(bb_pack_extract(&pack, d.cand->file, &mbn, &mbn_len) == BB_PACK_OK, "NX54 MBN extracted");
-	returns(); installs(d.cand, mbn, mbn_len); backup();
+	evidence_tests(f, d.cand); returns(); installs(d.cand, mbn, mbn_len); backup();
 	bb_rules_free(&rules); free(text); free(mbn); free(data);
 	for (unsigned i = 0; i < 20; i++) { free(original[i]); mem_nand_free(parts[i]); }
 	printf("NX54: %u checks, %u failures\n", checks, failures);

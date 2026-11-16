@@ -23,6 +23,7 @@ import json
 import os
 import re
 import sys
+import struct
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "..", "..", "release-tools"))
@@ -60,7 +61,37 @@ def nx54_rules(dist, profiles):
     if len(data) > part_bytes:
         sys.exit(f"{name}: larger than APPSBL")
     padded = data + b"\xff" * (part_bytes - len(data))
-    out = [f"board NX54 layout=nx54 route=mp03.1 machid=0x08040001 product=NX54 sbl1.sha256={NX54_SBL1}"]
+    out = [f"board NX54 layout=nx54 route=mp03.1 machid=0x08040001 product=NX54 sbl1.sha256={NX54_SBL1} ecc_evidence=1"]
+    catalog_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "u-boot-2016", "include", "h3c_nand_catalog.h")
+    catalog = open(catalog_path, encoding="utf-8").read()
+    pattern = r'\{"([^" ]+)","[^"]*","[^"]*",\{0x([0-9a-f]+),0x([0-9a-f]+)\},([^}]+)\}'
+    found = set()
+    for profile, mfr, chip, numbers in re.findall(pattern, catalog):
+        vals = [int(x.strip().rstrip("Uu"), 0) for x in numbers.split(",")]
+        if len(vals) != 20:
+            sys.exit("invalid NAND catalog row " + profile)
+        # Verify a compiled catalog row, including its pointer to this profile,
+        # ID and geometry, in the hash-verified target MBN's LOAD segment.
+        profile_name = profile.encode() + b"\0"
+        pos = data.find(profile_name, appsbl_packager.LOAD_OFFSET)
+        if pos < 0:
+            continue
+        address = appsbl_packager.LOAD_ADDRESS + pos - appsbl_packager.LOAD_OFFSET
+        row = (re.escape(struct.pack("<I", address)) + b".{8}" +
+               re.escape(bytes((int(mfr, 16), int(chip, 16))) + b"\0\0" +
+                         struct.pack("<5I", *vals[:5])))
+        if not re.search(row, data[appsbl_packager.LOAD_OFFSET:], re.DOTALL):
+            continue
+        # Only entries with QPIC ID, geometry and fixed-read support.
+        if vals[19] & 0x1c != 0x1c:
+            continue
+        for ecc, bit, oob in ((4, 1, vals[14]), (8, 2, vals[14])):
+            if vals[16] & bit and oob:
+                found.add((mfr, chip, ecc, oob, vals[14]))
+    if not found:
+        sys.exit("no target MBN NAND catalog entries found")
+    out += [f"evidence_catalog NX54 id={a}:{b} ecc={ecc} oob={oob} raw={raw} target=NX54"
+            for a, b, ecc, oob, raw in sorted(found)]
     for pid, ecc in NX54_NANDS:
         if pid not in profiles:
             sys.exit(f"NX54 NAND profile missing: {pid}")
@@ -132,6 +163,10 @@ def main():
     if unknown:
         sys.exit(f"--hold names profiles no candidate uses: {unknown}")
     out += [f"# held, no candidate: {pid} ({why})" for pid, why in sorted(held.items())]
+    if a.nx54:
+        hold_ids = sorted({(0xa1, 0xa5), (0xe5, 0x21)} |
+                          {(profiles[pid]["manufacturer_id"], profiles[pid]["chip_id"]) for pid in held})
+        out += [f"evidence_hold {mfr:02x}:{chip:02x}" for mfr, chip in hold_ids]
     if held:
         out.append("")
 

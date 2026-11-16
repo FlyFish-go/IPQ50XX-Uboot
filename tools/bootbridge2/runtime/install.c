@@ -74,7 +74,9 @@ void bb_inst_plan(const struct bb_inst_inputs *in, const struct bb_candidate *c,
 	for (unsigned i = 0; i < count; i++)
 		for (unsigned j = 0; j < 2; j++) {
 			if (!strcmp(parts[i].name, j ? "0:APPSBL_1" : "0:APPSBL") &&
-			    !bb_part_matches(&parts[i], in->appsbl[j])) return;
+			    !bb_part_matches(&parts[i], in->appsbl[j]) &&
+			    (!layout->full_backup || !bb_part_matches(&parts[i], in->appsbl[1-j]) ||
+			     !bb_part_name_ok(&parts[i], in->appsbl[1-j]->name))) return;
 			if (!strcmp(parts[i].name, j ? "0:BOOTCONFIG1" : "0:BOOTCONFIG") &&
 			    !bb_part_matches(&parts[i], in->ret.bc[j])) return;
 		}
@@ -122,9 +124,9 @@ void bb_inst_plan(const struct bb_inst_inputs *in, const struct bb_candidate *c,
 static int write_copy(const struct bb_flash *f, const uint8_t *image, uint32_t len)
 {
 	for (uint32_t off = 0; off < len; off += f->erase_size)
-		if (bb_flash_rewrite_block(f, off, image + off))
+		if (bb_flash_rewrite_boot_block(f, off, image + off))
 			return -1;
-	return 0;
+	return holds_image(f, image, len) ? 0 : -1;
 }
 
 enum bb_inst_code bb_inst_commit(const struct bb_inst_inputs *in, struct bb_inst_plan *p)

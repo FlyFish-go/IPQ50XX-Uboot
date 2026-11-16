@@ -284,8 +284,13 @@ static void refresh(void)
 {
 	bb_facts_collect(&S.facts);
 	memset(&S.decision, 0, sizeof(S.decision));
-	if (S.have_rules)
-		bb_rules_decide(&S.rules, &S.facts, &S.decision);
+	if (S.have_rules) {
+        bb_rules_decide(&S.rules, &S.facts, &S.decision);
+        if (S.decision.needs_evidence) {
+            bb_evidence_collect_linux(&S.facts.evidence, S.decision.evidence_oob, S.facts.mtd_ecc_strength);
+            bb_rules_decide(&S.rules, &S.facts, &S.decision);
+        }
+    }
 }
 
 /* ---- HTTP -------------------------------------------------------------- */
@@ -371,7 +376,7 @@ static void state_json(struct buf *b)
 		snprintf(facts, sizeof(facts), "null");
 	bprintf(b, "{\"schema\":\"bb-state-v1\",\"facts\":%s,\"pack\":\"%s\",\"pack_where\":\"%s\",\"rule_set\":\"%s\","
 		"\"decision\":{\"code\":\"%s\",\"message\":\"%s\",\"board\":\"%s\",\"nand\":\"%s\","
-		"\"candidate\":\"%s\",\"detail\":\"%s\"},"
+		"\"candidate\":\"%s\",\"detail\":\"%s\"%s},"
 		"\"oem_return\":{\"code\":\"%s\",\"message\":\"%s\",\"oem_offset\":%u,\"oem_slot\":\"%s\"},"
 		"\"backup\":{\"ready\":%s,\"downloaded\":%s,\"full\":%s,\"bytes\":%llu,\"sha256\":\"%s\",\"bad_blocks\":%u,"
 		"\"unreadable_blocks\":%u},"
@@ -380,7 +385,7 @@ static void state_json(struct buf *b)
 		S.have_rules ? bb_decide_str(S.decision.code) : "no_rules",
 		S.have_rules ? bb_decide_text(S.decision.code) : "桥接包里没有可用的规则包",
 		S.decision.board, S.decision.nand, S.decision.cand ? S.decision.cand->id : "",
-		S.decision.detail, bb_ret_code_str(rp.code), bb_ret_code_text(rp.code), rp.oem_offset,
+		S.decision.detail, S.decision.experimental ? ",\"nand_evidence\":\"experimental\"" : "", bb_ret_code_str(rp.code), bb_ret_code_text(rp.code), rp.oem_offset,
 		bb_ubi_status_str(rp.ubi_status), S.backup_ready ? "true" : "false",
 		S.backup_downloaded ? "true" : "false", S.backup_full ? "true" : "false",
 		(unsigned long long)S.backup.bytes, S.backup.sha256, S.backup.bad_blocks,
@@ -423,7 +428,11 @@ static void do_backup(void)
 		return;
 	}
 	for (unsigned i = 0; i < count; i++) {
-		int idx = bb_mtd_find(spec[i].name, 0);
+		/* Full backups locate each partition by its reviewed physical offset:
+		 * SBL swaps the names of failsafe pairs (rootfs/rootfs_1,
+		 * 0:APPSBL/0:APPSBL_1) whenever their selector is 1. */
+		int idx = layout->full_backup ? bb_mtd_find(NULL, spec[i].offset)
+					      : bb_mtd_find(spec[i].name, 0);
 		if (idx < 0 || bb_mtd_open(idx, 0, &parts[n])) {
 			if (spec[i].optional) continue;
 			set_result("backup", "missing_partition", "缺少必需分区，无法完整备份");
@@ -431,7 +440,8 @@ static void do_backup(void)
 		}
 		/* Keep legacy optional persistent partitions as before. Full backups
 		 * require every entry at the reviewed offset and size. */
-		if (layout->full_backup && !bb_part_matches(&spec[i], &parts[n])) {
+		if (layout->full_backup && (!bb_part_matches(&spec[i], &parts[n]) ||
+					    !bb_part_name_ok(&spec[i], parts[n].name))) {
 			parts[n].close(parts[n].ctx);
 			set_result("backup", "layout", "备份分区偏移或大小与布局不一致");
 			goto close;
@@ -503,7 +513,13 @@ static void do_install(void)
 		set_result("install", "download_backup", "请先将完整备份下载保存到电脑");
 		return;
 	}
-	refresh();	/* decide again on what the flash says now */
+	/* The experimental path must pass both the initial check and a fresh check. */
+    struct bb_facts first_facts = S.facts;
+    struct bb_decision first_decision = S.decision;
+    refresh();
+    if (!bb_rules_recheck(&first_facts, &first_decision, &S.facts, &S.decision)) {
+        set_result("install", "not_matched", "设备检查或实测 ECC 复检未通过"); return;
+    }
 	if (!S.have_rules || S.decision.code != BB_DEC_OK) {
 		set_result("install", "not_matched", S.have_rules ? bb_decide_text(S.decision.code) :
 			   "桥接包里没有可用的规则包");

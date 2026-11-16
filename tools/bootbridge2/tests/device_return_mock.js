@@ -22,6 +22,12 @@ const base = {
 const cases = {
   'NX54 unrecognized, no backup': { ...base, facts: { route: 'mp03.1', layout: 'nx54', env: { productname: 'BX54E' } },
     pack: 'missing', decision: { code: 'no_board', message: 'no' } },
+  'NX54 experimental ECC': { ...base,
+    facts: { route: 'mp03.1', env: { productname: 'NX54' }, ecc_evidence: { sampled: true, parts: [
+      { failed: 0, corrected: 1, non_ff: 80 }, { failed: 0, corrected: 0, non_ff: 90 },
+      { failed: 0, corrected: 0, non_ff: 91 }, { failed: 0, corrected: 0, non_ff: 1 },
+      { failed: 0, corrected: 0, non_ff: 1 }] } },
+    decision: { code: 'ok', board: 'NX54', candidate: 'NX54-auto', nand_evidence: 'experimental' } },
   'NX54 backup not downloaded': { ...base, decision: { code: 'ok', board: 'NX54', candidate: 'NX54-auto' },
     backup: { ready: true, full: true, downloaded: false, bytes: 124256256, sha256: 'test' } },
   'install done': { ...base, oem_return: { code: 'already_oem', message: 'm' },
@@ -54,6 +60,11 @@ const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': '
     });
     await page.goto('http://bridge.test/');
     await page.waitForTimeout(300);
+    if (name === 'NX54 experimental ECC') {
+      ok('experimental: backup warning displayed', (await page.textContent('#device-sub')) ===
+        '闪存型号未登记，按实测 ECC 放行（实验性）。安装前请务必生成并下载完整备份。');
+      ok('experimental: per-partition evidence shown', (await page.textContent('#tech')).includes('corrected 1（上限 8），非擦除页 80'));
+    }
     const enabled = await page.isEnabled('#return-button');
     ok(name + ': return enabled', enabled);
     if (enabled) {

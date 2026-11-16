@@ -169,3 +169,24 @@ int bb_mtd_open(int idx, int writable, struct bb_flash *f)
 	f->close = mtd_close;
 	return 0;
 }
+
+/* Read the kernel's per-MTD cumulative ECC counters, without resetting them. */
+int bb_mtd_ecc_stats(void *ctx, uint32_t *failed, uint32_t *corrected)
+{
+ struct mtd_ctx *c = ctx;
+ struct mtd_ecc_stats s;
+ if (ioctl(c->fd, ECCGETSTATS, &s)) return -errno;
+ *failed=s.failed; *corrected=s.corrected;
+ return 0;
+}
+
+int bb_mtd_geometry(int idx, const struct bb_flash *f, unsigned oob, unsigned ecc)
+{
+ struct mtd_ctx *c=f->ctx;
+ struct mtd_info_user info;
+ uint32_t strength;
+ if (ioctl(c->fd, MEMGETINFO, &info) || info.writesize!=2048 ||
+     info.oobsize!=oob || sys_u32(idx,"ecc_strength",&strength) || strength!=ecc)
+  return -1;
+ return 0;
+}

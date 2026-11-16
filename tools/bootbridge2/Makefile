@@ -8,7 +8,7 @@ ARM_CC ?= arm-openwrt-linux-gcc
 ARM_CFLAGS ?= -Os -static
 
 RETURN_SRC := runtime/flash.c runtime/bootconfig.c runtime/ubi_check.c runtime/oem_return.c
-FACTS_SRC := runtime/facts.c runtime/rules.c runtime/layout.c
+FACTS_SRC := runtime/facts.c runtime/rules.c runtime/layout.c runtime/evidence.c
 INSTALL_SRC := runtime/install.c runtime/pack.c runtime/sha256.c runtime/backup.c third_party/lzma/LzmaDec.c
 LINUX_SRC := runtime/flash_mtd.c runtime/facts_linux.c
 CORE := $(RETURN_SRC) $(FACTS_SRC) $(INSTALL_SRC)
@@ -24,7 +24,7 @@ $(OUT)/test_oem_return: $(RETURN_SRC) tests/flash_mem.c tests/test_oem_return.c 
 	@mkdir -p $(OUT)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(filter %.c,$^)
 
-$(OUT)/test_facts_rules: $(FACTS_SRC) tests/test_facts_rules.c $(HDRS)
+$(OUT)/test_facts_rules: $(FACTS_SRC) runtime/flash.c tests/test_facts_rules.c $(HDRS)
 	@mkdir -p $(OUT)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(filter %.c,$^)
 

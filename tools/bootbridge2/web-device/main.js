@@ -47,6 +47,12 @@
       ["备份", s.backup.ready ? s.backup.bytes + " 字节，SHA-256 " + s.backup.sha256 : "未生成"],
       ["上次操作", s.last.action ? s.last.action + " → " + s.last.code : "无"],
     ];
+    if (f.ecc_evidence && f.ecc_evidence.sampled) {
+      const names = ["SBL1", "APPSBL", "APPSBL_1", "BOOTCONFIG", "BOOTCONFIG1"];
+      rows.push(["nand_evidence", d.nand_evidence || "refused"]);
+      (f.ecc_evidence.parts || []).forEach((p, i) => rows.push([names[i],
+        "failed " + p.failed + "，corrected " + p.corrected + "（上限 8），非擦除页 " + p.non_ff]));
+    }
     const dl = $("tech");
     dl.textContent = "";
     rows.forEach(([k, v]) => {
@@ -68,7 +74,9 @@
     $("device").hidden = false;
     $("device-name").textContent = ((s.facts.env || {}).productname || "未知机型") +
       (matched ? " · " + (BOARD[d.board] || d.board) : "");
-    $("device-sub").textContent = matched ? "将安装 " + d.candidate : d.message;
+    $("device-sub").textContent = d.nand_evidence === "experimental"
+      ? "闪存型号未登记，按实测 ECC 放行（实验性）。安装前请务必生成并下载完整备份。"
+      : matched ? "将安装 " + d.candidate : d.message;
     $("backup").hidden = !matched;
     $("backup-link").hidden = !b.ready;
     $("backup-copy").textContent = b.ready

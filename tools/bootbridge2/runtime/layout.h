@@ -20,4 +20,8 @@ const struct bb_layout *bb_layout_slots(const struct bb_flash *a, const struct b
 const struct bb_layout *bb_layout_board(const char *board);
 unsigned bb_layout_backup(const struct bb_layout *l, struct bb_part_spec *out, unsigned max);
 int bb_part_matches(const struct bb_part_spec *p, const struct bb_flash *f);
+/* SBL renames failsafe pairs ("X" <-> "X_1", e.g. rootfs, 0:APPSBL) after the
+ * selector flips, so a partition found by physical offset may carry its
+ * partner's name. Nonzero when `name` is p->name or that pair partner. */
+int bb_part_name_ok(const struct bb_part_spec *p, const char *name);
 #endif

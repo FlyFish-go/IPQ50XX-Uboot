@@ -30,4 +30,8 @@ int bb_flash_read(const struct bb_flash *f, uint32_t off, void *buf, size_t len)
 int bb_flash_rewrite_block(const struct bb_flash *f, uint32_t block_off,
 			   const uint8_t *data);
 
+/* Boot-chain pages, including all-FF pages, must be programmed with ECC. */
+int bb_flash_rewrite_boot_block(const struct bb_flash *f, uint32_t block_off,
+				const uint8_t *data);
+
 #endif

@@ -39,6 +39,9 @@ struct bb_rules {
 	char set[48];
 	char *text;		/* owned copy of the rule file */
 	unsigned ncand;
+	unsigned n_catalog, n_hold;
+	struct { unsigned mfr, chip, ecc, oob, raw_oob; } catalog[128];
+	struct { unsigned mfr, chip; } hold[128];
 	struct bb_candidate cand[BB_RULES_MAX_CANDIDATES];
 };
 
@@ -57,6 +60,8 @@ struct bb_decision {
 	char board[64];
 	char nand[64];
 	const struct bb_candidate *cand;
+	int needs_evidence, experimental;
+	unsigned evidence_oob;
 	char detail[256];	/* which groups/profiles matched, for diagnostics */
 };
 
@@ -65,6 +70,8 @@ int bb_rules_load(struct bb_rules *r, const char *text, unsigned *bad_line);
 void bb_rules_free(struct bb_rules *r);
 
 void bb_rules_decide(const struct bb_rules *r, const struct bb_facts *f, struct bb_decision *d);
+int bb_rules_recheck(const struct bb_facts *first, const struct bb_decision *a,
+                     const struct bb_facts *second, const struct bb_decision *b);
 const char *bb_decide_str(enum bb_decide c);
 const char *bb_decide_text(enum bb_decide c);
 

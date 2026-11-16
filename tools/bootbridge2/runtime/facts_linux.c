@@ -131,3 +131,23 @@ void bb_facts_collect(struct bb_facts *f)
 		slots[0].close(slots[0].ctx);
 	}
 }
+
+void bb_evidence_collect_linux(struct bb_evidence *out, unsigned oob, unsigned strength)
+{
+ static const char *const names[5]={"0:SBL1","0:APPSBL","0:APPSBL_1","0:BOOTCONFIG","0:BOOTCONFIG1"};
+ struct bb_flash flash[5]; const struct bb_flash *parts[5]={0};
+ memset(flash,0,sizeof(flash)); memset(out,0,sizeof(*out)); out->sampled=1;
+ if ((strength!=4 && strength!=8) || !oob) return;
+ for (unsigned i=0;i<5;i++) {
+  static const uint32_t offsets[5]={0,0x500000,0x640000,0x100000,0x140000};
+  int idx=bb_mtd_find(NULL,offsets[i]);
+  if (idx<0 || bb_mtd_open(idx,0,&flash[i])) goto done;
+  parts[i]=&flash[i];
+  struct bb_part_spec spec={.name=names[i]};
+  if (!bb_part_name_ok(&spec,flash[i].name)) goto done;
+  if (bb_mtd_geometry(idx,parts[i],oob,strength)) goto done;
+ }
+ bb_evidence_scan(parts,bb_mtd_ecc_stats,out);
+done:
+ for (unsigned i=0;i<5;i++) if (parts[i]) flash[i].close(flash[i].ctx);
+}

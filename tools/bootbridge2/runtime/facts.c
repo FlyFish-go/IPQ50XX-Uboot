@@ -216,6 +216,16 @@ int bb_facts_json(const struct bb_facts *f, char *buf, size_t len)
 	put_str(&o, f->sbl1_sha256);
 	put(&o, ",\"layout\":");
 	put_str(&o, f->layout);
-	put(&o, "}");
+	if (f->evidence.sampled) {
+	put(&o, ",\"ecc_evidence\":{\"sampled\":%s,\"ok\":%s,\"corrected_limit\":%u,\"parts\":[",
+        f->evidence.sampled?"true":"false", f->evidence.ok?"true":"false", BB_EVIDENCE_CORRECTED_MAX);
+    for (unsigned i=0;i<BB_EVIDENCE_PARTS;i++) {
+        const struct bb_evidence_part *p=&f->evidence.part[i];
+        put(&o, "%s{\"failed\":%u,\"corrected\":%u,\"non_ff\":%u,\"read_ok\":%s,\"header_ok\":%s}",
+            i?",":"",p->failed,p->corrected,p->non_ff,p->read_ok?"true":"false",p->header_ok?"true":"false");
+    }
+    put(&o, "]}");
+    }
+    put(&o, "}");
 	return o.err ? -1 : (int)o.used;
 }

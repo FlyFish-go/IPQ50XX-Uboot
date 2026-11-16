@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "evidence.h"
 
 #define BB_ART5G_OFFSET		0x26800u	/* QCN6122 calibration block in 0:ART */
 #define BB_ART5G_BYTES		0x60u
@@ -28,6 +29,7 @@ struct bb_facts {
 	char nand_vendor[32], nand_model[64];
 	unsigned nand_mib, nand_erase_kib, nand_page, nand_oob;
 	unsigned mtd_oob, mtd_ecc_strength;
+	struct bb_evidence evidence;
 
 	/* First bytes of the 5 GHz calibration block (FEM flags live here). */
 	int have_art5g;

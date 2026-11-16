@@ -55,6 +55,18 @@ int bb_part_matches(const struct bb_part_spec *p, const struct bb_flash *f)
 		f->erase_size == 0x20000 && f->page_size == 2048;
 }
 
+int bb_part_name_ok(const struct bb_part_spec *p, const char *name)
+{
+	size_t a, b;
+
+	if (!p || !p->name || !name) return 0;
+	if (!strcmp(p->name, name)) return 1;
+	a = strlen(p->name); b = strlen(name);
+	if (a + 2 == b) return !strncmp(name, p->name, a) && !strcmp(name + a, "_1");
+	if (b + 2 == a) return !strncmp(p->name, name, b) && !strcmp(p->name + b, "_1");
+	return 0;
+}
+
 unsigned bb_layout_backup(const struct bb_layout *l, struct bb_part_spec *out, unsigned max)
 {
 	static const char *const pers[] = { "pdt_data", "pdt_data_1", "exp", "plugin" };

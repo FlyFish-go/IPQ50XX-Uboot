@@ -52,10 +52,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	bb_rules_decide(&r, &f, &d);
+    if (d.needs_evidence) {
+        bb_evidence_collect_linux(&f.evidence, d.evidence_oob, f.mtd_ecc_strength);
+        bb_rules_decide(&r, &f, &d);
+    }
+    if (bb_facts_json(&f, json, sizeof(json)) < 0) return 1;
 	printf("{\"facts\":%s,\"rule_set\":\"%s\",\"decision\":{\"code\":\"%s\",\"message\":\"%s\","
-	       "\"board\":\"%s\",\"nand\":\"%s\",\"candidate\":\"%s\",\"detail\":\"%s\"}}\n",
+	       "\"board\":\"%s\",\"nand\":\"%s\",\"candidate\":\"%s\",\"detail\":\"%s\"%s}}\n",
 	       json, r.set, bb_decide_str(d.code), bb_decide_text(d.code), d.board, d.nand,
-	       d.cand ? d.cand->id : "", d.detail);
+	       d.cand ? d.cand->id : "", d.detail, d.experimental ? ",\"nand_evidence\":\"experimental\"" : "");
 	bb_rules_free(&r);
 	free(text);
 	return d.code == BB_DEC_OK ? 0 : 1;
