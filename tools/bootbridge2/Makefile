@@ -8,7 +8,7 @@ ARM_CC ?= arm-openwrt-linux-gcc
 ARM_CFLAGS ?= -Os -static
 
 RETURN_SRC := runtime/flash.c runtime/bootconfig.c runtime/ubi_check.c runtime/oem_return.c
-FACTS_SRC := runtime/facts.c runtime/rules.c
+FACTS_SRC := runtime/facts.c runtime/rules.c runtime/layout.c
 INSTALL_SRC := runtime/install.c runtime/pack.c runtime/sha256.c runtime/backup.c third_party/lzma/LzmaDec.c
 LINUX_SRC := runtime/flash_mtd.c runtime/facts_linux.c
 CORE := $(RETURN_SRC) $(FACTS_SRC) $(INSTALL_SRC)
@@ -44,18 +44,28 @@ $(OUT)/test_button: tests/test_button.c runtime/button_event.h
 	@mkdir -p $(OUT)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $<
 
-test: $(OUT)/test_oem_return $(OUT)/test_facts_rules $(OUT)/test_install $(OUT)/test_operation_lock $(OUT)/test_backup $(OUT)/test_button
+$(OUT)/test_nx54: $(CORE) tests/flash_mem.c tests/test_nx54.c $(HDRS)
+	@mkdir -p $(OUT)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(filter %.c,$^)
+
+test: $(OUT)/test_oem_return $(OUT)/test_facts_rules $(OUT)/test_install $(OUT)/test_operation_lock $(OUT)/test_backup $(OUT)/test_button $(OUT)/test_nx54
 	$(OUT)/test_oem_return
 	$(OUT)/test_facts_rules
 	$(OUT)/test_install
 	$(OUT)/test_operation_lock
 	$(OUT)/test_backup
 	$(OUT)/test_button
+	$(OUT)/test_nx54
 
 $(OUT)/arm/%: runtime/%_main.c $(CORE) $(LINUX_SRC) $(HDRS)
 	@mkdir -p $(OUT)/arm
 	$(ARM_CC) $(ARM_CFLAGS) -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -o $@ \
 		$< $(CORE) $(LINUX_SRC)
+
+# The fallback tool must not depend on rules, facts, backup or installation.
+$(OUT)/arm/bb_oem_return: runtime/bb_oem_return_main.c $(RETURN_SRC) runtime/flash_mtd.c $(HDRS)
+	@mkdir -p $(OUT)/arm
+	$(ARM_CC) $(ARM_CFLAGS) -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -o $@ $(filter %.c,$^)
 
 $(OUT)/arm/bb_init: runtime/boot/bb_init.c
 	@mkdir -p $(OUT)/arm

@@ -1,6 +1,9 @@
 {
   "_note": "Web-edition overrides and additions merged over design/desktop-offline-ui/strings.json by web/tools/build_site.py. {placeholders} are runtime values; <b>/<u> are emphasis only.",
   "zh": {
+    "testing": "测试中",
+    "testingNote": "NX54 测试中：完整 BootBridge 流程尚未实机验收。仅供具备恢复条件的测试者使用；BX54E 不支持。",
+    "s1fine": "NX30 家族直接安装 U-Boot v0.2.0 正式版。生成桥接包时按文件指纹自动识别；这里的选择用于显示下载和说明。",
     "edition": "网页版",
     "version": "网页版 {v}",
     "rulesOk": "规则目录已校验",
@@ -90,9 +93,14 @@
     "s6recT": "以后要进入 U-Boot 恢复页：",
     "s6rec": "系统启动失败时，路由器会自动进入恢复页；也可以先断电，按住 Reset 键再通电，红灯每秒闪一下，闪满 3 下后松手（闪 1 下、2 下就松手是切换系统）。电脑网卡保持「自动获取 IP」即可拿到 192.168.10.x 地址，然后在浏览器打开 192.168.10.1。",
     "rulesLatest": "规则集 {rs} · 已是最新",
-    "by": "作者"
+    "by": "作者",
+    "manualFw": "请自行从 H3C 官网取得指定版本的原厂固件，再选择下面的文件进行校验。仅支持 NX54 VER.A，不支持 BX54E。",
+    "buttonLogin": "NX54 新机或恢复出厂后，原厂登录页只有“登录”按钮，直接点击即可。"
   },
   "en": {
+    "testing": "Testing",
+    "testingNote": "NX54 is experimental: the complete BootBridge flow has not passed hardware acceptance. For testers with recovery access only. BX54E is unsupported.",
+    "s1fine": "NX30-family devices install final U-Boot v0.2.0 directly. The bridge is matched by file fingerprint; this choice controls downloads and guidance.",
     "edition": "Web",
     "version": "Web {v}",
     "rulesOk": "Rule catalog verified",
@@ -182,6 +190,8 @@
     "s6recT": "Entering U-Boot recovery later:",
     "s6rec": "If the system fails to boot, the router opens the recovery page automatically. You can also power it off and hold Reset while powering on: the red LED flashes once a second; release after the third flash (releasing after one or two flashes switches the system instead). Leave the network adapter on automatic (DHCP) to get a 192.168.10.x address, then open 192.168.10.1 in your browser.",
     "rulesLatest": "Rule set {rs} · Up to date",
-    "by": "by"
+    "by": "by",
+    "manualFw": "Obtain the specified stock firmware from H3C, then select it below for verification. Supports NX54 VER.A only; BX54E is unsupported.",
+    "buttonLogin": "A new or factory-reset NX54 shows a Login button without a password field. Click Login to continue."
   }
 }

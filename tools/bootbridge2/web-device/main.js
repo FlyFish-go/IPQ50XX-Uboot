@@ -3,7 +3,7 @@
 // All decisions are made on the device; this page only displays them.
 (function () {
   const $ = (id) => document.getElementById(id);
-  const BOARD = { A: "HW-A", B: "HW-B", C: "HW-C", D: "HW-D" };
+  const BOARD = { A: "HW-A", B: "HW-B", C: "HW-C", D: "HW-D", NX54: "NX54 VER.A" };
   let state = null;
   let busy = false;
   let done = false;	// install or return finished: only reboot is left
@@ -36,6 +36,7 @@
     const f = s.facts || {}, n = f.nand || {}, d = s.decision || {}, r = s.oem_return || {};
     const rows = [
       ["规则集", s.rule_set || "无"], ["规则包", s.pack],
+      ["分区布局", f.layout || "未读到"], ["SBL1 SHA-256", f.sbl1_sha256 || "未读到"],
       ["启动路由", f.route || "未读到"], ["machid", f.machid || "未读到"],
       ["闪存", (n.model || "?") + " (" + (n.id || "?") + ")，ECC " + (n.ecc || "?")],
       ["原厂产品名", (f.env || {}).productname || "未读到"],
@@ -71,7 +72,7 @@
     $("backup").hidden = !matched;
     $("backup-link").hidden = !b.ready;
     $("backup-copy").textContent = b.ready
-      ? "备份已生成（" + Math.round(b.bytes / 1048576) + " MiB）。建议先下载保存到电脑，不要公开分享。" +
+      ? "备份已生成（" + Math.round(b.bytes / 1048576) + " MiB）。请下载保存到电脑，不要公开分享。" +
         (b.unreadable_blocks ? " 注意：有 " + b.unreadable_blocks + " 个块读不出，已用 0xFF 代替。" : "")
       : "安装前必须先生成备份。备份含设备私有数据，请保存在自己的电脑上，不要公开分享。";
     notice("", "");
@@ -104,7 +105,13 @@
       $("message").textContent = "已识别为 " + (BOARD[d.board] || d.board) + "。安装前需要先在设备上生成恢复备份。";
       main.textContent = "生成备份";
       main.disabled = busy;
-      main.onclick = () => run("/api/backup", "正在生成备份，约需 1 分钟…");
+      main.onclick = () => run("/api/backup", "正在生成备份，包含系统槽时可能需要数分钟…");
+    } else if (b.full && !b.downloaded) {
+      setStep(2);
+      $("title").textContent = "先下载完整备份";
+      $("message").textContent = "请点击“下载备份”，保存后核对 ZIP 和 SHA-256，再安装 U-Boot。";
+      main.textContent = "请先下载备份";
+      main.disabled = true;
     } else {
       setStep(3);
       $("kicker").textContent = "第 3 步 · 安装 U-Boot";
@@ -166,6 +173,12 @@
     "只修改启动配置，不改动原厂系统和 U-Boot。之后点“重启”即进入原厂系统。",
     () => run("/api/return", "正在切换启动配置…"));
   $("diag-button").onclick = () => { location.href = "/api/diagnostics"; };
+
+  $("backup-link").onclick = () => {
+    // The service handles requests sequentially: this state request completes
+    // after the ZIP transfer and exposes whether every byte was sent.
+    setTimeout(() => api("/api/state").then(render).catch(() => {}), 500);
+  };
 
   api("/api/state").then(render).catch((e) => notice("无法读取设备状态", String(e.message || e)));
 })();

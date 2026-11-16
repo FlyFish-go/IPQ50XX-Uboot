@@ -20,6 +20,10 @@ const base = {
   last: { action: '', code: '', message: '' },
 };
 const cases = {
+  'NX54 unrecognized, no backup': { ...base, facts: { route: 'mp03.1', layout: 'nx54', env: { productname: 'BX54E' } },
+    pack: 'missing', decision: { code: 'no_board', message: 'no' } },
+  'NX54 backup not downloaded': { ...base, decision: { code: 'ok', board: 'NX54', candidate: 'NX54-auto' },
+    backup: { ready: true, full: true, downloaded: false, bytes: 124256256, sha256: 'test' } },
   'install done': { ...base, oem_return: { code: 'already_oem', message: 'm' },
     last: { action: 'install', code: 'done', message: 'done' } },
   'no matching U-Boot, pack missing': { ...base, pack: 'missing', decision: { code: 'no_board', message: 'no' } },
@@ -58,6 +62,10 @@ const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': '
       await page.waitForTimeout(300);
     }
     ok(name + ': return posted', posted);
+    if (name === 'NX54 backup not downloaded') {
+      ok('NX54: install disabled until backup download', await page.isDisabled('#main-button'));
+      ok('NX54: backup download available', await page.isVisible('#backup-link'));
+    }
     await page.close();
   }
   await browser.close();

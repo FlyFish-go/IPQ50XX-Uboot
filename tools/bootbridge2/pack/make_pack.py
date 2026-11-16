@@ -63,8 +63,9 @@ def main():
                 continue
             if a.auto:
                 name = os.path.basename(kv["file"])
-                if not (name.startswith("h3c-hw-") and name.endswith(".mbn")):
-                    sys.exit(f"{cid}: {kv['file']} is not an h3c-hw-<x>.mbn")
+                if not ((name.startswith("h3c-hw-") and name.endswith(".mbn")) or
+                        (name == "h3c-nx54.mbn" and kv["board"] == "NX54")):
+                    sys.exit(f"{cid}: {kv['file']} is not a supported NAND-auto filename")
                 path = os.path.join(a.auto, name)
             else:
                 path = os.path.join(a.dist, folders[cid], "appsbl.mbn")

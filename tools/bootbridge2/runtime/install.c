@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "install.h"
 #include "sha256.h"
+#include "layout.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +64,20 @@ void bb_inst_plan(const struct bb_inst_inputs *in, const struct bb_candidate *c,
 		return;
 
 	p->code = BB_INST_PARTITIONS;
+	/* Bind candidates to physical layouts even with an older rule pack.
+	 * In particular MP03.1 alone must never send HW-A to an NX54. */
+	const struct bb_layout *layout = bb_layout_slots(in->ret.slot[0], in->ret.slot[1]);
+	if (!layout || bb_layout_board(c->board) != layout)
+		return;
+	struct bb_part_spec parts[32];
+	unsigned count = bb_layout_backup(layout, parts, 32);
+	for (unsigned i = 0; i < count; i++)
+		for (unsigned j = 0; j < 2; j++) {
+			if (!strcmp(parts[i].name, j ? "0:APPSBL_1" : "0:APPSBL") &&
+			    !bb_part_matches(&parts[i], in->appsbl[j])) return;
+			if (!strcmp(parts[i].name, j ? "0:BOOTCONFIG1" : "0:BOOTCONFIG") &&
+			    !bb_part_matches(&parts[i], in->ret.bc[j])) return;
+		}
 	if (!a || !b || a->size != b->size || a->size != c->part_bytes ||
 	    !a->erase_size || !a->page_size || a->erase_size % a->page_size ||
 	    a->page_size != b->page_size || a->erase_size != b->erase_size ||

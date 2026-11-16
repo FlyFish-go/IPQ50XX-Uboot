@@ -1,0 +1,14 @@
+{
+  "schema": "bb-web-release-v1",
+  "rule_set": "BB2-R5",
+  "nx30_uboot": "v0.2.0",
+  "nx54": "testing",
+  "models": [
+    "RC3000",
+    "RT3000",
+    "NX30",
+    "RW3000",
+    "NX54"
+  ],
+  "format": "COPY/LITERAL; no OEM payload literals"
+}

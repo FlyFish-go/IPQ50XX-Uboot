@@ -212,6 +212,10 @@ int bb_facts_json(const struct bb_facts *f, char *buf, size_t len)
 	put_str(&o, f->appsbl_sha256[0]);
 	put(&o, ",");
 	put_str(&o, f->appsbl_sha256[1]);
-	put(&o, "]}");
+	put(&o, "],\"sbl1_sha256\":");
+	put_str(&o, f->sbl1_sha256);
+	put(&o, ",\"layout\":");
+	put_str(&o, f->layout);
+	put(&o, "}");
 	return o.err ? -1 : (int)o.used;
 }

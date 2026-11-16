@@ -56,6 +56,10 @@ static const char *fact(const struct bb_facts *f, const char *key, char *tmp, si
 {
 	if (!strcmp(key, "route"))
 		return f->have_route ? f->route : NULL;
+	if (!strcmp(key, "layout"))
+		return f->layout[0] ? f->layout : NULL;
+	if (!strcmp(key, "sbl1.sha256"))
+		return f->sbl1_sha256[0] ? f->sbl1_sha256 : NULL;
 	if (!strcmp(key, "machid")) {
 		if (!f->have_machid)
 			return NULL;
@@ -144,6 +148,7 @@ static int known_key(const char *cond)
 	static const char *const keys[] = {
 		"route=", "machid=", "nand.id=", "nand.model=", "nand.mib=", "nand.page=",
 		"nand.erase_kib=", "nand.oob=", "ecc=", "product=", "item=", "art5g@",
+		"layout=", "sbl1.sha256=",
 	};
 
 	for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++)

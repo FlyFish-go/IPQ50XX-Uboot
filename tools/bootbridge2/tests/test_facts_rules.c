@@ -96,6 +96,7 @@ static int build(const struct sample *s, struct bb_facts *f)
 	size_t len;
 
 	memset(f, 0, sizeof(*f));
+	snprintf(f->layout, sizeof(f->layout), "nx30");
 	bb_facts_parse_dt_model(f, s->model);
 	bb_facts_parse_kmsg(f, s->kmsg);
 	f->mtd_ecc_strength = s->ecc;

@@ -7,7 +7,8 @@
 Only three things change: the reserved LEB data areas get the pack bytes, the
 FIT image's crc32/sha1 values are recomputed over the UBI data, and the H3C
 header checksum is fixed so the 32-bit big-endian word sum from offset 64 is
-0xffffffff. The UBI headers stay valid because ubi_rootfs is a dynamic
+0xffffffff (including any model-specific zero transport tail). The tail
+remains outside the FIT. The UBI headers stay valid because ubi_rootfs is a dynamic
 volume (no data CRC).
 """
 import argparse
@@ -23,6 +24,14 @@ def inject(base, layout, pack):
     p = layout["pack"]
     if hashlib.sha256(base).hexdigest() != layout["base"]["sha256"]:
         raise ValueError("base image does not match layout")
+    transport = layout.get("transport")
+
+    def check_tail():
+        if transport and (len(out) != transport["tail_offset"] + transport["zero_tail_bytes"] or
+                          any(out[transport["tail_offset"]:])):
+            raise ValueError("zero transport tail changed")
+
+    check_tail()
     if len(pack) > p["capacity"] or pack[:4] != b"BBPK":
         raise ValueError("pack too large or not a pack")
     pos = 0
@@ -40,6 +49,7 @@ def inject(base, layout, pack):
     struct.pack_into(">I", out, h["checksum_offset"], 0)
     total = sum(v[0] for v in struct.iter_unpack(">I", bytes(out[h["sum_from"]:]))) & 0xffffffff
     struct.pack_into(">I", out, h["checksum_offset"], (0xffffffff - total) & 0xffffffff)
+    check_tail()
     return bytes(out)
 
 

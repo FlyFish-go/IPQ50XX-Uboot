@@ -19,6 +19,7 @@
 #include "pack.h"
 #include "operation_lock.h"
 #include "sha256.h"
+#include "layout.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -54,7 +55,7 @@ static struct {
 	struct bb_pack pack;
 	struct bb_decision decision;
 	struct bb_backup_result backup;
-	int backup_ready;
+	int backup_ready, backup_downloaded, backup_full;
 	char last_action[16];
 	char last_code[40];
 	char last_message[256];
@@ -116,11 +117,11 @@ static int running_offset(struct parts *p, uint32_t *out)
 }
 
 /* Returns 0 when every partition is open; `writable` opens BOOTCONFIG and APPSBL rw. */
-static int parts_open(struct parts *p, int writable)
+static int parts_open(struct parts *p, int writable, int install)
 {
 	memset(p, 0, sizeof(*p));
-	if (open_named("0:APPSBL", writable, &p->appsbl[0], p, 0) ||
-	    open_named("0:APPSBL_1", writable, &p->appsbl[1], p, 1) ||
+	if ((install && (open_named("0:APPSBL", writable, &p->appsbl[0], p, 0) ||
+	    open_named("0:APPSBL_1", writable, &p->appsbl[1], p, 1))) ||
 	    open_named("0:BOOTCONFIG", writable, &p->bc[0], p, 2) ||
 	    open_named("0:BOOTCONFIG1", writable, &p->bc[1], p, 3) ||
 	    open_named("rootfs", 0, &p->slot[0], p, 4) ||
@@ -316,7 +317,7 @@ static void bprintf(struct buf *b, const char *fmt, ...)
 	}
 }
 
-static void send_all(int fd, const void *p, size_t n)
+static int send_all(int fd, const void *p, size_t n)
 {
 	const char *c = p;
 
@@ -326,10 +327,11 @@ static void send_all(int fd, const void *p, size_t n)
 		if (w < 0 && errno == EINTR)
 			continue;
 		if (w <= 0)
-			return;
+			return -1;
 		c += w;
 		n -= w;
 	}
+	return 0;
 }
 
 static void respond(int fd, int status, const char *type, const char *extra, const void *body,
@@ -361,7 +363,7 @@ static void state_json(struct buf *b)
 	}
 	memset(&rp, 0, sizeof(rp));
 	rp.code = BB_RET_BAD_SLOTS;
-	if (!parts_open(&p, 0)) {
+	if (!parts_open(&p, 0, 0)) {
 		bb_ret_plan(&p.in.ret, &rp);
 		parts_close(&p);
 	}
@@ -371,7 +373,7 @@ static void state_json(struct buf *b)
 		"\"decision\":{\"code\":\"%s\",\"message\":\"%s\",\"board\":\"%s\",\"nand\":\"%s\","
 		"\"candidate\":\"%s\",\"detail\":\"%s\"},"
 		"\"oem_return\":{\"code\":\"%s\",\"message\":\"%s\",\"oem_offset\":%u,\"oem_slot\":\"%s\"},"
-		"\"backup\":{\"ready\":%s,\"bytes\":%llu,\"sha256\":\"%s\",\"bad_blocks\":%u,"
+		"\"backup\":{\"ready\":%s,\"downloaded\":%s,\"full\":%s,\"bytes\":%llu,\"sha256\":\"%s\",\"bad_blocks\":%u,"
 		"\"unreadable_blocks\":%u},"
 		"\"last\":{\"action\":\"%s\",\"code\":\"%s\",\"message\":\"%s\"}}",
 		facts, bb_pack_status_str(S.pack_status), S.pack_where, S.have_rules ? S.rules.set : "",
@@ -380,6 +382,7 @@ static void state_json(struct buf *b)
 		S.decision.board, S.decision.nand, S.decision.cand ? S.decision.cand->id : "",
 		S.decision.detail, bb_ret_code_str(rp.code), bb_ret_code_text(rp.code), rp.oem_offset,
 		bb_ubi_status_str(rp.ubi_status), S.backup_ready ? "true" : "false",
+		S.backup_downloaded ? "true" : "false", S.backup_full ? "true" : "false",
 		(unsigned long long)S.backup.bytes, S.backup.sha256, S.backup.bad_blocks,
 		S.backup.unreadable_blocks, S.last_action, S.last_code, S.last_message);
 	bb_ret_plan_free(&rp);
@@ -397,39 +400,48 @@ static int backup_valid(void)
 
 static void do_backup(void)
 {
-	static const char *const startup[] = {
-		"0:SBL1", "0:MIBIB", "0:BOOTCONFIG", "0:BOOTCONFIG1", "0:QSEE", "0:QSEE_1",
-		"0:DEVCFG", "0:DEVCFG_1", "0:CDT", "0:CDT_1", "0:APPSBLENV", "0:APPSBL",
-		"0:APPSBL_1", "0:ART", "0:TRAINING",
-	};
-	static const char *const persistent[] = { "pdt_data", "pdt_data_1", "exp", "plugin" };
-	struct bb_flash parts[BB_BACKUP_MAX];
+	struct bb_flash parts[BB_BACKUP_MAX], slots[2];
 	struct bb_backup_entry e[BB_BACKUP_MAX];
-	const size_t nstart = sizeof(startup) / sizeof(startup[0]);
-	const size_t npers = sizeof(persistent) / sizeof(persistent[0]);
-	unsigned n = 0;
+	struct bb_part_spec spec[BB_BACKUP_MAX];
+	const struct bb_layout *layout = NULL;
+	unsigned n = 0, count;
 	FILE *out;
 	int ret;
 
-	S.backup_ready = 0;
-	for (size_t i = 0; i < nstart + npers; i++) {
-		int is_startup = i < nstart;
-		const char *name = is_startup ? startup[i] : persistent[i - nstart];
-		int idx = bb_mtd_find(name, 0);
-
+	S.backup_ready = S.backup_downloaded = S.backup_full = 0;
+	int a = bb_mtd_find("rootfs", 0), b = bb_mtd_find("rootfs_1", 0);
+	if (a >= 0 && !bb_mtd_open(a, 0, &slots[0])) {
+		if (b >= 0 && !bb_mtd_open(b, 0, &slots[1])) {
+			layout = bb_layout_slots(&slots[0], &slots[1]);
+			slots[1].close(slots[1].ctx);
+		}
+		slots[0].close(slots[0].ctx);
+	}
+	count = bb_layout_backup(layout, spec, BB_BACKUP_MAX);
+	if (!count) {
+		set_result("backup", "layout", "无法确定完整备份所需的分区布局");
+		return;
+	}
+	for (unsigned i = 0; i < count; i++) {
+		int idx = bb_mtd_find(spec[i].name, 0);
 		if (idx < 0 || bb_mtd_open(idx, 0, &parts[n])) {
-			if (is_startup) {
-				set_result("backup", "missing_partition", "缺少启动区分区，无法备份");
-				goto close;
-			}
-			continue;	/* not every model has all persistent partitions */
+			if (spec[i].optional) continue;
+			set_result("backup", "missing_partition", "缺少必需分区，无法完整备份");
+			goto close;
+		}
+		/* Keep legacy optional persistent partitions as before. Full backups
+		 * require every entry at the reviewed offset and size. */
+		if (layout->full_backup && !bb_part_matches(&spec[i], &parts[n])) {
+			parts[n].close(parts[n].ctx);
+			set_result("backup", "layout", "备份分区偏移或大小与布局不一致");
+			goto close;
 		}
 		e[n].part = &parts[n];
-		e[n].role = is_startup ? "startup" : "oem-persistent-data";
-		if (is_startup)
+		e[n].role = spec[i].role;
+		if (!strcmp(spec[i].role, "startup"))
 			snprintf(e[n].file, sizeof(e[n].file), "startup_%06x.bin", parts[n].offset);
 		else
-			snprintf(e[n].file, sizeof(e[n].file), "%s.bin", name);
+			snprintf(e[n].file, sizeof(e[n].file), "%s.bin", spec[i].name);
 		n++;
 	}
 	mkdir("/tmp/bridge", 0700);
@@ -450,6 +462,7 @@ static void do_backup(void)
 		goto close;
 	}
 	S.backup_ready = 1;
+	S.backup_full = layout->full_backup;
 	set_result("backup", "ok", S.backup.unreadable_blocks ?
 		   "备份完成，但有读不出的块已用 0xFF 代替，详见 manifest.json" : "备份完成");
 close:
@@ -462,7 +475,7 @@ static void do_return(void)
 	struct parts p;
 	struct bb_ret_plan rp;
 
-	if (parts_open(&p, 1)) {
+	if (parts_open(&p, 1, 0)) {
 		set_result("return", "bad_slots", bb_ret_code_text(BB_RET_BAD_SLOTS));
 		return;
 	}
@@ -486,6 +499,10 @@ static void do_install(void)
 		set_result("install", "no_backup", "请先生成并校验完整备份");
 		return;
 	}
+	if (S.backup_full && !S.backup_downloaded) {
+		set_result("install", "download_backup", "请先将完整备份下载保存到电脑");
+		return;
+	}
 	refresh();	/* decide again on what the flash says now */
 	if (!S.have_rules || S.decision.code != BB_DEC_OK) {
 		set_result("install", "not_matched", S.have_rules ? bb_decide_text(S.decision.code) :
@@ -496,7 +513,7 @@ static void do_install(void)
 		set_result("install", "pack", "规则包中取不出对应的 U-Boot");
 		return;
 	}
-	if (parts_open(&p, 1)) {
+	if (parts_open(&p, 1, 1)) {
 		free(mbn);
 		set_result("install", "partitions", bb_inst_code_text(BB_INST_PARTITIONS));
 		return;
@@ -548,9 +565,13 @@ static void serve_backup(int fd)
 		     "Content-Disposition: attachment; filename=\"bootbridge-recovery-backup.zip\"\r\n"
 		     "Cache-Control: no-store\r\nConnection: close\r\n\r\n",
 		     (unsigned long long)S.backup.bytes);
-	send_all(fd, head, n);
-	while ((n = fread(chunk, 1, sizeof(chunk), f)) > 0)
-		send_all(fd, chunk, n);
+	int ok = !send_all(fd, head, n);
+	uint64_t sent = 0;
+	while (ok && (n = fread(chunk, 1, sizeof(chunk), f)) > 0) {
+		ok = !send_all(fd, chunk, n);
+		if (ok) sent += n;
+	}
+	if (ok && !ferror(f) && sent == S.backup.bytes) S.backup_downloaded = 1;
 	fclose(f);
 }
 

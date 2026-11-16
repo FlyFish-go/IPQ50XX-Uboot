@@ -395,13 +395,13 @@
     }).join('') + '</ol>';
   }
 
-  function head(n, t, lead) { var l = L(); return '<div class="eyebrow">' + fmt(l.stepOf, { n: n }) + '</div><h1>' + t + '</h1><p class="lead">' + lead + '</p>'; }
+  function head(n, t, lead) { var l = L(); return '<div class="eyebrow">' + fmt(l.stepOf, { n: n }) + '</div><h1>' + t + '</h1><p class="lead">' + lead + '</p>' + (G().testing ? '<p class="soft-note">' + l.testingNote + '</p>' : ''); }
 
   function step1() {
     var l = L();
     return head(1, l.s1t, l.s1l) + '<div class="mgrid" role="radiogroup">' + CAT.guide.map(function (g) {
       var sel = S.model === g.id;
-      return '<button class="mcard' + (sel ? ' sel' : '') + '" data-model="' + esc(g.id) + '" role="radio" aria-checked="' + sel + '"><span class="ic">' + ic('router') + '</span><span class="tx"><b>' + esc(g.primary) + (g.alias ? '<em class="alias">' + esc(g.alias) + '</em>' : '') + '</b><span>' + fmt(l.needVer, { v: esc(g.version) }) + '</span></span><span class="radio"></span></button>';
+      return '<button class="mcard' + (sel ? ' sel' : '') + '" data-model="' + esc(g.id) + '" role="radio" aria-checked="' + sel + '"><span class="ic">' + ic('router') + '</span><span class="tx"><b>' + esc(g.primary) + (g.testing ? '<em class="alias">' + l.testing + '</em>' : '') + (g.alias ? '<em class="alias">' + esc(g.alias) + '</em>' : '') + '</b><span>' + fmt(l.needVer, { v: esc(g.version) }) + '</span></span><span class="radio"></span></button>';
     }).join('') + '</div><div class="fine">' + ic('info') + '<span>' + l.s1fine + '</span></div>';
   }
 
@@ -482,6 +482,8 @@
         '<a class="btn" href="' + esc(g.url) + '" target="_blank" rel="noopener noreferrer">' + ic('ext') + l.openBrowser + '</a>' +
         '<button class="btn" data-copy="link" aria-label="' + esc(l.copyLink) + '">' + ic('copy') + '</button></div>' +
         (dlBusy || S.file.st === 'error' ? '<div class="fine">' + ic('info') + '<span>' + l.dlOpenHint + '</span></div>' : '');
+    } else if (g.download === "manual") {
+      h += '<p class="how">' + l.manualFw + '</p>';
     } else {
       h += snPanel();
     }
@@ -491,7 +493,7 @@
 
   function step3() {
     var l = L(), g = G();
-    return head(3, l.s3t, l.s3l) + '<div class="callout amber">' + ic('alert') + '<span>' + fmt(l.s3warn, { v: esc(g.version) }) + '</span></div><div class="card">' + olist(l.s3steps, { v: g.version }) + '</div>';
+    return head(3, l.s3t, l.s3l) + '<div class="callout amber">' + ic('alert') + '<span>' + fmt(l.s3warn, { v: esc(g.version) }) + '</span></div><div class="card">' + olist(l.s3steps, { v: g.version }) + (g.login === "button" ? '<p class="fine">' + l.buttonLogin + '</p>' : '') + '</div>';
   }
 
   function step4() {

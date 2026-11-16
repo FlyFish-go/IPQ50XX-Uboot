@@ -13,7 +13,7 @@ Install guide (Chinese): <https://flyfish-go.github.io/IPQ50XX-Uboot/>
 
 The rescue page's firmware update writes only a UBI system image (a `.ubi` file or a backup of a rootfs partition). It does not take vendor upgrade packages: they also carry SBL1, APPSBL and the rest of the boot chain, which the rescue page should not touch, and accepting them would need an allowlist in U-Boot that every vendor release would force us to update. Take the UBI out of a vendor package with the web unpacker, which runs offline in your browser.
 
-First-time H3C installs use [BootBridge Web](https://flyfish-go.github.io/H3C-NX30-Uboot/). Releases up to v0.1.0 are at [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases); later releases are published here.
+First-time H3C installs use [BootBridge Web](https://flyfish-go.github.io/IPQ50XX-Uboot/bootbridge/), which directly installs the final v0.2.0 release. Releases up to v0.1.0 are at [H3C-NX30-Uboot](https://github.com/FlyFish-go/H3C-NX30-Uboot/releases); later releases are published here. NX54 remains experimental and is hidden by default (`site/data/bootbridge.json`: `nx54=hidden|testing`).
 
 Build instructions: [BUILDING.md](BUILDING.md). Based on [chenxin527/uboot-qsdk12.5-build](https://github.com/chenxin527/uboot-qsdk12.5-build) (uBootKit); see [LICENSE](LICENSE) and [LICENSE-NOTICE.md](LICENSE-NOTICE.md).
 

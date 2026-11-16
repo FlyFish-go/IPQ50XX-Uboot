@@ -1,6 +1,6 @@
 # IPQ50XX-Uboot 仓库目录说明
 
-一个仓库维护 U-Boot 与配套工具，组件分别构建、分别发布。首轮公开内容聚焦 U-Boot；BootBridge 先保留文档入口。
+一个仓库维护 U-Boot 与配套工具，组件分别构建、分别发布。U-Boot、BootBridge v2 和固件拆包工具在本仓库维护，网页工具与指南站共用 GitHub Pages。
 
 ## 主要目录
 
@@ -67,7 +67,7 @@ U-Boot 源码继续使用上游的 `u-boot-2016/` 位置，便于比较和整理
 
 ## 配套工具目录
 
-工具准备好后，在 `tools/bootbridge/` 下加入桌面工具、桥接运行程序及各自构建说明。具体子目录随实际导入确定，EXE、DAT 与网页包作为 Release 附件发布；网页站点部署在 `gh-pages` 分支。
+新版 BootBridge 位于 `tools/bootbridge2/`，旧版 `tools/bootbridge/` 仅供历史追溯。`site/build.py` 将新版生成器构建到 `site/dist/bootbridge/`，由 `.github/workflows/pages.yml` 与指南站一并部署，不再使用旧仓库的 `gh-pages`。私有固件生成的公开计划、规则包、来源审计和 SHA256SUMS 在 `tools/bootbridge2/web/release/BB2-R5/`；完整基础镜像、官方包和样机备份不进入仓库或 Pages。固件拆包工具的页面也放在同一站点的「工具」导航。
 
 安装规则、U-Boot 候选和共享 NAND 信息通过精确版本与摘要清单关联。同仓便于同时审阅这些变化，工具版本仍可独立推进。
 

@@ -34,11 +34,41 @@ import appsbl_packager  # noqa: E402  (MBN contract shared with the U-Boot relea
 # +0x45 0x09/0x01. A FEM-less HW-D (RC3000 B0) therefore gets the HW-B build,
 # which was bench-verified to run on HW-D.
 BOARD_RULES = """\
-board A route=mp03.1 machid=0x08040001
-board C route=mp03.1-c2 machid=0x08040101
-board D route=mp02.1 machid=0x08040000 art5g@0=01000404 art5g@3a=60 art5g@45=09
-board B route=mp02.1 machid=0x08040000 art5g@0=01000404 art5g@3a=50 art5g@45=01
+board A layout=nx30 route=mp03.1 machid=0x08040001
+board C layout=nx30 route=mp03.1-c2 machid=0x08040101
+board D layout=nx30 route=mp02.1 machid=0x08040000 art5g@0=01000404 art5g@3a=60 art5g@45=09
+board B layout=nx30 route=mp02.1 machid=0x08040000 art5g@0=01000404 art5g@3a=50 art5g@45=01
 """
+
+NX54_SBL1 = "36e919527fb80dd70607ebfd965172b40b880845d02dc581b8444c4c7b3f88cf"
+# Only the NAND/ECC combination observed on the stock test unit is qualified.
+# A teardown naming another NAND is not evidence of its OEM kernel ECC mode.
+NX54_NANDS = [("h3c-oem-c811-128m-2k-sp64", 4)]
+
+
+def nx54_rules(dist, profiles):
+    name = "h3c-nx54.mbn"
+    data = open(os.path.join(dist, name), "rb").read()
+    try:
+        appsbl_packager.verify_mbn(data)
+    except appsbl_packager.PackError as e:
+        sys.exit(f"{name}: {e}")
+    ident = b"H3C-UBOOT-ID:v1;board=NX54;profile=auto;mask=none;ecc=none;\0"
+    if data.count(b"H3C-UBOOT-ID:v1;") != 1 or data.count(ident) != 1:
+        sys.exit(f"{name}: not exactly one NX54 NAND-auto identity")
+    part_bytes = 0x140000
+    if len(data) > part_bytes:
+        sys.exit(f"{name}: larger than APPSBL")
+    padded = data + b"\xff" * (part_bytes - len(data))
+    out = [f"board NX54 layout=nx54 route=mp03.1 machid=0x08040001 product=NX54 sbl1.sha256={NX54_SBL1}"]
+    for pid, ecc in NX54_NANDS:
+        if pid not in profiles:
+            sys.exit(f"NX54 NAND profile missing: {pid}")
+        out.append(f"candidate NX54-auto-{pid}-ecc{ecc} board=NX54 nand={pid} ecc={ecc} "
+                   f"bytes={len(data)} sha256={hashlib.sha256(data).hexdigest()} "
+                   f"part_bytes={part_bytes} part_sha256={hashlib.sha256(padded).hexdigest()} "
+                   f"file=candidates/{name}")
+    return out
 
 
 def nand_rule(p):
@@ -63,6 +93,7 @@ def main():
     ap.add_argument("--dist", help="extracted release folders HW-<board>/<model>-ECC<n>/")
     ap.add_argument("--auto", help="folder with the per-board NAND-auto images h3c-hw-<x>.mbn")
     ap.add_argument("--release", default="", help="U-Boot release of the --auto images, for the header")
+    ap.add_argument("--nx54", action="store_true", help="also read h3c-nx54.mbn from --auto DIR")
     ap.add_argument("--hold", action="append", default=[], metavar="PROFILE=REASON",
                     help="--auto only: write no candidate for this NAND profile, so the bridge "
                          "refuses it before writing (its nand rule stays, so it cannot be "
@@ -70,6 +101,8 @@ def main():
     a = ap.parse_args()
     if a.auto and a.dist:
         sys.exit("--auto and --dist exclude each other")
+    if a.nx54 and not a.auto:
+        sys.exit("--nx54 needs --auto DIR")
     if a.hold and not a.auto:
         sys.exit("--hold needs --auto")
     held = {}
@@ -89,6 +122,8 @@ def main():
         origin = f"# from {cands.get('release', '?')} source {cands.get('source_commit', '?')}"
     out = ["bbrules 1", f"set {a.set}", origin, "", BOARD_RULES]
     used = sorted({c["nand_profile_id"] for c in cands["candidates"]})
+    if a.nx54:
+        used = sorted(set(used) | {pid for pid, _ in NX54_NANDS})
     missing = [u for u in used if u not in profiles]
     if missing:
         sys.exit(f"candidates use unknown NAND profiles: {missing}")
@@ -154,6 +189,10 @@ def main():
                    f"ecc={c['storage_ecc_bits']} bytes={c['appsbl_mbn_bytes']} "
                    f"sha256={c['appsbl_mbn_sha256']} part_bytes={c['appsbl_partition_bytes']} "
                    f"part_sha256={c['appsbl_partition_sha256']} file=candidates/{cid}.mbn")
+    if a.nx54:
+        if any(pid in held for pid, _ in NX54_NANDS):
+            sys.exit("NX54 NAND is held; refusing to emit its candidate")
+        out += [""] + nx54_rules(a.auto, profiles)
     print("\n".join(out))
 
 

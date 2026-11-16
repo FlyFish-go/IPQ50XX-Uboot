@@ -18,6 +18,8 @@ PROFILE = "H3C-BOOTBRIDGE-MULTICONFIG-V1"
 BOOTARGS = b"console=ttyMSM0,115200,n8 ro init=/sbin/init\0"
 MAX_FIT_BYTES = 16 * 1024 * 1024
 SOURCES = {
+    "c17feced39752548853a75620b7454288b7d011ec38c4bbe330018f3efcef897":
+        ("NX54V100R014", "427d83e383694f11f0b175abea711748d8d0e9bceda1f3351a539262536dd082"),
     "61fbc2a356aa9d5d73eaa9f02eb87f455adea8c32684ffb627b2a35afc2ce922":
         ("NX30V100R012", "5878e39213f37fb3d26b51a5197e09b05e7de18ee275fd7f430ea6eac5e7dc85"),
     "69d3e558e770f4dc26f0ff9ddd6a5a10f541b3fdc826aacf3cbeaf1f93469c44":
@@ -47,6 +49,34 @@ DISABLED = {
     "/soc/wifi1@c000000": b"qcom,cnss-qcn6122\0qcom,cnss-qcn9100\0",
     "/soc/wifi2@c000000": b"qcom,cnss-qcn6122\0qcom,cnss-qcn9100\0",
 }
+
+# Per-source reviewed structure. Defaults retain the exact NX30 transform.
+SOURCE_PROFILES = {
+    "NX54V100R014": {
+        "slot_bytes": 0x2d40000, "zero_tail_bytes": 16384,
+        "header_version": "NX54V100R999",
+        "tmpfs_mib": 192,
+        "config_names": frozenset((
+            "mp03.3", "db-mp03.1-c2", "mp03.6-c1", "db-mp03.1", "mp03.1",
+            "emulation-c1", "mp02.1", "db-mp03.3", "mp03.5-c1", "db-mp03.3-c3",
+            "mp03.1-c3", "db-mp03.3-c2", "sod", "mp03.3-c2", "db-mp02.1",
+            "emulation-c3", "emulation-c2", "mp03.1-c2", "mp03.5-c2", "mp03.6-c2")),
+        "routes": {"config@mp03.1": ("fdt@mp03.1", "qcom,ipq5018-mp03.1",
+            "75c09f3508fd460992ef66d3ca2a324ad75303a1c198e8353578b3dfefd26d79")},
+        "disabled": {
+            "/soc/spi@78b5000/m25p80@0": b"n25q128a11\0",
+            "/soc/wifi@c000000": b"qcom,cnss-qca5018\0qcom,ipq5018-wifi\0",
+            "/soc/wifi3@f00000": b"qcom,cnss-qcn9000\0",
+        },
+    },
+}
+
+
+def source_profile(official_sha):
+    identity = SOURCES[official_sha]
+    return {"slot_bytes": 0x2800000, "zero_tail_bytes": 0, "tmpfs_mib": 64,
+            "header_version": None, "config_names": CONFIG_NAMES,
+            "routes": ROUTES, "disabled": DISABLED} | SOURCE_PROFILES.get(identity[0], {})
 
 
 def sha(data):
@@ -130,7 +160,7 @@ def _changes(before, after):
             if before[path].get(key) != after[path].get(key)}
 
 
-def _transform_dt(data, compatible, expected_sha):
+def _transform_dt(data, compatible, expected_sha, disabled=DISABLED):
     if sha(data) != expected_sha:
         raise ValueError("unreviewed reference DTB bytes")
     before = _parse(data)
@@ -141,25 +171,25 @@ def _transform_dt(data, compatible, expected_sha):
         raise ValueError("unreviewed chosen bootargs")
     if "h3c,bridge-profile" in before["/"]:
         raise ValueError("already transformed or unexpected profile")
-    for path, expected in DISABLED.items():
+    for path, expected in disabled.items():
         if before.get(path, {}).get("compatible") != expected:
             raise ValueError("unreviewed bridge child compatible: " + path)
     # Other stock CNSS radios must already be disabled; do not silently enable
     # or guess modifications for a newly active radio on a new reference DTB.
     for path, props in before.items():
-        if b"cnss" in props.get("compatible", b"") and path not in DISABLED:
+        if b"cnss" in props.get("compatible", b"") and path not in disabled:
             if props.get("status") != b"disabled\0":
                 raise ValueError("unexpected additional active CNSS radio")
     if before.get("/soc/spi@78b5000", {}).get("status") not in (b"ok\0", b"okay\0"):
         raise ValueError("shared SPI parent has unreviewed state")
     dt = _FDT(data, 4096)
-    for path in DISABLED:
+    for path in disabled:
         dt.set(path, "status", b"disabled\0")
     dt.set("/", "h3c,bridge-profile", PROFILE.encode("ascii") + b"\0")
     dt.set("/chosen", "bootargs", BOOTARGS)
     result = dt.bytes()
     after = _parse(result)
-    expected = {(p, "status") for p in DISABLED} | {("/", "h3c,bridge-profile"), ("/chosen", "bootargs")}
+    expected = {(p, "status") for p in disabled} | {("/", "h3c,bridge-profile"), ("/chosen", "bootargs")}
     changes = _changes(before, after)
     if changes != expected:
         raise ValueError("DT transformation changed unexpected properties")
@@ -182,12 +212,14 @@ def transform_kernel(stock_fit, source_official_sha256):
     if not isinstance(stock_fit, bytes) or sha(stock_fit) != identity[1]:
         raise ValueError("kernel FIT is not the pinned official original; repeat transform refused")
     before = _verify(stock_fit)
+    profile = source_profile(source_official_sha256)
+    routes, config_names = profile["routes"], profile["config_names"]
     configs = {p: v for p, v in before.items() if p.startswith("/configurations/") and p.count("/") == 2}
-    names = {"config@" + name for name in CONFIG_NAMES}
+    names = {"config@" + name for name in config_names}
     if {p.rsplit("/", 1)[1] for p in configs} != names:
         raise ValueError("unreviewed configuration layout")
     image_names = {p.rsplit("/", 1)[1] for p in before if p.startswith("/images/") and p.count("/") == 2}
-    if image_names != {"kernel@1"} | {"fdt@" + name for name in CONFIG_NAMES}:
+    if image_names != {"kernel@1"} | {"fdt@" + name for name in config_names}:
         raise ValueError("unreviewed image layout")
     for path, props in configs.items():
         suffix = path.rsplit("@", 1)[1]
@@ -198,10 +230,10 @@ def transform_kernel(stock_fit, source_official_sha256):
     fit = _FDT(stock_fit, 65536)
     route_reports = []
     allowed = set()
-    for config, (image, compatible, expected_sha) in ROUTES.items():
+    for config, (image, compatible, expected_sha) in routes.items():
         path = "/images/" + image
         original_dt = before[path]["data"]
-        new_dt, changes = _transform_dt(original_dt, compatible, expected_sha)
+        new_dt, changes = _transform_dt(original_dt, compatible, expected_sha, profile["disabled"])
         fit.set(path, "data", new_dt)
         allowed.add((path, "data"))
         for hash_path, props in before.items():
@@ -215,17 +247,17 @@ def transform_kernel(stock_fit, source_official_sha256):
     output = fit.bytes()
     after = _verify(output)
     if _changes(before, after) != allowed:
-        raise ValueError("FIT changed outside the three DTB data/hash properties")
-    untouched = sorted(image_names - {x[0] for x in ROUTES.values()})
+        raise ValueError("FIT changed outside reviewed DTB data/hash properties")
+    untouched = sorted(image_names - {x[0] for x in routes.values()})
     for image in untouched:
         if before["/images/" + image] != after["/images/" + image]:
             raise ValueError("untouched FIT image changed")
     report = {"schema": 1, "profile": PROFILE, "source_identity": identity[0],
         "source_official_sha256": source_official_sha256, "stock_fit_sha256": sha(stock_fit),
-        "output_fit_sha256": sha(output), "config_count": 24, "image_count": 25,
+        "output_fit_sha256": sha(output), "config_count": len(config_names), "image_count": len(image_names),
         "default_preserved": _string(before["/configurations"]["default"]),
         "all_configuration_properties_preserved": True,
-        "untouched_dtb_count": 21, "untouched_image_names": untouched,
+        "untouched_dtb_count": len(config_names) - len(routes), "untouched_image_names": untouched,
         "kernel_compressed_sha256": sha(before["/images/kernel@1"]["data"]),
         "kernel_image_byte_identical": True, "ecc_kernel_binary_patch": False,
         "repeat_policy": "reject: only exact pinned original FIT accepted",

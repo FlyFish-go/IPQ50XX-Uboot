@@ -1,17 +1,14 @@
 # 安装说明
 
-> [!WARNING]
-> 当前版本（U-Boot `v0.1.0-pre.7` / BootBridge `v0.2.0-pre.3`）正在由测试人员上机测试，尚未取得整机验收结论。改写启动程序有变砖风险。
+当前 NX30 家族新版 BootBridge（BB2-R5）直接安装 **U-Boot v0.2.0 正式版**。NX54 的桥接流程尚待实机验收，默认隐藏；启用时明确标为测试中。
 
 ## 已装过本项目 U-Boot：从旧版升级
 
-已装 pre.3 到 pre.6 的设备，直接在救援页「U-Boot 更新」上传本版 `appsbl.mbn` 即可，见 [pre.7 说明](../releases/uboot-v0.1.0-pre.7.md#从-pre3pre6-升级)。HW-D 的 ECC8 机器在旧版上「U-Boot 更新」会失败，要先在「网页终端」加载本版 RAM 救援版，再写入。BootBridge v0.2.0-pre.3 安装的是 pre.5，装好后同样按这个步骤升级。用 BootBridge v0.2.0-pre.2 装上 pre.4 的设备也按这个步骤升级。
-
-比 pre.3 更旧的版本：以前的救援页「固件更新」会留下 ECC 隐患，请升级后再刷一次固件。升级方法是在旧救援页的「网页终端」加载 RAM 救援版，再在新救援页写入 U-Boot（两份 APPSBL 一起写），完整步骤见 [pre.3 说明](../releases/uboot-v0.1.0-pre.3.md#从旧版升级)。不要用旧救援页的「U-Boot 更新」直接上传：它只写一份 APPSBL，HW-D 和部分 NAND 型号还会拒绝。
+已是 v0.2.0 的设备使用救援页「U-Boot 更新」上传对应 `h3c-hw-x.mbn`。旧版 BootBridge 装过 pre.5、或仍是 v0.1.0 及更早的设备，需要先加载对应组的 RAM 救援版，再写入 v0.2.0。完整步骤见[指南站升级说明](https://flyfish-go.github.io/IPQ50XX-Uboot/use/upgrade.html#h3c-nx30-家族)。历史 pre.3～pre.7 的专用说明仍保留在 `releases/`，不用于新版首次安装。
 
 ## 原厂设备：使用 BootBridge
 
-首次安装请使用 [BootBridge](../tools/bootbridge/README.md)（网页版 <https://flyfish-go.github.io/H3C-NX30-Uboot/> 或 Windows 版）。流程是：
+首次安装请使用 [BootBridge v2](../tools/bootbridge2/README.md)（网页版 <https://flyfish-go.github.io/IPQ50XX-Uboot/bootbridge/>）。流程是：
 
 1. 选机型，获取工具指定的官方固件，并先用原厂升级页升级到这个版本；
 2. 在工具里用这份官方固件生成桥接包；

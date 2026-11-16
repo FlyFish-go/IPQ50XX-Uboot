@@ -65,6 +65,13 @@
   function apply(base, layout, pack) {
     var p = layout.pack, f = layout.fit, h = layout.header, pos = 0, i, n, sum, data, crc, sha;
     if (!(base instanceof Uint8Array) || base.length !== layout.base.bytes) throw fail('inject-base');
+    function checkTail() {
+      var t = layout.transport, j;
+      if (!t) return;
+      if (base.length !== t.tail_offset + t.zero_tail_bytes) throw fail('inject-tail');
+      for (j = t.tail_offset; j < base.length; j++) if (base[j] !== 0) throw fail('inject-tail');
+    }
+    checkTail();
     if (!(pack instanceof Uint8Array) || pack.length > p.capacity || pack.length < 64 ||
         pack[0] !== 0x42 || pack[1] !== 0x42 || pack[2] !== 0x50 || pack[3] !== 0x4b) throw fail('inject-pack');
     for (i = 0; i < p.slots.length && pos < pack.length; i++) {
@@ -83,6 +90,7 @@
     for (i = h.sum_from; i + 3 < base.length; i += 4)
       sum = (sum + (base[i] << 24 | base[i + 1] << 16 | base[i + 2] << 8 | base[i + 3])) >>> 0;
     be32(base, h.checksum_offset, (0xffffffff - sum) >>> 0);
+    checkTail();
     return base;
   }
 

@@ -20,6 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vendor_fit  # noqa: E402
 import vendor_ubi  # noqa: E402
+import bridge_kernel  # noqa: E402
+import build_bridge  # noqa: E402
 
 
 def fail(msg):
@@ -34,18 +36,29 @@ def main():
     a = ap.parse_args()
     img = open(a.image, "rb").read()
     off = open(a.official, "rb").read()
+    official_sha = hashlib.sha256(off).hexdigest()
+    if official_sha not in bridge_kernel.SOURCES:
+        fail("unreviewed official source")
+    profile = bridge_kernel.source_profile(official_sha)
+    header = build_bridge.header_template(off, profile)
 
+    if len(img) < 200 or len(img) % 4:
+        fail("H3C length/alignment")
     if sum(v[0] for v in struct.iter_unpack(">I", img[64:])) & 0xffffffff != 0xffffffff:
         fail("H3C word sum")
-    if img[:68] != off[:68] or img[76:80] != off[76:80] or img[84:160] != off[84:160]:
+    if img[:68] != header[:68] or img[76:80] != header[76:80] or img[84:160] != header[84:160]:
         fail("H3C header fields other than sizes/checksum differ from the official image")
     fit_len = struct.unpack_from(">I", img, 164)[0]
-    if 160 + fit_len > len(img) or len(img) - 160 - fit_len > 3:
+    tail = -fit_len % 4 + profile["zero_tail_bytes"]
+    if fit_len < 40 or len(img) != 160 + fit_len + tail or any(img[160 + fit_len:]):
         fail("FIT length")
+    if struct.unpack_from(">I", img, 68)[0] != len(img) - 64 or \
+            struct.unpack_from(">I", img, 80)[0] != len(img) - 160:
+        fail("H3C payload sizes")
     nodes = vendor_fit.fdt_props(img[160:160 + fit_len])
     imgs = [n for n in nodes if n.startswith("/images/") and n.count("/") == 2]
-    if len(imgs) != 1:
-        fail("FIT must hold one image")
+    if len(imgs) != 1 or not imgs[0].startswith("/images/ubi-"):
+        fail("FIT must hold exactly one ubi image and no bootloader")
     ubi = nodes[imgs[0]]["data"]
     crc = nodes[imgs[0] + "/hash@1"]["value"]
     sha1 = nodes[imgs[0] + "/hash@2"]["value"]
@@ -55,6 +68,17 @@ def main():
         p = Path(t) / "b.ubi"
         p.write_bytes(ubi)
         meta, streams, _, _ = vendor_ubi.parse(p)
+        if len(ubi) > profile["slot_bytes"]:
+            fail("UBI exceeds system slot")
+        # Independently extract the source and reproduce only its reviewed DT
+        # edits: a structurally valid UBI with a wrong kernel must also fail.
+        p.write_bytes(build_bridge.split_official(off))
+        stock_meta, stock, _, _ = vendor_ubi.parse(p)
+        expected, _ = bridge_kernel.transform_kernel(stock["kernel"], official_sha)
+        if streams["kernel"] != expected or meta["volume_table"] != stock_meta["volume_table"]:
+            fail("kernel or OEM volume table differs")
+        if any(streams[n] != stock[n] for n in ("wifi_fw", "bt_fw")):
+            fail("OEM firmware volumes differ")
         rootfs = streams["ubi_rootfs"]
         if rootfs[:4] != b"hsqs":
             fail("ubi_rootfs is not SquashFS")
@@ -72,7 +96,8 @@ def main():
         elif rootfs[pack_at:pack_at + 4] == b"BBPK":
             fail("base image unexpectedly carries a pack")
     print(f"OK {a.image}: {len(img)} bytes, volumes "
-          f"{[v['name'] for v in meta['volume_table']]}, squashfs {used} bytes, pack at {pack_at}")
+          f"{[v['name'] for v in meta['volume_table']]}, squashfs {used} bytes, pack at {pack_at}, "
+          f"FIT {fit_len} bytes, zero tail {tail} bytes")
 
 
 if __name__ == "__main__":

@@ -230,7 +230,11 @@ static int mount_runtime(void) {
         logmsg("bridge-init: cannot create validated MTD character nodes from sysfs");
         return 0;
     }
-    if (!mount_ram("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV, "mode=1777,size=64m")) return 0;
+    /* Full system-slot backups need more RAM disk space. The builder writes
+     * this bounded setting; it is independent of rule-pack/ENV recognition. */
+    const char *tmp_options = marker_is("/etc/bridge/tmpfs-mib", "192") ?
+        "mode=1777,size=192m" : "mode=1777,size=64m";
+    if (!mount_ram("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV, tmp_options)) return 0;
     if (!ensure_dir("/tmp/run", 0755) || !ensure_dir("/tmp/bridge", 0755)) {
         logmsg("bridge-init: cannot create volatile runtime directories");
         return 0;
@@ -246,7 +250,7 @@ static void plan(void) {
     puts("check reviewed DT compatible reference route; hardware UNKNOWN; RUNTIME_GATED");
     puts("mount -t tmpfs -o nosuid tmpfs /dev; create console,null,zero,tty,urandom nodes");
     puts("create only validated /dev/mtdN character nodes from numeric /sys/class/mtd/mtdN/dev major:minor values");
-    puts("mount -t tmpfs -o nosuid,nodev,size=64m tmpfs /tmp; create /tmp/run and /tmp/bridge");
+    puts("mount tmpfs /tmp: default 64m; builder setting /etc/bridge/tmpfs-mib=192 selects 192m; create /tmp/run and /tmp/bridge");
     puts("exec /bin/sh /etc/bridge/boot.sh once; failure => console message and PID1 stays alive");
     puts("success => start /usr/sbin/bridge-dhcp -i eth1 -s 192.168.10.1 if present and /usr/sbin/bbd -b 192.168.10.1 -p 80 -w /www concurrently");
     puts("waitpid(-1) supervises both children with bounded per-service retry delays; DHCP failure leaves static web LAN running");

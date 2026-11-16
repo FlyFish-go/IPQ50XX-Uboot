@@ -23,6 +23,7 @@ import zipfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "build"))
 import inject_pack  # noqa: E402
+from prepare_release import verify_release
 
 WEB_VERSION = "0.2.0"
 COPY, LITERAL, XOR = 1, 2, 3
@@ -70,8 +71,11 @@ def data_script(ident, raw):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--builds", required=True)
-    ap.add_argument("--pack", required=True)
+    ap.add_argument("--builds")
+    ap.add_argument("--pack")
+    ap.add_argument("--release-dir", help="sealed public inputs; no private firmware/compiler needed")
+    ap.add_argument("--config", help="JSON configuration with nx54=hidden|testing")
+    ap.add_argument("--nx54", choices=("hidden", "testing"), help="override configuration (default: hidden)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--inputs")
     ap.add_argument("--rule-set", default="")
@@ -79,6 +83,19 @@ def main():
     ap.add_argument("--build-label", default="")
     ap.add_argument("--zip")
     a = ap.parse_args()
+    config = json.load(open(a.config, encoding="utf-8")) if a.config else {}
+    a.nx54 = a.nx54 or config.get("nx54", "hidden")
+    if a.nx54 not in ("hidden", "testing"):
+        die("nx54 must be hidden or testing")
+    if a.release_dir:
+        if a.builds or a.pack:
+            die("--release-dir excludes --builds/--pack")
+        meta = verify_release(a.release_dir)
+        a.rule_set = a.rule_set or meta["rule_set"]
+        a.builds = os.path.join(a.release_dir, "builds")
+        a.pack = os.path.join(a.release_dir, "rules-nx54.bbpack" if a.nx54 == "testing" else "rules.bbpack")
+    if not a.builds or not a.pack:
+        die("--release-dir or both --builds and --pack are required")
 
     if os.path.exists(a.out) and os.listdir(a.out):
         if not os.path.isfile(os.path.join(a.out, "SHA256SUMS")):
@@ -87,6 +104,7 @@ def main():
     shutil.copytree(os.path.join(HERE, "site"), a.out)
 
     guide = json.load(open(os.path.join(HERE, "guide-models.json"), encoding="utf-8"))
+    guide["models"] = [g for g in guide["models"] if g["id"] != "NX54" or a.nx54 == "testing"]
     by_sha = {g["sha256"]: g for g in guide["models"]}
     pack = open(a.pack, "rb").read()
     pack_sha = hashlib.sha256(pack).hexdigest()
@@ -105,7 +123,11 @@ def main():
         plan = json.load(open(os.path.join(d, "plan.json")))
         layout = json.load(open(os.path.join(d, "layout.json")))
         data = open(os.path.join(d, "plan.bin"), "rb").read()
-        g = by_sha.get(plan["inSha"]) or die("%s: official firmware not in guide-models.json" % name)
+        g = by_sha.get(plan["inSha"])
+        if not g and name == "NX54" and a.nx54 == "hidden":
+            continue
+        if not g:
+            die("%s: official firmware not in guide-models.json" % name)
         if g["bytes"] != plan["inSize"] or layout["base"]["sha256"] != plan["outSha"]:
             die("%s: guide/plan/layout disagree" % name)
         if len(data) != plan["data"]["size"] or hashlib.sha256(data).hexdigest() != plan["data"]["sha"]:
@@ -141,10 +163,12 @@ def main():
     pack_file = "data/pack-%s.js" % pack_sha[:12]
     write(os.path.join(a.out, pack_file), script)
     guide_js = [dict(id=g["id"], primary=g["primary"], alias=g.get("alias", ""), products=g.get("products", []),
-                     version=g["version"], bytes=g["bytes"], sha=g["sha256"], url=g.get("url", ""))
+                     version=g["version"], bytes=g["bytes"], sha=g["sha256"], url=g.get("url", ""),
+                     download=g.get("download", "direct" if g.get("url") else "sn"),
+                     login=g.get("login", ""), note=g.get("note", ""), testing=g["id"] == "NX54")
                 for g in guide["models"]]
     meta = dict(schema="bootbridge-web-catalog-v2", web=WEB_VERSION, release=rule_set, engine=2,
-                repo=a.repo_url, label=a.build_label)
+                repo=a.repo_url, label=a.build_label, nx54=a.nx54, nx30Uboot="v0.2.0")
     catalog = dict(meta=meta, guide=guide_js, bundles=bundles,
                    pack=dict(id="pack", data=dict(file=pack_file, size=len(pack), sha=pack_sha, b64=len(b64))))
     write(os.path.join(a.out, "assets/catalog.js"), js_literal("BB_CATALOG", catalog))

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* Recovery backup: a stored (uncompressed) ZIP of the boot area partitions
  * and the OEM persistent data, ECC-decoded main area only, plus manifest.json.
- * The two system slots are not included. Unreadable blocks are filled with
+ * Layout policy chooses whether to include both system slots. Unreadable blocks are filled with
  * 0xff and listed in the manifest. */
 #ifndef BB_BACKUP_H
 #define BB_BACKUP_H
@@ -15,7 +15,7 @@
 struct bb_backup_entry {
 	char file[48];			/* name inside the ZIP */
 	const struct bb_flash *part;
-	const char *role;		/* "startup" or "oem-persistent-data" */
+	const char *role;		/* startup, system-slot, oem-persistent-data */
 };
 
 struct bb_backup_result {

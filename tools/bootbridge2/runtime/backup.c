@@ -140,6 +140,7 @@ int bb_backup_write(FILE *out, const struct bb_backup_entry *e, unsigned n,
 	char *manifest;
 	size_t mlen = 0, mcap = 8192 + n * 512;
 	uint8_t eocd[22], d[32];
+	unsigned systems = 0;
 	uint64_t cd_start;
 
 	memset(r, 0, sizeof(*r));
@@ -148,10 +149,13 @@ int bb_backup_write(FILE *out, const struct bb_backup_entry *e, unsigned n,
 	manifest = malloc(mcap);
 	if (!manifest)
 		return -ENOMEM;
+	for (unsigned i = 0; i < n; i++)
+		systems += !strcmp(e[i].role, "system-slot");
 	bb_sha256_init(&z.sha);
 	mlen = snprintf(manifest, mcap,
 			"{\"schema\":\"bb-backup-v1\",\"data_format\":\"ecc-decoded-main-area\","
-			"\"contains_oob\":false,\"excludes\":\"rootfs slots\",\"entries\":[");
+			"\"contains_oob\":false,\"excludes\":\"%s\",\"entries\":[",
+			systems == 2 ? "OOB and unpartitioned tail" : "rootfs slots");
 	for (unsigned i = 0; i < n && !z.err; i++) {
 		const struct bb_flash *f = e[i].part;
 		char notes[1024] = "";

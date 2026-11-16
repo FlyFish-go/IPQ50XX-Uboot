@@ -12,6 +12,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const [BASE, INPUTS, BUILDS, SHOTS] = process.argv.slice(2);
+const NX54 = process.argv[6] || 'testing';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => {
@@ -22,7 +23,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
 (async () => {
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-  for (const model of ['RC3000', 'RT3000', 'NX30', 'RW3000']) {
+  for (const model of ['RC3000', 'RT3000', 'NX30', 'RW3000', 'NX54']) {
     const ctx = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 }, locale: 'zh-CN' });
     const page = await ctx.newPage();
     const problems = [];
@@ -30,12 +31,29 @@ fs.mkdirSync(SHOTS, { recursive: true });
     page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
     await page.goto(BASE + '/index.html');
     ok(model + ': page boots', await page.isHidden('#boot-fail'));
+    if (model === 'NX54' && NX54 === 'hidden') {
+      ok('NX54: hidden model has no card or bundle', await page.locator('[data-model="NX54"]').count() === 0 &&
+        await page.evaluate(() => !window.BB_CATALOG.bundles.some(b => b.id === 'NX54')));
+      await page.click('[data-act="next"]');
+      await page.setInputFiles('#picker', path.join(INPUTS, model + '-original.bin'));
+      await page.waitForSelector('.result.warn', { timeout: 120000 });
+      const refused = await page.isVisible('.result.warn');
+      await page.click('[data-go="4"]');
+      ok('NX54: hidden firmware cannot auto-enable or generate', refused &&
+        await page.locator('[data-act="gen"]').count() === 0);
+      ok('NX54 hidden: no console errors', problems.length === 0, problems.join(' | '));
+      await ctx.close();
+      continue;
+    }
+    if (model === 'NX54') ok('NX54: experimental badge', (await page.locator('[data-model="NX54"]').textContent()).includes('测试中'));
     await page.click('[data-model="' + model + '"]');
     await page.click('[data-act="next"]');
+    if (model === 'NX54') ok('NX54: manual firmware input without NX30 SN query', await page.locator('#sn').count() === 0);
     await page.setInputFiles('#picker', path.join(INPUTS, model + '-original.bin'));
     await page.waitForSelector('.result.ok, .result.err', { timeout: 120000 });
     ok(model + ': official firmware accepted', await page.isVisible('.result.ok'));
     await page.click('[data-act="next"]');
+    if (model === 'NX54') ok('NX54: passwordless login guidance', (await page.textContent('body')).includes('原厂登录页只有'));
     await page.click('[data-act="toggle-up"]');
     await page.click('[data-act="next"]');
     if (model === 'RC3000') await page.screenshot({ path: path.join(SHOTS, 'generate-ready.png') });

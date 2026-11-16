@@ -11,7 +11,7 @@
  *
  * A condition is key=value; value may list alternatives separated by '|'.
  * Keys: route, machid, nand.id, nand.model, nand.mib, nand.page, nand.erase_kib,
- * nand.oob, ecc, product, item, and art5g@<hex offset> whose value is hex bytes
+ * nand.oob, ecc, product, item, layout, sbl1.sha256, and art5g@<hex offset> whose value is hex bytes
  * compared at that offset of the 5 GHz calibration block.
  *
  * Every rule of a kind is evaluated. Exactly one board group, one NAND

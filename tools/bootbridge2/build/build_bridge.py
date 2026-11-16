@@ -36,6 +36,8 @@ import bridge_kernel  # noqa: E402
 import compile_delta_plan  # noqa: E402
 import vendor_fit  # noqa: E402
 import vendor_ubi  # noqa: E402
+import squashfs_splice  # noqa: E402
+import public_plan  # noqa: E402
 
 PEB, LEB = vendor_ubi.PEB, vendor_ubi.LEB
 EPOCH = 1791907200
@@ -78,7 +80,8 @@ def split_official(official):
     return ubi[0]
 
 
-def stage_rootfs(oem_root, root, arm_bin, www):
+def stage_rootfs(oem_root, root, arm_bin, www, profile):
+    oem_regular = set()
     for d in ["dev", "proc", "sys", "tmp", "run", "etc/bridge", "usr/sbin", "usr/bin", "www",
               "root", "lib/modules/4.4.60", "lib/firmware", "sbin", "bin"]:
         (root / d).mkdir(parents=True, exist_ok=True)
@@ -93,12 +96,16 @@ def stage_rootfs(oem_root, root, arm_bin, www):
         if not src.is_file():
             sys.exit(f"official rootfs lacks {rel}")
         shutil.copyfile(src, root / rel)
+        oem_regular.add(rel)
         (root / rel).chmod(stat.S_IMODE(src.stat().st_mode))
     for name in OEM_LIBS:	# a library link must resolve inside the image
         p = root / "lib" / name
         if p.is_symlink() and not (root / "lib" / os.readlink(p)).exists():
             shutil.copyfile(oem_root / "lib" / os.readlink(p), root / "lib" / os.readlink(p))
+            oem_regular.add("lib/" + os.readlink(p))
     (root / "var").symlink_to("/tmp")
+    if profile["tmpfs_mib"] != 64:
+        (root / "etc/bridge/tmpfs-mib").write_text(str(profile["tmpfs_mib"]) + "\n")
     for app in APPLETS:
         (root / "bin" / app).symlink_to("busybox")
     (root / "usr/sbin/insmod").symlink_to("../../sbin/kmodloader")
@@ -114,6 +121,7 @@ def stage_rootfs(oem_root, root, arm_bin, www):
     for f in ("index.html", "main.js", "style.css"):
         shutil.copyfile(www / f, root / "www" / f)
         (root / "www" / f).chmod(0o644)
+    return oem_regular
 
 
 def ubinize(ubinize_bin, table, images, work):
@@ -183,9 +191,22 @@ def build_fit(ubi, work):
                  "crc32_offset": unique(crc, "crc32 value"), "sha1_offset": unique(sha1, "sha1 value")}
 
 
+def header_template(official, profile):
+    header = bytearray(official[:160])
+    version = profile["header_version"]
+    if version:
+        original = bridge_kernel.SOURCES[sha(official)][0].encode() + b"\0"
+        if header.count(original) != 1 or len(version.encode()) + 1 != len(original):
+            raise ValueError("unreviewed H3C version field")
+        at = header.index(original)
+        header[at:at + len(original)] = version.encode() + b"\0"
+    return header
+
+
 def wrap_h3c(official, fit):
-    payload = fit + b"\0" * (-len(fit) % 4)
-    out = bytearray(official[:160]) + payload
+    profile = bridge_kernel.source_profile(sha(official))
+    payload = fit + b"\0" * (-len(fit) % 4 + profile["zero_tail_bytes"])
+    out = header_template(official, profile) + payload
     struct.pack_into(">I", out, 68, 96 + len(payload))
     struct.pack_into(">I", out, 80, len(payload))
     struct.pack_into(">I", out, 72, 0)
@@ -203,17 +224,21 @@ def main():
     ap.add_argument("--www", required=True, type=Path)
     ap.add_argument("--ubinize", required=True)
     ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--public-plan", action="store_true",
+                    help="splice OEM compressed blocks; emit provenance-audited COPY/LITERAL data")
     a = ap.parse_args()
 
     official = a.official.read_bytes()
     official_sha = sha(official)
     if official_sha not in bridge_kernel.SOURCES:
-        sys.exit("unsupported official firmware (not one of the reviewed four)")
+        sys.exit("unsupported official firmware (not a reviewed source)")
     product = bridge_kernel.SOURCES[official_sha][0]
+    profile = bridge_kernel.source_profile(official_sha)
     a.out.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory() as t:
         work = Path(t)
-        (work / "stock.ubi").write_bytes(split_official(official))
+        stock_ubi = split_official(official)
+        (work / "stock.ubi").write_bytes(stock_ubi)
         meta, streams, _, _ = vendor_ubi.parse(work / "stock.ubi")
         table = meta["volume_table"]
         rootfs_vol = next(v for v in table if v["name"] == "ubi_rootfs")
@@ -224,12 +249,19 @@ def main():
         run(["unsquashfs", "-no-xattrs", "-d", work / "oem", work / "oem.squashfs",
              *OEM_FILES, *["lib/" + n for n in OEM_LIBS]])
         root = work / "root"
-        stage_rootfs(work / "oem", root, a.arm_bin, a.www)
+        oem_regular = stage_rootfs(work / "oem", root, a.arm_bin, a.www, profile)
         (work / "nodes.pseudo").write_text("dev/console c 0600 0 0 5 1\n")
-        run(["mksquashfs", root, work / "bridge.squashfs", "-comp", "xz", "-b", "131072", "-noappend",
+        block_size = struct.unpack_from('<I', streams['ubi_rootfs'], 12)[0] if a.public_plan else 131072
+        run(["mksquashfs", root, work / "bridge.squashfs", "-comp", "xz", "-b", block_size, "-noappend",
              "-all-root", "-no-xattrs", "-no-progress", "-processors", "1", "-mkfs-time", EPOCH,
-             "-all-time", EPOCH, "-pf", work / "nodes.pseudo"])
+             "-all-time", EPOCH, "-pf", work / "nodes.pseudo"] +
+            (["-no-fragments"] if a.public_plan else []))
         squash = (work / "bridge.squashfs").read_bytes()
+        if a.public_plan:
+            squash, root_ranges, root_manifest = squashfs_splice.splice(
+                streams["ubi_rootfs"], squash, root, oem_regular, EPOCH)
+            root_files = {e["file"]: (root / e["file"]).read_bytes()
+                          for e in root_manifest if e["source"] == "ours"}
         # The runtime finds the pack from the SquashFS bytes_used field, so the
         # boundary must be derived from it, not from the padded file length.
         used = struct.unpack_from("<Q", squash, 40)[0]
@@ -251,6 +283,10 @@ def main():
                   "bt_fw": work / "bt_fw.bin", "ubi_rootfs": work / "rootfs.img"}
         ubi_path = ubinize(a.ubinize, table, images, work)
         ubi = ubi_path.read_bytes()
+        # Account for all reserved volumes, both layout PEBs and UBI reserve.
+        reserved = sum(v["reserved_pebs"] for v in table)
+        if max(len(ubi) // PEB, reserved + 4) > profile["slot_bytes"] // PEB:
+            sys.exit("UBI image or volume reservations exceed system slot")
 
         new_meta, new_streams, _, _ = vendor_ubi.parse(ubi_path)
         if new_meta["volume_table"] != table:
@@ -264,6 +300,10 @@ def main():
         slots = pack_slots(ubi, rootfs_vol["id"], first_lnum)
         fit, fit_loc = build_fit(ubi, work)
         base = wrap_h3c(official, fit)
+        if a.public_plan:
+            plan, data, provenance = public_plan.compile_plan(
+                official, base, stock_ubi, ubi, 160 + fit_loc["data_offset"], kernel,
+                root_ranges, root_manifest, used, root_files)
 
     fit_off = 160
     layout = {
@@ -280,20 +320,28 @@ def main():
         "kernel": {"stock_sha256": kernel_report["stock_fit_sha256"],
                    "bridge_sha256": kernel_report["output_fit_sha256"]},
     }
+    if profile["zero_tail_bytes"]:
+        layout["transport"] = {"tail_offset": 160 + len(fit),
+                               "zero_tail_bytes": len(base) - 160 - len(fit)}
     (a.out / "bridge-base.bin").write_bytes(base)
     (a.out / "layout.json").write_text(json.dumps(layout, indent=2) + "\n")
+    (a.out / "kernel-audit.json").write_text(json.dumps(kernel_report, indent=2) + "\n")
 
-    ops, data, _ = compile_delta_plan.build_plan(official, base)
-    if compile_delta_plan.reconstruct(official, ops, data, len(base)) != base:
-        sys.exit("delta plan does not rebuild the base image")
-    kinds = {"COPY": 1, "LITERAL": 2, "XOR": 3}
-    plan = {"id": product, "inSize": len(official), "inSha": official_sha, "outSize": len(base),
-            "outSha": sha(base), "ops": [[kinds[o.kind], o.offset, o.size] for o in ops],
-            "data": {"size": len(data), "sha": sha(data)}}
+    if a.public_plan:
+        (a.out / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
+    else:
+        ops, data, _ = compile_delta_plan.build_plan(official, base)
+        if compile_delta_plan.reconstruct(official, ops, data, len(base)) != base:
+            sys.exit("delta plan does not rebuild the base image")
+        kinds = {"COPY": 1, "LITERAL": 2, "XOR": 3}
+        plan = {"inSize": len(official), "inSha": official_sha, "outSize": len(base),
+                "outSha": sha(base), "ops": [[kinds[o.kind], o.offset, o.size] for o in ops],
+                "data": {"size": len(data), "sha": sha(data)}}
+    plan["id"] = product
     (a.out / "plan.json").write_text(json.dumps(plan) + "\n")
     (a.out / "plan.bin").write_bytes(data)
     print(f"{product}: base {len(base)} bytes, squashfs {len(squash)}, pack area {LEB * PACK_LEBS} "
-          f"bytes in {PACK_LEBS} LEBs, plan {len(ops)} ops / {len(data)} literal bytes")
+          f"bytes in {PACK_LEBS} LEBs, plan {len(plan['ops'])} ops / {len(data)} data bytes")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,8 @@
 /* bb-keyd: hold the WPS/Mesh key for 3 seconds to return to the OEM system.
  *
  * Every official H3C device tree (all products, all boot routes) declares the
- * WPS/Mesh key as gpio-keys GPIO38 / KEY_WPS_BUTTON. OEM gpio-button-hotplug
+ * WPS/Mesh key as gpio-keys / KEY_WPS_BUTTON (GPIO38 on NX30, GPIO27 on
+ * NX54). OEM gpio-button-hotplug
  * publishes it as BUTTON=wps on the kernel uevent socket. This works without
  * knowing the board. bb-oem-return takes the same operation lock as bbd,
  * so a busy device refuses the key action atomically. It runs every check

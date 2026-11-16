@@ -40,6 +40,8 @@ struct bb_facts {
 
 	/* SHA-256 of both APPSBL partitions, "" when unreadable. */
 	char appsbl_sha256[2][65];
+	char sbl1_sha256[65];
+	char layout[16];		/* from both rootfs offsets/sizes, not ENV */
 };
 
 /* Parsers, pure and host-testable. Each returns 0 when it found what it needs. */

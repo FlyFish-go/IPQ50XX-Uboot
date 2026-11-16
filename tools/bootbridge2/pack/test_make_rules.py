@@ -59,6 +59,9 @@ def run(script, *args):
 
 def setup(d, images):
     profiles = {"profiles": [
+        {"profile_id": "h3c-oem-c811-128m-2k-sp64", "oem_model": "F50D1G41LB(2M)",
+         "manufacturer_id": 0xc8, "chip_id": 0x11, "capacity_mib": 128, "page_bytes": 2048,
+         "erase_bytes": 131072, "raw_spare_bytes": 64},
         {"profile_id": "h3c-oem-efba-128m-2k-sp64", "oem_model": "W25N01GWZEIG",
          "manufacturer_id": 0xef, "chip_id": 0xba, "capacity_mib": 128, "page_bytes": 2048,
          "erase_bytes": 131072, "raw_spare_bytes": 64},
@@ -76,6 +79,7 @@ def setup(d, images):
     os.makedirs(img, exist_ok=True)
     for b in "ABCD":
         open(os.path.join(img, f"h3c-hw-{b.lower()}.mbn"), "wb").write(images.get(b, mbn(b)))
+    open(os.path.join(img, "h3c-nx54.mbn"), "wb").write(images.get("NX54", mbn("NX54")))
     return ["--candidates", os.path.join(d, "cands.json"),
             "--nand-profiles", os.path.join(d, "profiles.json"),
             "--set", "BB2-TEST", "--auto", img]
@@ -142,6 +146,16 @@ def main():
         check("nand h3c-oem-a1a5-128m-2k-sp64-p2048-e131072 " in out,
               "--hold keeps the held profile's nand rule")
 
+        rc, out, err = run("make_rules.py", *args, "--nx54")
+        check(rc == 0 and sum(l.startswith("candidate ") for l in out.splitlines()) == 9,
+              "combined dist emits eight NX30 candidates and one NX54 candidate")
+        check("product=NX54 sbl1.sha256=36e91952" in out and "layout=nx54" in out,
+              "NX54 rule binds product, SBL1 and layout")
+        open(rules, "w").write(out)
+        rc, _, err = run("make_pack.py", "--rules", rules, "--auto", args[-1],
+                         "-o", os.path.join(d, "nx54.bbpack"))
+        check(rc == 0, f"combined pack stores all five images ({err.strip()})")
+
     bad_sets = {
         "RAM rescue ELF named h3c-hw-b.mbn": {"B": elf(RAM, b"\x01" * 0x4000 + ident("B"))},
         "truncated h3c-hw-c.mbn": {"C": mbn("C")[:-100]},
@@ -151,6 +165,13 @@ def main():
     for what, images in bad_sets.items():
         with tempfile.TemporaryDirectory() as d:
             rc, out, err = run("make_rules.py", *setup(d, images))
+            check(rc != 0 and "candidate " not in out, f"refused: {what} ({err.strip()})")
+
+    for what, bad in (("wrong NX54 identity", mbn("A")),
+                      ("duplicate NX54 identity", mbn("NX54", ident("NX54"))),
+                      ("truncated NX54 MBN", mbn("NX54")[:-1])):
+        with tempfile.TemporaryDirectory() as d:
+            rc, out, err = run("make_rules.py", *setup(d, {"NX54": bad}), "--nx54")
             check(rc != 0 and "candidate " not in out, f"refused: {what} ({err.strip()})")
 
     print("make_rules self-test:", "PASS" if not fails else f"{fails} FAILED")

@@ -2,6 +2,7 @@
 #include "facts.h"
 #include "flash_mtd.h"
 #include "sha256.h"
+#include "layout.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,4 +119,15 @@ void bb_facts_collect(struct bb_facts *f)
 	}
 	hash_part("0:APPSBL", f->appsbl_sha256[0]);
 	hash_part("0:APPSBL_1", f->appsbl_sha256[1]);
+	hash_part("0:SBL1", f->sbl1_sha256);
+	struct bb_flash slots[2];
+	int a = bb_mtd_find("rootfs", 0), b = bb_mtd_find("rootfs_1", 0);
+	if (a >= 0 && !bb_mtd_open(a, 0, &slots[0])) {
+		if (b >= 0 && !bb_mtd_open(b, 0, &slots[1])) {
+			const struct bb_layout *l = bb_layout_slots(&slots[0], &slots[1]);
+			if (l) snprintf(f->layout, sizeof(f->layout), "%s", l->id);
+			slots[1].close(slots[1].ctx);
+		}
+		slots[0].close(slots[0].ctx);
+	}
 }

@@ -6,7 +6,8 @@
 
 int main(void)
 {
-	char path[] = "/tmp/bb-lock-test-XXXXXX";
+	char path[4096];
+	snprintf(path, sizeof(path), "%s/bb-lock-test-XXXXXX", getenv("TMPDIR") ?: "/tmp");
 	int fd = mkstemp(path), lock, status;
 	pid_t pid;
 

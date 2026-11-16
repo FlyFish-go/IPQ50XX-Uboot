@@ -8,7 +8,7 @@
 
 | 机型 | 安装方式 |
 |---|---|
-| H3C NX30 / RT3000 / RC3000 / RW3000 | 已验证，[BootBridge 网页版](https://flyfish-go.github.io/H3C-NX30-Uboot/)安装，不用拆机 |
+| H3C NX30 / RT3000 / RC3000 / RW3000 | 已验证，[BootBridge 网页版](https://flyfish-go.github.io/IPQ50XX-Uboot/bootbridge/)直接安装 v0.2.0，不用拆机 |
 | 小米 CR8806、领研 LYW-30M（联通 VS010）、TCL T30 Pro、航芯 HW3000B1、锐捷 RG-MA3063、中国移动 MR3000D-CI、中国移动 RAX3000Q(Y) | 已验证，TTL 串口安装 |
 | 中国移动 PZ-L8，锐捷 RG-MA3063 V3 | **未验证，请勿刷入**，只做 RAM 试跑 |
 | 其余大部分 IPQ50xx 机型（小米 AX6000、红米 AX5400、TP-Link、Linksys 等） | 规划中，还没有构建 |
@@ -41,6 +41,8 @@ python3 -m http.server -d site/dist 8000
 ```
 
 浏览器打开 <http://localhost:8000/>。构建时会检查所有站内链接和锚点，坏了就报错。
+
+BootBridge 与固件拆包工具共用本站的「工具」入口。BootBridge 的公开发布输入在 `tools/bootbridge2/web/release/BB2-R5/`，附 SHA256SUMS；构建站点不需要厂商固件、ARM 工具链或私有目录。NX54 默认隐藏，`site/data/bootbridge.json` 的 `nx54` 改为 `testing` 后显示“测试中”。发布输入的来源审计与更新方法见 [BootBridge v2](tools/bootbridge2/README.md)。
 
 ## 添加一个机型
 
