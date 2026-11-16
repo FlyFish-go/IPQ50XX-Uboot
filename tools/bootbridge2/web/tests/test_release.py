@@ -30,7 +30,7 @@ class Release(unittest.TestCase):
         cls.audit = json.loads((d / 'provenance.json').read_text())
 
     def test_sealed_release(self):
-        self.assertEqual(verify_release(self.release)['rule_set'], 'BB2-R5')
+        self.assertEqual(verify_release(self.release)['rule_set'], 'BB2-R6')
 
     def test_no_xor(self):
         self.assertEqual({o[0] for o in self.plan['ops']}, {1, 2})
@@ -82,7 +82,7 @@ class Release(unittest.TestCase):
         rules_len, = struct.unpack_from('<I', raw, 8)
         rules = raw[64:64 + rules_len]
         self.assertNotIn(b'board NX54', rules)
-        self.assertIn(b'set BB2-R5\n', rules)
+        self.assertIn(b'set BB2-R6\n', rules)
         archive = lzma.decompress(raw[64 + rules_len:], format=lzma.FORMAT_ALONE)
         with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
             self.assertEqual(set(tar.getnames()), {f'candidates/h3c-hw-{g}.mbn' for g in 'abcd'})

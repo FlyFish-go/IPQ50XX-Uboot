@@ -96,7 +96,7 @@ def main():
             shutil.copyfile(a.builds / model / name, d / name)
     for name in ('rules.txt', 'rules.bbpack', 'rules-nx54.txt', 'rules-nx54.bbpack'):
         shutil.copyfile(a.rules / name, a.out / name)
-    meta = dict(schema='bb-web-release-v1', rule_set='BB2-R5', nx30_uboot='v0.2.0',
+    meta = dict(schema='bb-web-release-v1', rule_set='BB2-R6', nx30_uboot='v0.2.0',
                 nx54='testing', models=list(MODELS), format='COPY/LITERAL; no OEM payload literals')
     (a.out / 'release.json').write_text(json.dumps(meta, indent=2) + '\n')
     rows = [f'{sha(p.read_bytes())}  {p.relative_to(a.out).as_posix()}'

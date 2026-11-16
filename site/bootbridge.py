@@ -1,4 +1,5 @@
 """Small guide-site hook; all tool-specific generation lives in bootbridge2."""
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -19,9 +20,9 @@ def build_bootbridge(out, layout, fix_links):
         frame = Path(tmp) / 'frame.html'
         frame.write_text(fix_links(page, shell), encoding='utf-8')
         subprocess.run([sys.executable, str(WEB / 'build_site.py'),
-                        '--release-dir', str(WEB / 'release' / 'BB2-R5'),
+                        '--release-dir', os.environ.get('BB_PUBLIC_RELEASE', str(WEB / 'release' / 'BB2-R6')),
                         '--config', str(SITE / 'data' / 'bootbridge.json'),
                         '--repo-url', 'https://github.com/FlyFish-go/IPQ50XX-Uboot',
                         '--build-label', 'NX30 家族直接安装 U-Boot v0.2.0',
                         '--guide-frame', str(frame),
-                        '--out', str(out)], check=True)
+                        '--out', str(out)] + (['--nx54', os.environ['BB_NX54_MODE']] if os.environ.get('BB_NX54_MODE') else []), check=True)
