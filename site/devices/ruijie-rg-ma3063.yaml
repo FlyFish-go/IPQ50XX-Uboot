@@ -18,6 +18,7 @@ hardware:
 tested:
   - "原厂系统工厂接口开启 SSH，以 `admin` 登录后 `id` 返回 `uid=0(root) gid=0(root)`；[步骤与验证范围](/install/shell#ma3063-stock-shell)"
   - "两份 APPSBL 写入，读回校验一致"
+  - "系统内安装（台架，一台样机）：先把两份 APPSBL 恢复成原厂 U-Boot，再在原厂系统里运行安装程序，核对、备份、写入两份 APPSBL、读回都通过，之后冷启动 8 次正常"
   - "冷启动 10 次通过（串口横幅、交换芯片、内核、rootfs 槽、LAN 都正常）"
   - "BOOTCONFIG：把 rootfs 切到 1 并断电重启，从第二槽启动；切回 0 后字节和备份一致"
   - "救援页：1 号口（GE 口，LAN）能打开；4 号口需要在 U-Boot 里把 `ethact` 设成 `eth1` 才行，一次只能接一个口"
@@ -26,8 +27,7 @@ not_tested:
   - "拔网线后救援页自动换口"
   - "MAC 从 ART 读取的路径（样机环境变量里本来就有 MAC）"
   - "硬件版本 V3 / V4 / MA3064：见各自页面"
-  - "Telnet 登录、调试服务重启后的持久性"
-  - "从原厂 SSH 一键安装"
+  - "其他样机上的系统内安装；安装程序还没有发布"
 differences:
   - "**没有自动回退到另一个槽。** 原厂 U-Boot 在每次不被打断的自动启动时，把环境变量 `ipqboot_num` 加一并保存；超过 5 次还没有健康启动，就切换到另一个系统槽并重启，原厂 Linux 在正常启动后把它清零。本 U-Boot 不读也不写 `ipqboot_num`，所以装了本 U-Boot 以后，启动但从不健康的系统不会自动回退，内核崩溃也不会自动恢复，要用救援页处理。"
   - "好处：每次开机不再重写环境分区，少一次闪存磨损，也没有写入过程中断电的风险。原厂系统里清零计数的脚本照常运行，但没有影响；环境里残留的大于 5 的旧值会被忽略。"
@@ -42,7 +42,7 @@ slots:
 install:
   method: ttl
 shell:
-  access: "工厂接口开启 SSH 已在样机实测，`admin` 登录实际为 root；[开启步骤与验证范围](/install/shell#ma3063-stock-shell)。Telnet 仅确认端口开放，重启持久性未测。"
+  access: "工厂接口开启 SSH 和 Telnet 已在样机实测，`admin` 登录实际为 root；重启后两者都会关闭，每次重启后要重新开启。[开启步骤与验证范围](/install/shell#ma3063-stock-shell)。系统内安装已在台架样机上跑通，安装程序发布前仍按 TTL 安装。"
 ttl:
   voltage: 1.8 V
   pins: GPIO28/29

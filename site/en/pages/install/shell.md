@@ -1,11 +1,11 @@
 ---
 title: In-system install (Telnet / SSH)
-description: Plans and progress for installing U-Boot from the stock system without opening the case. Still being researched, not open for any model.
+description: Progress on installing U-Boot from the stock system without opening the case. RG-MA3063 has been run through on a bench unit; the installer has not been released yet.
 ---
 
 # In-system install (Telnet / SSH)
 
-The in-system installer is still being researched and is not open for any model. [Stock SSH access on the RG-MA3063 has been tested](#ma3063-stock-shell); installing U-Boot after obtaining root still needs separate validation. To install now, use the method on the model page: [BootBridge web install](/install/bootbridge) for H3C, [TTL serial install](/install/ttl) for other models. This page explains how we plan to make this method work and how far along we are.
+The in-system installer has not been released yet and is not open for any model. On the RG-MA3063 it has been [run through from the stock state](#ma3063-bench) on one of our units. To install now, use the method on the model page: [BootBridge web install](/install/bootbridge) for H3C, [TTL serial install](/install/ttl) for other models. This page explains how this method works and how far along we are.
 
 ## What it is
 
@@ -29,7 +29,9 @@ Before writing, every item below must match. Otherwise the installer refuses to 
 4. Secure boot is off: `/sys/devices/system/qfprom/qfprom0/authenticate` must be `0`;
 5. The partition holding U-Boot is readable and writable.
 
-Then it backs up the existing U-Boot partition for you to save, writes the new one, and reads it back byte by byte to check it.
+It also reads both U-Boot copies to confirm there are no bad blocks and that each reads completely, and uses BOOTCONFIG to tell which copy is in use.
+
+Then it packs the boot-related partitions into a backup, which must be downloaded in the browser before writing is allowed. It writes the spare U-Boot copy first and the one in use second, and reads each back byte by byte.
 
 ## Progress by model
 
@@ -37,7 +39,7 @@ Then it backs up the existing U-Boot partition for you to save, writes the new o
 
 ## RG-MA3063: enable stock SSH { #ma3063-stock-shell }
 
-On our RG-MA3063 hardware 1.00 unit, the factory endpoint enabled SSH in the stock system. Logging in as `admin` gave a Linux root shell.
+On our RG-MA3063 hardware 1.00 unit, the factory endpoint enabled SSH and Telnet in the stock system. Logging in as `admin` gave a Linux root shell. **Both close again after a reboot**, so open the address in step 2 again after every reboot.
 
 ### Enable and log in
 
@@ -66,12 +68,23 @@ On our RG-MA3063 hardware 1.00 unit, the factory endpoint enabled SSH in the sto
 ### Test scope
 
 - Recorded hardware: revision 1.00, AP-MP02.1, machid `0x8040000`. The system identifier read during this test was `wuhu-cmcc-main`; the kernel was `4.4.60`, built on 2022-01-13. The full stock firmware version was not rechecked during this test.
-- Ports 22 and 23 refused connections before activation and opened after the endpoint returned success. SSH login and root privileges were confirmed. Only the Telnet port was checked; Telnet login was not tested.
-- The unit already had this project's U-Boot installed while still running the Ruijie stock system. Stock U-Boot was not restored for this test. This verifies network access in the stock system, not a first install with the complete stock boot chain.
-- No reboot or power cycle was performed. Persistence of SSH/Telnet after reboot is unknown. V3, V4, MA3064 and other firmware versions were not tested.
-- Obtaining root does not validate in-system installation. See the [model page](/devices/ruijie-rg-ma3063) for the currently supported MA3063 install method.
+- Ports 22 and 23 refused connections before activation and opened after the endpoint returned success. Both SSH and Telnet accept the `admin` login, and root privileges were confirmed.
+- After a power cycle, ports 22 and 23 refused connections again; opening the factory address again restored them.
+- V3, V4, MA3064 and other firmware versions were not tested.
 
 Method source: [Enabling SSH on the Ruijie RG-MA3063](https://blog.kokomi.me/posts/enable-ssh-for-rg-ma3063/). The results within the scope above were reproduced on the project maintainer's unit.
+
+### In-system install on the bench { #ma3063-bench }
+
+On the same unit, both U-Boot copies were first restored to the stock version (2022-01-13) and a cold boot confirmed stock U-Boot was back. Then we followed the user steps: enable SSH, paste the install command, upload the package from the browser because the router had no internet access, run the checks, download the backup, write.
+
+- All checks passed: model, partition table (20 partitions), secure boot off, U-Boot partitions writable, no bad blocks, both copies read completely, boot selection record;
+- Both U-Boot copies in the backup matched the stock version; pressing install before downloading the backup was refused;
+- Both U-Boot copies read back correctly after writing. 9 cold boots followed, each one started the stock system through this U-Boot, with LAN reachable after about 65 seconds;
+- The stock LuCI already uses port 8088, so the install page moved to 8089 automatically; use the address the command prints;
+- The stock command line accepts at most 1023 bytes per line, so the install command spans several lines but is still one paste.
+
+Only this one unit has been verified, and the installer has not been released yet. If a write fails, recovery needs a TTL serial console.
 
 ## How you can help
 
