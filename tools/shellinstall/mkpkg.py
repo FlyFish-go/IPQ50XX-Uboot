@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Build the installer package and the one-line command for the stock shell.
+"""Build the installer package and the paste-in command for the stock shell.
 
   mkpkg.py --bin out/arm/ipqi --version v0.2.1-si1 \
            --entry uboot/cmcc-mr3000d-ci.mbn=path/to/u-boot.mbn \
@@ -52,7 +52,12 @@ def main():
         raise SystemExit('quote in url')
     open(os.path.join(a.out, 'stub.sh'), 'w').write(stub)
     b64 = base64.b64encode(gzip.compress(stub.encode(), 9, mtime=0)).decode()
-    cmd = "echo '%s' | base64 -d | gunzip | sh\n" % b64
+    # Busybox ash line editing keeps at most 1023 bytes per line (MA3063 stock
+    # shell cut a 3.6 KB single line and sat at the "> " prompt), so the base64
+    # is split over short lines inside the quotes; busybox base64 -d skips the
+    # newlines. Still one paste.
+    cmd = "echo '%s' | base64 -d | gunzip | sh\n" % '\n'.join(
+        b64[i:i + 76] for i in range(0, len(b64), 76))
     open(os.path.join(a.out, 'command.txt'), 'w').write(cmd)
     print('package %s  %d bytes  sha256 %s' % (pkg, len(data), sha))
     print('command %d bytes' % len(cmd))

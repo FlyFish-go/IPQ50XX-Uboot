@@ -4,7 +4,7 @@
 # Gets the installer package (download, or upload from a browser), checks its
 # SHA-256, then starts it. Writes nothing outside $D.
 V='@VERSION@'; SHA='@SHA256@'; SIZE='@SIZE@'; URLS='@URLS@'
-PORT=${IPQI_PORT:-8088}; D=${IPQI_DIR:-/tmp/ipqi}
+D=${IPQI_DIR:-/tmp/ipqi}
 say() { echo "[ipqi] $*"; }
 die() { say "$*"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -19,6 +19,14 @@ cd "$D" || exit 1
 [ -f uhttpd.pid ] && kill "$(cat uhttpd.pid)" 2>/dev/null
 [ -f pkg.pid ] && kill "$(cat pkg.pid)" 2>/dev/null
 rm -f uhttpd.pid pkg.pid pkg.part
+# Some stock firmware already listens on 8088 (Ruijie MA3063: a LuCI uhttpd).
+# Take the first port nobody listens on (state 0A in /proc/net/tcp*).
+busy() { h=$(printf '%04X' "$1"); cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -qE "^ *[0-9]+: [0-9A-F]+:$h [0-9A-F]+:[0-9A-F]+ 0A "; }
+if [ -n "$IPQI_PORT" ]; then PORT=$IPQI_PORT; else
+	sleep 1; PORT=
+	for p in 8088 8089 8090 18088 18089; do busy "$p" || { PORT=$p; break; }; done
+	[ -n "$PORT" ] || die "8088-8090、18088-18089 端口都被占用"
+fi
 cat > conf <<EOC
 SHA='$SHA'; SIZE='$SIZE'; PORT='$PORT'; D='$D'
 EOC

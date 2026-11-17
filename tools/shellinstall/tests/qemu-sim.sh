@@ -163,10 +163,13 @@ PY
 
 # ---- 1. Command size and stub syntax, in the stock rootfs
 is_arm "$R1/bin/busybox" && [ "$(readlink "$R1/bin/sh")" = busybox ] && ok "chroot /bin/sh is the OEM ARM busybox" || die "chroot /bin/sh is the OEM ARM busybox"
-[ "$(wc -c < "$W/pkg/command.txt")" -lt 4096 ] && ok "command $(wc -c < "$W/pkg/command.txt") bytes" || die "command too long"
+[ "$(wc -c < "$W/pkg/command.txt")" -lt 8192 ] && ok "command $(wc -c < "$W/pkg/command.txt") bytes" || die "command too long"
+# busybox ash line editing drops everything past 1023 bytes of one line
+[ "$(awk '{ if (length($0) > m) m = length($0) } END { print m }' "$W/pkg/command.txt")" -le 200 ] &&
+	ok "every command line <= 200 bytes" || die "a command line is longer than 200 bytes"
 inroot "$R1" /bin/sh -n "$W/pkg/stub.sh" && ok "stub parses in OEM busybox sh" || die "stub parses in OEM busybox sh"
-inroot "$R1" /bin/sh -c "base64 -d | gunzip | head -c 9" \
-	< <(sed "s/^echo '//;s/' | base64.*//" "$W/pkg/command.txt") | grep -q '^#!/bin/sh' && ok "one-liner decodes in OEM busybox" || die "one-liner decodes in OEM busybox"
+sed "\$s#| sh\$#| cmp - $W/pkg/stub.sh \&\& echo SAME#" "$W/pkg/command.txt" > "$W/pkg/decode.sh"
+inroot "$R1" /bin/sh "$W/pkg/decode.sh" | grep -qx SAME && ok "command decodes to stub.sh in OEM busybox" || die "command decodes to stub.sh in OEM busybox"
 
 # ---- 2. Upload path (no download), CGI under the OEM busybox
 run_stub "$R1" IPQI_NO_FETCH=1 | tee "$W/stub-upload.log"
