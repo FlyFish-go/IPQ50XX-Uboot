@@ -1,11 +1,11 @@
 ---
 title: In-system install (Telnet / SSH)
-description: Progress on installing U-Boot from the stock system without opening the case. RG-MA3063 has been run through on a bench unit; the installer has not been released yet.
+description: Install U-Boot from the stock system without opening the case. Test build shellinstall-test.1 supports only the Ruijie RG-MA3063 hardware 1.00.
 ---
 
 # In-system install (Telnet / SSH)
 
-The in-system installer has not been released yet and is not open for any model. On the RG-MA3063 it has been [run through from the stock state](#ma3063-bench) on one of our units. To install now, use the method on the model page: [BootBridge web install](/install/bootbridge) for H3C, [TTL serial install](/install/ttl) for other models. This page explains how this method works and how far along we are.
+The in-system install test build [shellinstall-test.1](https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/shellinstall-test.1) is released and **supports only the Ruijie RG-MA3063 hardware 1.00**; [steps below](#ma3063-install). Other models are not open yet; use the method on the model page: [BootBridge web install](/install/bootbridge) for H3C, [TTL serial install](/install/ttl) for other models.
 
 ## What it is
 
@@ -23,11 +23,11 @@ This will be the main install method for ordinary users in the future. TTL is re
 
 Before writing, every item below must match. Otherwise the installer refuses to write:
 
-1. The model and board identifier (machid) match the model data;
-2. The flash model is on the supported list;
-3. The partition table names, sizes and offsets match the model data;
-4. Secure boot is off: `/sys/devices/system/qfprom/qfprom0/authenticate` must be `0`;
-5. The partition holding U-Boot is readable and writable.
+1. Model: the board model in the device tree and the stock firmware marker both match the model data;
+2. The partition table names, sizes and offsets match the model data;
+3. Secure boot is off: `/sys/devices/system/qfprom/qfprom0/authenticate` must be `0`;
+4. The partition holding U-Boot is readable and writable;
+5. The package contains U-Boot for this model.
 
 It also reads both U-Boot copies to confirm there are no bad blocks and that each reads completely, and uses BOOTCONFIG to tell which copy is in use.
 
@@ -74,6 +74,16 @@ On our RG-MA3063 hardware 1.00 unit, the factory endpoint enabled SSH and Telnet
 
 Method source: [Enabling SSH on the Ruijie RG-MA3063](https://blog.kokomi.me/posts/enable-ssh-for-rg-ma3063/). The results within the scope above were reproduced on the project maintainer's unit.
 
+### Install the test build { #ma3063-install }
+
+First complete "Enable and log in" above, then:
+
+1. Open the [shellinstall-test.1 release page](https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/shellinstall-test.1), copy **the whole content** of `command.txt`, paste it into SSH and press Enter. It is several dozen lines, but it is one command.
+2. The command first tries to download the package from GitHub and Gitee. If the router has no internet access, it asks you to open an upload page: download `ipqi-shellinstall-test.1.bin` from the release page to the computer and select it there. Use the address the command prints, usually `http://192.168.10.1:8089/`.
+3. On the install page: read the checks → create the backup and download it → write → reboot.
+
+After the reboot SSH is closed and the stock system starts as usual. The backup holds this unit's calibration data and MACs; do not upload it anywhere.
+
 ### In-system install on the bench { #ma3063-bench }
 
 On the same unit, both U-Boot copies were first restored to the stock version (2022-01-13) and a cold boot confirmed stock U-Boot was back. Then we followed the user steps: enable SSH, paste the install command, upload the package from the browser because the router had no internet access, run the checks, download the backup, write.
@@ -84,7 +94,9 @@ On the same unit, both U-Boot copies were first restored to the stock version (2
 - The stock LuCI already uses port 8088, so the install page moved to 8089 automatically; use the address the command prints;
 - The stock command line accepts at most 1023 bytes per line, so the install command spans several lines but is still one paste.
 
-Only this one unit has been verified, and the installer has not been released yet. If a write fails, recovery needs a TTL serial console.
+Then the release package of the test build was run through in a browser: upgrading from an older development build to v0.2.0, writing and the reboot button on the page worked, followed by 9 normal cold boots.
+
+Only this one unit has been verified. If a write fails, recovery needs a TTL serial console.
 
 ## How you can help
 

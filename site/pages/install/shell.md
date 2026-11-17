@@ -1,11 +1,11 @@
 ---
 title: 系统内安装（Telnet / SSH）
-description: 不拆机、在原厂系统里安装 U-Boot 的进展。RG-MA3063 已在台架样机上跑通，安装程序还没有发布。
+description: 不拆机、在原厂系统里安装 U-Boot。测试版 shellinstall-test.1 只支持锐捷 RG-MA3063 硬件 1.00。
 ---
 
 # 系统内安装（Telnet / SSH）
 
-系统内安装程序还没有发布，没有对任何机型开放。RG-MA3063 已在我们的一台样机上[从原厂状态跑通](#ma3063-bench)。现在要装，按机型页上写的方式：H3C 用 [BootBridge 网页安装](/install/bootbridge)，其他机型用 [TTL 串口安装](/install/ttl)。这一页说明这种方式怎么做、进展到哪里。
+系统内安装测试版 [shellinstall-test.1](https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/shellinstall-test.1) 已发布，**只支持锐捷 RG-MA3063 硬件 1.00**，[步骤见下](#ma3063-install)。其他机型还没开放，按机型页上写的方式：H3C 用 [BootBridge 网页安装](/install/bootbridge)，其他机型用 [TTL 串口安装](/install/ttl)。
 
 ## 是什么
 
@@ -23,11 +23,11 @@ description: 不拆机、在原厂系统里安装 U-Boot 的进展。RG-MA3063 �
 
 写入之前，下面每一项都要对得上，否则拒绝写入：
 
-1. 机型和主板标识（machid）与机型资料一致；
-2. 闪存型号在支持列表里；
-3. 分区表的名字、大小、偏移和机型资料一致；
-4. 安全启动没有开启：`/sys/devices/system/qfprom/qfprom0/authenticate` 必须是 `0`；
-5. U-Boot 所在分区能读、能写。
+1. 机型：设备树里的主板型号和原厂固件标记都与机型资料一致；
+2. 分区表的名字、大小、偏移和机型资料一致；
+3. 安全启动没有开启：`/sys/devices/system/qfprom/qfprom0/authenticate` 必须是 `0`；
+4. U-Boot 所在分区能读、能写；
+5. 安装包里有这个机型的 U-Boot。
 
 还会读出两份 U-Boot，确认没有坏块、能完整读出，并从 BOOTCONFIG 判断正在用的是哪一份。
 
@@ -74,6 +74,16 @@ RG-MA3063 硬件 1.00 样机已通过工厂接口开启原厂系统的 SSH 和 T
 
 方法来源：[锐捷 RG-MA3063 开启 SSH 的方法](https://blog.kokomi.me/posts/enable-ssh-for-rg-ma3063/)。以上范围内的结果已由项目维护者在样机上复现。
 
+### 安装测试版 { #ma3063-install }
+
+先完成上面的「开启与登录」，然后：
+
+1. 打开 [shellinstall-test.1 发布页](https://github.com/FlyFish-go/IPQ50XX-Uboot/releases/tag/shellinstall-test.1)，把 `command.txt` 的**全部内容**复制粘贴到 SSH 里回车。它有几十行，是一条命令。
+2. 命令会先试着从 GitHub、Gitee 下载安装包。路由器连不上外网时，会提示打开上传页：把发布页上的 `ipqi-shellinstall-test.1.bin` 下载到电脑，再在上传页选择它。页面地址以命令输出为准，一般是 `http://192.168.10.1:8089/`。
+3. 安装页上依次：看核对结果 → 生成备份并下载保存 → 写入 → 重启。
+
+重启后 SSH 会关闭，原厂系统照常启动。备份里有这台机器的校准数据和 MAC，不要上传到网上。
+
 ### 台架上的系统内安装 { #ma3063-bench }
 
 在同一台样机上，先把两份 U-Boot 恢复成原厂版本（2022-01-13），冷启动确认回到原厂 U-Boot，然后按用户的步骤操作：开启 SSH，粘贴安装命令，路由器连不上外网时在浏览器上传安装包，核对、下载备份、写入。
@@ -84,7 +94,9 @@ RG-MA3063 硬件 1.00 样机已通过工厂接口开启原厂系统的 SSH 和 T
 - 原厂系统自己的 LuCI 占用了 8088 端口，安装页自动改用 8089；页面地址以命令输出为准；
 - 原厂命令行一行最多 1023 字节，所以安装命令分成多行，仍是一次粘贴。
 
-只验证了这一台样机，安装程序还没有发布。写入失败时需要 TTL 串口救回。
+之后用测试版的正式安装包，在浏览器里完整走了一遍：从旧开发版升级到 v0.2.0，写入、点页面上的重启都正常，之后冷启动 9 次正常。
+
+只验证了这一台样机。写入失败时需要 TTL 串口救回。
 
 ## 你能帮什么忙
 
