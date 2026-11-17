@@ -26,9 +26,19 @@ python3 mkpkg.py --bin out/arm/ipqi --version <版本> \
 
 ## 测试（qemu，不碰设备）
 
-`tests/qemu-sim.sh` 用 qemu-user 运行原厂 rootfs 里的 busybox、uhttpd 和 curl，用一台真机的分区备份拼成模拟 NAND，走完上传、下载、核对、备份、写入、重复写入、退出，以及各项拒绝的情况。输入都是私有文件，用环境变量给出：`ROOTFS`、`DUMP`、`UBOOT`、`MODEL`、`ARM_CC`。
+`tests/qemu-sim.sh` 把原厂 rootfs 复制一份当作 chroot（用户命名空间，不需要 root），stub、uhttpd 和上传 CGI
+都在里面跑，用的是原厂 busybox 的 `/bin/sh`。模拟 NAND 用一台真机的分区备份拼成。覆盖：
 
-已知的测试局限：uhttpd 执行 CGI 时用的是主机的 `/bin/sh`，不是原厂 busybox。
+- 上传：篡改的包、大小不对的包被拒，正确的包上传后安装程序接管端口；
+- 下载：有 curl 的机型用 curl，没有 curl 的机型用 busybox wget（`ROOTFS_WGET` 给一个没有 curl 的原厂 rootfs），
+  第一个地址不通时换下一个；下载到的包校验不对时不启动，改开上传页；
+- 核对、备份、写入、重复写入、退出，以及各项拒绝的情况；
+- 写入顺序：每次擦除都记在模拟 NAND 的 `write.log` 里，断言先整份写完备用的 APPSBL 再写正在用的那份
+  （两种启动选择都测）；用 `fail.txt` 让某一份写失败，断言备用那份失败时正在用的那份没被擦过，
+  正在用的那份失败后重试只写这一份。
+
+输入都是私有文件，用环境变量给出：`ROOTFS`、`ROOTFS_WGET`（可选）、`DUMP`、`UBOOT`、`MODEL`、`ARM_CC`。
+需要 binfmt_misc 的 qemu-arm 带 F 标志（chroot 里才能用）。
 
 ## 加一个机型
 

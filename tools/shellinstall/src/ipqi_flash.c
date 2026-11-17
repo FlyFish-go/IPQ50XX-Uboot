@@ -67,7 +67,31 @@ struct sim_ctx {
 	uint32_t base, erase, page;
 	uint8_t *programmed;	/* per page, this process only */
 	int writable;
+	char name[32];
 };
+
+/* Test hooks: every erase is appended to write.log ("<part> <offset>"), and an
+ * erase in the partition named in fail.txt fails with EIO. */
+static int sim_erase_hook(const struct sim_ctx *c, uint32_t off)
+{
+	char path[512], want[32] = "";
+	FILE *f;
+
+	snprintf(path, sizeof(path), "%s/fail.txt", sim_dir());
+	f = fopen(path, "r");
+	if (f) {
+		if (fscanf(f, "%31s", want) != 1)
+			want[0] = 0;
+		fclose(f);
+	}
+	snprintf(path, sizeof(path), "%s/write.log", sim_dir());
+	f = fopen(path, "a");
+	if (f) {
+		fprintf(f, "%s 0x%x%s\n", c->name, off, strcmp(want, c->name) ? "" : " fail");
+		fclose(f);
+	}
+	return strcmp(want, c->name) ? 0 : -EIO;
+}
 
 static int sim_bad(uint32_t abs_off, uint32_t erase)
 {
@@ -108,6 +132,8 @@ static int s_erase(void *ctx, uint32_t off)
 
 	if (!c->writable)
 		return -EROFS;
+	if ((r = sim_erase_hook(c, off)))
+		return r;
 	ff = malloc(c->erase);
 	if (!ff)
 		return -ENOMEM;
@@ -230,6 +256,7 @@ int ipqi_open(int idx, int writable, struct bb_flash *f)
 	c->erase = parts[idx].erase_size;
 	c->page = parts[idx].page_size;
 	c->writable = writable;
+	snprintf(c->name, sizeof(c->name), "%s", parts[idx].name);
 	memset(f, 0, sizeof(*f));
 	snprintf(f->name, sizeof(f->name), "%s", parts[idx].name);
 	f->ctx = c;
