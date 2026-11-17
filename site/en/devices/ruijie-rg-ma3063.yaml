@@ -14,6 +14,7 @@ hardware:
 - label: Stock LAN address
   value: '`192.168.10.1`'
 tested:
+- Stock factory endpoint enabled SSH; logging in as `admin` gave `uid=0(root) gid=0(root)`. [Steps and test scope](/install/shell#ma3063-stock-shell)
 - Both APPSBL copies written and read back identically
 - Passed 10 cold boots (serial banner, switch, kernel, rootfs slot and LAN all normal)
 - 'BOOTCONFIG: switched rootfs to 1 and power-cycled, booted from the second slot; switched back to 0 and the bytes matched the backup'
@@ -23,6 +24,7 @@ not_tested:
 - Automatic port switching on the rescue page after unplugging the network cable
 - The path for reading the MAC from ART (the test unit already has a MAC in its environment variables)
 - 'Hardware versions V3 / V4 / MA3064: see their own pages'
+- Telnet login and persistence of the debug services after reboot
 - One-click install from the stock system over SSH
 differences:
 - '**No automatic fallback to the other slot.** On every uninterrupted autoboot, stock U-Boot increments and saves the environment variable `ipqboot_num`. If there is still no healthy boot after more than 5 attempts, it switches to the other system slot and reboots; stock Linux clears the counter after a normal boot. This U-Boot neither reads nor writes `ipqboot_num`, so after installing it, a system that boots but is never healthy will not fall back automatically and a kernel panic will not recover automatically. Use the rescue page instead.'
@@ -35,6 +37,8 @@ slots:
     bytes: 52428800
   capacity_source: 50 MiB comes from the system write range in the stock MA3063 FIT flash.scr (0x900000 + 0x3200000). Use the partition table shown on the rescue page as the authority.
   note: Stock uses BOOTCONFIG to select the rootfs slot. Switching slots takes effect only after a power cycle (SBL has to read SMEM again).
+shell:
+  access: "Enabling SSH through the factory endpoint was tested on our unit; `admin` logs in as root. See [steps and test scope](/install/shell#ma3063-stock-shell). Only the Telnet port was checked; persistence after reboot is untested."
 ttl:
   port: Port 1 (GE port)
 notes:

@@ -5,7 +5,7 @@ description: 不拆机、在原厂系统里安装 U-Boot 的计划和进展。�
 
 # 系统内安装（Telnet / SSH）
 
-还在调研，没有对任何机型开放。现在要装，按机型页上写的方式：H3C 用 [BootBridge 网页安装](/install/bootbridge)，其他机型用 [TTL 串口安装](/install/ttl)。这一页说明这种方式打算怎么做、进展到哪里。
+系统内安装程序还在调研，没有对任何机型开放。[RG-MA3063 的原厂 SSH 入口已实测](#ma3063-stock-shell)，取得 root 后如何安装 U-Boot 仍须单独验证。现在要装，按机型页上写的方式：H3C 用 [BootBridge 网页安装](/install/bootbridge)，其他机型用 [TTL 串口安装](/install/ttl)。这一页说明这种方式打算怎么做、进展到哪里。
 
 ## 是什么
 
@@ -34,6 +34,44 @@ description: 不拆机、在原厂系统里安装 U-Boot 的计划和进展。�
 ## 各机型的进展
 
 {{shell_table}}
+
+## RG-MA3063：开启原厂 SSH { #ma3063-stock-shell }
+
+RG-MA3063 硬件 1.00 样机已通过工厂接口开启原厂系统的 SSH，以 `admin` 登录后确认是 Linux root。
+
+### 开启与登录
+
+1. 拔掉 WAN 网线，电脑用网线连接设备的 LAN 口，先确认能打开原厂管理页。默认地址为 `192.168.10.1`，改过地址的使用当前地址。此接口会开启调试服务，使用公开工厂口令，请在隔离的管理网络内操作。
+2. 浏览器访问 `http://192.168.10.1/__factory_verify_mode__`。样机返回：
+
+   ```json
+   {"result": "Pass"}
+   ```
+
+3. 在电脑终端连接 SSH：
+
+   ```sh
+   ssh -o HostKeyAlgorithms=+ssh-rsa admin@192.168.10.1
+   ```
+
+   首次连接先核验并保存主机密钥，密码输入公开工厂口令 `wifi@cmcc`。样机的旧版 Dropbear 需要上述 `ssh-rsa` 主机密钥兼容选项。
+4. 登录后执行 `id`。样机实测输出：
+
+   ```text
+   uid=0(root) gid=0(root)
+   ```
+
+   登录名虽然是 `admin`，实际权限是 root。随后可以运行 `cat /proc/mtd` 等只读检查；本节不包含安装或分区写入命令。
+
+### 验证范围
+
+- 样机资料：硬件 1.00，AP-MP02.1，machid `0x8040000`。本次读取的系统标识为 `wuhu-cmcc-main`，内核为 `4.4.60`，编译时间为 2022-01-13；本次没有重新核对完整原厂固件版本号。
+- 开启前 22/23 端口均拒绝连接；接口返回成功后两者开放，SSH 登录和 root 权限已确认。Telnet 只确认了端口开放，没有验证登录。
+- 样机此前已刷入本项目 U-Boot，仍运行锐捷原厂系统；本次没有恢复原厂 U-Boot。因此只验证了原厂系统的网络入口，没有验证完整原厂引导链上的首次安装。
+- 没有重启或断电，SSH/Telnet 的重启持久性未知。没有测试 V3、V4、MA3064 或其他固件版本。
+- 取得 root 不代表系统内安装已通过验收。MA3063 当前安装方式仍见[机型页](/devices/ruijie-rg-ma3063)。
+
+方法来源：[锐捷 RG-MA3063 开启 SSH 的方法](https://blog.kokomi.me/posts/enable-ssh-for-rg-ma3063/)。以上范围内的结果已由项目维护者在样机上复现。
 
 ## 你能帮什么忙
 
