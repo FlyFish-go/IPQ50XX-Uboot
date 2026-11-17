@@ -90,7 +90,7 @@ grep -q '0:APPSBL ' "$SIM/parts.txt" || die "sim has no APPSBL"
 
 run_stub() { # root [VAR=value...]
 	local r=$1; shift
-	inroot "$r" IPQI_SIM="$SIM" IPQI_DIR="$W/run" IPQI_PORT=$PORT "$@" /bin/sh "$W/pkg/stub.sh"
+	inroot "$r" IPQI_SIM="$SIM" IPQI_DIR="$W/run" IPQI_PORT=$PORT "$@" /bin/sh "${STUB:-$W/pkg/stub.sh}"
 }
 wait_page() { for _ in $(seq 30); do curl -fs "http://127.0.0.1:$PORT/" | grep -q 上传安装包 && return 0; sleep 1; done; return 1; }
 wait_api() {
@@ -246,6 +246,83 @@ if [ -n "${ROOTFS_WGET:-}" ]; then
 else
 	echo "SKIP 3b: ROOTFS_WGET not set"
 fi
+
+# ---- 3c. Download failures seen in the field. Every one must end on the
+# upload page (never a started package, never a stuck stub), and a working
+# mirror after them must still be used. Run with OEM curl and busybox wget.
+cat > "$W/fsrv.py" <<'PY'
+import sys, time, http.server
+port, pkg = int(sys.argv[1]), open(sys.argv[2], 'rb').read()
+B = 'http://127.0.0.1:%d' % port
+class H(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def go(self, loc):
+        self.send_response(302); self.send_header('Location', loc); self.send_header('Content-Length', '0'); self.end_headers()
+    def do_GET(self):
+        p = self.path
+        if p == '/ipqi.bin':
+            self.send_response(200); self.send_header('Content-Length', str(len(pkg))); self.end_headers(); self.wfile.write(pkg)
+        elif p == '/r302':        # GitHub style: release URL -> other host
+            self.go('http://127.0.0.2:%d/ipqi.bin' % port)
+        elif p == '/r2https':     # redirect to an HTTPS host the client cannot talk to
+            self.go('https://127.0.0.1:%d/ipqi.bin' % port)
+        elif p == '/loop':
+            self.go(B + '/loop')
+        elif p == '/hang':        # connection accepted, nothing ever sent
+            time.sleep(600)
+        elif p == '/short':       # full length announced, half sent
+            self.send_response(200); self.send_header('Content-Length', str(len(pkg))); self.end_headers()
+            self.wfile.write(pkg[:len(pkg) // 2]); self.wfile.flush(); self.close_connection = True
+        else:
+            self.send_error(404)
+import threading
+http.server.ThreadingHTTPServer.daemon_threads = True
+for a in ('127.0.0.2', '127.0.0.1'):   # .2 plays the other host
+    s = http.server.ThreadingHTTPServer((a, port), H)
+    threading.Thread(target=s.serve_forever, daemon=True).start()
+threading.Event().wait()
+PY
+python3 "$W/fsrv.py" "$PORT2" "$PKG" >"$W/fsrv.log" 2>&1 &
+echo $! > "$W/fsrv.pid"
+for _ in $(seq 10); do curl -fs "http://127.0.0.1:$PORT2/ipqi.bin" | cmp -s - "$PKG" && break; sleep 1; done
+curl -fs "http://127.0.0.1:$PORT2/ipqi.bin" | cmp -s - "$PKG" || die "failure server on $PORT2 not up"
+F=http://127.0.0.1:$PORT2
+# https:// on a plain HTTP port: the TLS handshake fails in any client, the way
+# it does when the OEM build has no TLS or only old TLS versions.
+BADS="https://127.0.0.1:$PORT2/ipqi.bin $F/r2https $F/loop $F/hang $F/short"
+stub_urls() { sed "s|URLS='[^']*'|URLS='$1'|" "$W/pkg/stub.sh" > "$W/stub-urls.sh"; grep -qF "URLS='$1'" "$W/stub-urls.sh" || die "cannot set URLS"; }
+fails_to_upload() { # root tag url
+	local r=$1 tag=$2 t0 dt
+	stub_urls "$3"; rm -rf "$W/run"; t0=$(date +%s)
+	STUB=$W/stub-urls.sh run_stub "$r" > "$W/stub-f.log" 2>&1
+	dt=$(( $(date +%s) - t0 ))
+	grep -q 改用上传 "$W/stub-f.log" && [ ! -e "$W/run/pkg" ] && wait_page && [ "$dt" -le 60 ] &&
+		ok "$tag: ${3#$F} -> upload page after ${dt}s" || { cat "$W/stub-f.log"; die "$tag: ${3#$F} -> upload page (took ${dt}s)"; }
+	stop
+}
+downloads() { # root tag urls
+	stub_urls "$3"; rm -rf "$W/run"
+	STUB=$W/stub-urls.sh run_stub "$1" > "$W/stub-f.log" 2>&1
+	grep -q 安装包已就绪 "$W/stub-f.log" && cmp -s "$W/run/pkg" "$PKG" && wait_api && [ "$(jget 'd["ready"]')" = True ] &&
+		ok "$2: $4" || { cat "$W/stub-f.log"; die "$2: $4"; }
+	post quit; stop
+}
+fail_matrix() { # root tag
+	for u in $BADS; do fails_to_upload "$1" "$2" "$u"; done
+	downloads "$1" "$2" "$F/r302" "cross-host 302 followed, package byte-identical"
+	downloads "$1" "$2" "$BADS $F/r302" "all failures skipped, last mirror used"
+}
+fail_matrix "$R1" curl
+# OEM curl too old for the server (exit 35, TLS error) while busybox wget works.
+R1C=$W/root1c
+mkroot "$ROOTFS" "$R1C"
+printf '#!/bin/sh\nexit 35\n' > "$R1C/usr/bin/curl"; chmod 755 "$R1C/usr/bin/curl"
+[ "$(readlink "$R1C/usr/bin/wget")" = ../../bin/busybox ] || die "first rootfs wget is not busybox"
+downloads "$R1C" "curl broken" "$F/ipqi.bin" "curl fails -> busybox wget used"
+if [ -n "${ROOTFS_WGET:-}" ]; then
+	fail_matrix "$R2" wget
+fi
+killpids "$W/fsrv.pid"
 
 # ---- 4. Refusals, via `ipqi check` on altered units
 check() { IPQI_SIM="$SIM" "$PKG" check >"$W/state.json" || true; }

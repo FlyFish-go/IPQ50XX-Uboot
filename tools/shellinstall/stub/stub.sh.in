@@ -45,15 +45,22 @@ start_pkg() {
 	chmod 755 pkg && ./bg pkg.pid pkg.log "$D/pkg" serve -p "$PORT" -d "$D"
 }
 
+# get <url>: curl first, then busybox wget (old curl may fail TLS where wget
+# works). Both give up on a stalled connection: curl below 1 B/s for 20 s,
+# wget after 8 s without data. Certificates are not checked: the SHA-256 is.
+get() {
+	rm -f pkg.part
+	have curl && curl -kfsSL --connect-timeout 8 -y 20 -Y 1 -o pkg.part "$1" 2>/dev/null && return 0
+	have wget || return 1
+	rm -f pkg.part
+	wget -q --no-check-certificate -T 8 -O pkg.part "$1" 2>/dev/null && return 0
+	rm -f pkg.part
+	wget -q -T 8 -O pkg.part "$1" 2>/dev/null
+}
+
 fetch() {
 	for u in $URLS; do
-		rm -f pkg.part
-		if have curl; then
-			curl -kfsSL --connect-timeout 8 -o pkg.part "$u" 2>/dev/null
-		else
-			wget -q --no-check-certificate -T 8 -O pkg.part "$u" 2>/dev/null ||
-				wget -q -O pkg.part "$u" 2>/dev/null
-		fi
+		get "$u"
 		pkg_ok pkg.part && mv pkg.part pkg && return 0
 	done
 	rm -f pkg.part
