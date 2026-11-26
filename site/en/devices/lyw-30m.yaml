@@ -22,7 +22,9 @@ not_tested:
 - Item-by-item check of LED colours and blink patterns
 - One-click install from the stock system over SSH
 warnings:
-- 'Same hardware but not verified unit by unit: China Unicom VS010, VS010 MAX and China Telecom CMLYQ706X. These models use the same hardware as the LYW-30M, **not verified on a real unit**. No hardware information at all is available for the China Telecom CMLYQ706X yet; only the model name matches, and this is not confirmed.'
+- '**The China Telecom / Aifeixun CMLYQ706X is not supported by this build.** A user''s CMLYQ706X reported machid `0x8040000`, not the LYW-30M''s `0x8040002`; after flashing it no longer boots and needs a flash programmer to recover ([#2](https://github.com/FlyFish-go/IPQ50XX-Uboot/issues/2)). Online claims that it is the same hardware as the LYW-30M are not reliable.'
+- 'Before flashing, check the board ID on TTL: it must be `0x8040002`. If it is anything else, do not flash, even if the model name and the case match.'
+- 'Same hardware but not verified unit by unit: China Unicom VS010 and VS010 MAX. These models use the same hardware as the LYW-30M, **not verified on a real unit**.'
 - Some VS010 MAX batches may use an RTL8366 / RTL8367 series switch instead of the QCA8337. In that case the network port will not work with this U-Boot. Always run a RAM trial before flashing and check that the network port and rescue page work.
 - A China Unicom VS010 whose CDT was changed by a third-party tool (such as uBootKit) may not have board ID `0x8040002` and is not supported by this build.
 slots:
@@ -37,4 +39,4 @@ recovery:
 links:
 - text: IPQ50XX-Uboot repository
   url: https://github.com/FlyFish-go/IPQ50XX-Uboot
-aliases: [LYW-30M, China Unicom VS010, China Unicom VS010 MAX, China Telecom CMLYQ706X]
+aliases: [LYW-30M, China Unicom VS010, China Unicom VS010 MAX]
